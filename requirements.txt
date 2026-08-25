@@ -1,0 +1,15 @@
+google-genai
+pandas
+requests
+streamlit
+openpyxl
+pymupdf
+python-docx
+python-pptx
+fpdf2==2.8.7
+Pillow
+xhtml2pdf
+apscheduler
+pytz
+supabase>=2.10.0
+python-dotenv

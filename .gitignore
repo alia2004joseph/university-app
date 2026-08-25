@@ -1,0 +1,14 @@
+# Ignore the hidden Streamlit secrets folder, but keep the example file
+# (it only contains placeholders) so collaborators know which keys to set.
+.streamlit/*
+!.streamlit/secrets.toml.example
+
+# Ignore any local student data sheets created during testing
+*.csv
+
+# Ignore real environment files (notifier.py standalone script secrets)
+.env
+
+# Ignore common Python cache folders
+__pycache__/
+*.pyc
