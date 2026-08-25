@@ -27,8 +27,11 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     css = f"""
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
-    html, body, [class*="css"] {{
+    body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        line-height: 1.55;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }}
     
     #MainMenu, footer {{ visibility: hidden !important; }}
@@ -294,8 +297,9 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     if is_mob:
         css += f"""
         /* MOBILE OVERRIDES */
-        html, body, [class*="css"] {{
+        body, .stApp {{
             font-size: 15px !important;
+            line-height: 1.55;
         }}
         .stApp {{
             padding: 0 !important;
@@ -920,16 +924,19 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
     notices_label = f"📢 Notices ({unread_count})" if unread_count else "📢 Notices"
     replies_label = f"💬 Replies ({unread_rep_count})" if unread_rep_count else "💬 Replies"
 
-    (tab_home, tab_notices, tab_materials, tab_group,
-     tab_message, tab_replies, tab_timetable,
-     tab_profile, tab_ai, tab_features) = st.tabs([
-        "🏠 Home", notices_label, "📁 Materials",
-        "👥 My Group", "✉️ Message", replies_label,
-        "📅 Timetable", "👤 Profile", "🤖 AI Assistant", "🧩 Features"
+    notices_total_unread = (unread_count + unread_rep_count)
+    notices_hub_label = f"💬 Notices & Chat ({notices_total_unread})" if notices_total_unread else "💬 Notices & Chat"
+
+    (tab_home, tab_academics, tab_comms, tab_ai, tab_profile_tools) = st.tabs([
+        "🏠 Dashboard",
+        "📚 Academics",
+        notices_hub_label,
+        "🤖 AI Study Tutor",
+        "⚙️ Profile & Tools"
     ])
 
     # -------------------------------------------------------------
-    # TAB 1: HOME
+    # 1. DASHBOARD
     # -------------------------------------------------------------
     with tab_home:
         c1, c2, c3, c4 = st.columns(4)
@@ -964,490 +971,386 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
     # -------------------------------------------------------------
     # TAB 2: NOTICES
     # -------------------------------------------------------------
-    with tab_notices:
-        st.markdown("### 📢 Noticeboard")
-        if unread_count:
-            st.warning(f"You have **{unread_count} unread** announcement(s)")
-
-        col_s, col_f = st.columns([3, 1])
-        with col_s:
-            ann_search = st.text_input("🔍 Search notices", placeholder="Search by keyword...", key="ann_search_input")
-        with col_f:
-            ann_filter = st.selectbox("Filter", ["All", "Unread", "Urgent", "Broadcast"], key="ann_filter_sel")
-
-        display_anns = all_anns
-        if ann_search:
-            display_anns = [a for a in display_anns if ann_search.lower() in (a.get("text", "") if isinstance(a, dict) else str(a)).lower()]
-        if ann_filter == "Unread":
-            display_anns = [a for a in display_anns if (a.get("id", a.get("text", ""))[:20] if isinstance(a, dict) else str(a)[:20]) not in st.session_state.read_announcements]
-        elif ann_filter == "Urgent":
-            display_anns = [a for a in display_anns if isinstance(a, dict) and a.get("priority", "").lower() == "urgent"]
-        elif ann_filter == "Broadcast":
-            display_anns = [a for a in display_anns if isinstance(a, dict) and a.get("dept", "") == "ALL"]
-
-        st.caption(f"Showing {len(display_anns)} of {len(all_anns)} notices")
-
-        if display_anns:
-            for idx, ann in enumerate(display_anns):
-                ann_text = ann.get("text", str(ann)) if isinstance(ann, dict) else str(ann)
-                ann_id   = ann.get("id", ann_text[:20]) if isinstance(ann, dict) else ann_text[:20]
-                priority = ann.get("priority", "normal").lower() if isinstance(ann, dict) else "normal"
-                is_read  = ann_id in st.session_state.read_announcements
-                is_global = isinstance(ann, dict) and ann.get("dept", "") == "ALL"
-
-                badge = "🌍 BROADCAST" if is_global else ("🚨 URGENT" if priority == "urgent" else "NOTICE")
-                card_cls = "urgent" if priority == "urgent" and not is_read else ("read" if is_read else "")
-                badge_cls = "badge-urgent" if priority == "urgent" else ("badge-read" if is_read else "badge-normal")
-
-                with st.expander(f"{'✅ ' if is_read else '🚨 ' if priority=='urgent' else '📌 '} {ann_text[:60]}..."):
-                    st.markdown(f'<div class="ann-card {card_cls}" style="margin:0;"><span class="ann-badge {badge_cls}">{badge}</span><div>{ann_text}</div></div>', unsafe_allow_html=True)
-                    if not is_read:
-                        if st.checkbox("Mark as Read", key=f"notice_{idx}_{ann_id}"):
-                            st.session_state.read_announcements.append(ann_id)
-                            st.rerun()
-                    else:
-                        st.caption("✅ Read")
-        else:
-            st.info("No announcements yet.")
 
     # -------------------------------------------------------------
-    # TAB 3: MATERIALS
+    # 2. ACADEMICS HUB
     # -------------------------------------------------------------
-    with tab_materials:
-        st.markdown("### 📁 Course Materials")
-        search   = st.text_input("🔍 Search", placeholder="Search by file name...")
-        filtered = [i for i in materials_list if search.lower() in (i.get("name", "") if isinstance(i, dict) else str(i)).lower()]
-        if filtered:
-            for idx, item in enumerate(filtered):
-                file_name = item.get("name", "Unnamed") if isinstance(item, dict) else str(item)
-                file_url  = item.get("url", "#") if isinstance(item, dict) else "#"
-                ext       = file_name.split(".")[-1].upper() if "." in file_name else "FILE"
+    with tab_academics:
+        sub_materials, sub_timetable, sub_group = st.tabs([
+            f"📁 Course Materials ({len(materials_list)})",
+            "📅 Class Timetable",
+            f"👥 My Study Group ({s_group})"
+        ])
+        with sub_materials:
+            st.markdown("### 📁 Course Materials")
+            search   = st.text_input("🔍 Search", placeholder="Search by file name...")
+            filtered = [i for i in materials_list if search.lower() in (i.get("name", "") if isinstance(i, dict) else str(i)).lower()]
+            if filtered:
+                for idx, item in enumerate(filtered):
+                    file_name = item.get("name", "Unnamed") if isinstance(item, dict) else str(item)
+                    file_url  = item.get("url", "#") if isinstance(item, dict) else "#"
+                    ext       = file_name.split(".")[-1].upper() if "." in file_name else "FILE"
 
-                with st.container():
-                    c1, c2 = st.columns([6, 1])
-                    with c1:
-                        st.markdown(
-                            f'<div class="mat-row">' +
-                            f'<div class="mat-icon {"pdf" if ext=="PDF" else ""}">{ext}</div>' +
-                            f'<div><strong>{file_name}</strong></div></div>',
-                            unsafe_allow_html=True
-                        )
-                    with c2:
-                        preview_key = f"preview_{idx}_{file_name}"
-                        if preview_key not in st.session_state:
-                            st.session_state[preview_key] = False
-                        if st.button(
-                            "👁️ Preview" if not st.session_state[preview_key] else "✖ Close",
-                            key=f"prev_btn_{idx}",
-                            use_container_width=True
-                        ):
-                            st.session_state[preview_key] = not st.session_state[preview_key]
-                            st.rerun()
+                    with st.container():
+                        c1, c2 = st.columns([6, 1])
+                        with c1:
+                            st.markdown(
+                                f'<div class="mat-row">' +
+                                f'<div class="mat-icon {"pdf" if ext=="PDF" else ""}">{ext}</div>' +
+                                f'<div><strong>{file_name}</strong></div></div>',
+                                unsafe_allow_html=True
+                            )
+                        with c2:
+                            preview_key = f"preview_{idx}_{file_name}"
+                            if preview_key not in st.session_state:
+                                st.session_state[preview_key] = False
+                            if st.button(
+                                "👁️ Preview" if not st.session_state[preview_key] else "✖ Close",
+                                key=f"prev_btn_{idx}",
+                                use_container_width=True
+                            ):
+                                st.session_state[preview_key] = not st.session_state[preview_key]
+                                st.rerun()
 
-                if st.session_state.get(f"preview_{idx}_{file_name}", False):
-                    with st.expander(f"Preview: {file_name}", expanded=True):
-                        with st.spinner("Loading preview..."):
-                            file_data = db.fetch_file_bytes(file_url)
+                    if st.session_state.get(f"preview_{idx}_{file_name}", False):
+                        with st.expander(f"Preview: {file_name}", expanded=True):
+                            with st.spinner("Loading preview..."):
+                                file_data = db.fetch_file_bytes(file_url)
 
-                        if not file_data:
-                            st.warning("⚠️ Could not load file for preview.")
-                        else:
-                            if ext == "PDF":
-                                try:
-                                    import fitz
-                                    doc  = fitz.open(stream=file_data, filetype="pdf")
-                                    pages = len(doc)
-                                    st.caption(f"📄 {pages} page(s) — PDF document")
-                                    page = doc[0]
-                                    mat  = fitz.Matrix(1.5, 1.5)
-                                    pix  = page.get_pixmap(matrix=mat)
-                                    st.image(pix.tobytes("png"), caption="Page 1 preview")
-                                    if pages > 1:
-                                        st.caption(f"Showing page 1 of {pages}. Download to view all pages.")
-                                    doc.close()
-                                except Exception:
-                                    st.info("Download PDF to view complete document.")
-                            elif ext in ("DOCX", "DOC"):
-                                try:
-                                    from docx import Document
-                                    import io
-                                    doc = Document(io.BytesIO(file_data))
-                                    paras = [p.text for p in doc.paragraphs if p.text.strip()]
-                                    st.text_area("Document preview (first 15 paragraphs):", "\n\n".join(paras[:15]), height=250, disabled=True)
-                                except Exception:
-                                    st.info("Download document to view.")
-                            elif ext in ("PNG", "JPG", "JPEG", "GIF", "WEBP"):
-                                st.image(file_data, caption=file_name)
+                            if not file_data:
+                                st.warning("⚠️ Could not load file for preview.")
                             else:
-                                st.info(f"Preview not available for {ext} files. Download to view.")
+                                if ext == "PDF":
+                                    try:
+                                        import fitz
+                                        doc  = fitz.open(stream=file_data, filetype="pdf")
+                                        pages = len(doc)
+                                        st.caption(f"📄 {pages} page(s) — PDF document")
+                                        page = doc[0]
+                                        mat  = fitz.Matrix(1.5, 1.5)
+                                        pix  = page.get_pixmap(matrix=mat)
+                                        st.image(pix.tobytes("png"), caption="Page 1 preview")
+                                        if pages > 1:
+                                            st.caption(f"Showing page 1 of {pages}. Download to view all pages.")
+                                        doc.close()
+                                    except Exception:
+                                        st.info("Download PDF to view complete document.")
+                                elif ext in ("DOCX", "DOC"):
+                                    try:
+                                        from docx import Document
+                                        import io
+                                        doc = Document(io.BytesIO(file_data))
+                                        paras = [p.text for p in doc.paragraphs if p.text.strip()]
+                                        st.text_area("Document preview (first 15 paragraphs):", "\n\n".join(paras[:15]), height=250, disabled=True)
+                                    except Exception:
+                                        st.info("Download document to view.")
+                                elif ext in ("PNG", "JPG", "JPEG", "GIF", "WEBP"):
+                                    st.image(file_data, caption=file_name)
+                                else:
+                                    st.info(f"Preview not available for {ext} files. Download to view.")
 
-                        st.markdown("---")
-                        st.download_button(
-                            label=f"⬇️ Download {file_name}",
-                            data=file_data if file_data else b"",
-                            file_name=file_name,
-                            mime="application/octet-stream",
-                            key=f"dl_{idx}_{file_name}",
-                            use_container_width=True,
-                            type="primary",
-                            disabled=not file_data
-                        )
-                else:
-                    col1, col2 = st.columns([1, 3])
-                    with col1:
-                        file_data_quick = db.fetch_file_bytes(file_url)
-                        st.download_button(
-                            "⬇️ Download",
-                            data=file_data_quick if file_data_quick else b"",
-                            file_name=file_name,
-                            mime="application/octet-stream",
-                            key=f"dl_quick_{idx}_{file_name}",
-                            disabled=not file_data_quick
-                        )
-                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-        else:
-            st.info("No materials available for your class yet.")
-
-    # -------------------------------------------------------------
-    # TAB 4: MY GROUP
-    # -------------------------------------------------------------
-    with tab_group:
-        st.markdown("### 👥 My Course Groups")
-        course_groups = db.fetch_course_unit_groups(s_name, dept=s_dept, year=s_year)
-        
-        with st.expander("🤖 AI Group Assistant", expanded=False):
-            group_query = st.text_input(
-                "What would you like to know?",
-                placeholder="e.g., What is my thermodynamics group? Which group am I in for mathematics?",
-                key="ai_group_query"
-            )
-            if st.button("Ask AI", key="ai_group_query_btn"):
-                if group_query.strip():
-                    if course_groups:
-                        with st.spinner("Checking your groups..."):
-                            answer = ai_study.answer_group_query(s_name, group_query, course_groups)
-                            st.info(answer)
+                            st.markdown("---")
+                            st.download_button(
+                                label=f"⬇️ Download {file_name}",
+                                data=file_data if file_data else b"",
+                                file_name=file_name,
+                                mime="application/octet-stream",
+                                key=f"dl_{idx}_{file_name}",
+                                use_container_width=True,
+                                type="primary",
+                                disabled=not file_data
+                            )
                     else:
-                        st.warning("No course unit groups assigned yet.")
-                else:
-                    st.warning("Please enter a question.")
-        
-        if course_groups:
-            st.markdown("**Your Course Unit Groups:**")
-            cols = st.columns(min(3, len(course_groups)) if len(course_groups) > 0 else 1)
-            for idx, (course, group) in enumerate(course_groups.items()):
-                with cols[idx % len(cols)] if len(cols) > 0 else st.container():
-                    st.markdown(f"""
-                    <div style="background:{light};border-radius:12px;padding:16px;
-                        border:2px solid {primary};text-align:center;margin-bottom:8px;">
-                        <div style="font-size:0.75rem;color:{primary};font-weight:700;
-                            text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
-                            {course}
+                        col1, col2 = st.columns([1, 3])
+                        with col1:
+                            file_data_quick = db.fetch_file_bytes(file_url)
+                            st.download_button(
+                                "⬇️ Download",
+                                data=file_data_quick if file_data_quick else b"",
+                                file_name=file_name,
+                                mime="application/octet-stream",
+                                key=f"dl_quick_{idx}_{file_name}",
+                                disabled=not file_data_quick
+                            )
+                    st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+            else:
+                st.info("No materials available for your class yet.")
+
+        # -------------------------------------------------------------
+        # TAB 4: MY GROUP
+        # -------------------------------------------------------------
+
+        with sub_timetable:
+            st.markdown("### 📅 Class Timetable")
+            TT_PALETTE = ["#1a56db","#16a34a","#ea580c","#7c3aed","#dc2626","#db2777","#0d9488","#b45309"]
+            TT_LIGHTS = ["#dbeafe","#dcfce7","#ffedd5","#ede9fe","#fee2e2","#fce7f3","#ccfbf1","#fef3c7"]
+            def auto_color_s(course_name):
+                idx = sum(ord(c) for c in course_name.upper()) % len(TT_PALETTE)
+                return TT_PALETTE[idx], TT_LIGHTS[idx]
+
+            timetable = cached_fetch_timetable(dept=s_dept, year=s_year)
+            if not timetable:
+                st.info("Your Class Rep has not posted a timetable yet.")
+            else:
+                day_order = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+                by_day = {}
+                for entry in timetable:
+                    d = entry.get("day","Other")
+                    by_day.setdefault(d, []).append(entry)
+
+                view_mode = st.radio("View", ["📋 List", "🔲 Grid"], horizontal=True, label_visibility="collapsed", key="tt_view_mode")
+                if view_mode == "📋 List":
+                    for day in day_order:
+                        if day not in by_day or not by_day[day]:
+                            continue
+                        st.markdown(f'<div style="background:{primary};color:white;border-radius:10px;padding:8px 16px;margin:12px 0 6px 0;font-weight:700;font-size:0.9rem;">📅 {day}</div>', unsafe_allow_html=True)
+                        entries = sorted(by_day[day], key=lambda x: x.get("time", ""))
+                        for entry in entries:
+                            e_color = entry.get("color", "") or auto_color_s(entry.get("course", ""))[0]
+                            lect = entry.get("lecturer", "")
+                            lect_part = f'<div style="font-size:0.82rem;color:#475569;font-weight:600;margin-top:4px;">👨‍🏫 {lect.title()}</div>' if lect else ""
+                            st.markdown(f'<div style="background:white;border-radius:10px;padding:12px 18px;margin-bottom:6px;border:1px solid #e2e8f7;border-left:4px solid {e_color};"><span style="font-weight:800;color:{e_color};min-width:90px;">{entry.get("time","")}</span> <span style="color:#1e293b;font-weight:600;">{entry.get("course","")}</span>{lect_part}</div>', unsafe_allow_html=True)
+
+        # -------------------------------------------------------------
+        # TAB 8: PROFILE & ATTACH PHOTO
+        # -------------------------------------------------------------
+
+        with sub_group:
+            st.markdown("### 👥 My Course Groups")
+            course_groups = db.fetch_course_unit_groups(s_name, dept=s_dept, year=s_year)
+
+            with st.expander("🤖 AI Group Assistant", expanded=False):
+                group_query = st.text_input(
+                    "What would you like to know?",
+                    placeholder="e.g., What is my thermodynamics group? Which group am I in for mathematics?",
+                    key="ai_group_query"
+                )
+                if st.button("Ask AI", key="ai_group_query_btn"):
+                    if group_query.strip():
+                        if course_groups:
+                            with st.spinner("Checking your groups..."):
+                                answer = ai_study.answer_group_query(s_name, group_query, course_groups)
+                                st.info(answer)
+                        else:
+                            st.warning("No course unit groups assigned yet.")
+                    else:
+                        st.warning("Please enter a question.")
+
+            if course_groups:
+                st.markdown("**Your Course Unit Groups:**")
+                cols = st.columns(min(3, len(course_groups)) if len(course_groups) > 0 else 1)
+                for idx, (course, group) in enumerate(course_groups.items()):
+                    with cols[idx % len(cols)] if len(cols) > 0 else st.container():
+                        st.markdown(f"""
+                        <div style="background:{light};border-radius:12px;padding:16px;
+                            border:2px solid {primary};text-align:center;margin-bottom:8px;">
+                            <div style="font-size:0.75rem;color:{primary};font-weight:700;
+                                text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
+                                {course}
+                            </div>
+                            <div style="font-size:1.5rem;font-weight:900;color:{primary};">
+                                {group}
+                            </div>
                         </div>
-                        <div style="font-size:1.5rem;font-weight:900;color:{primary};">
-                            {group}
+                        """, unsafe_allow_html=True)
+            else:
+                st.info("No course unit groups assigned yet.")
+
+            st.markdown("---")
+            if s_group and s_group.strip() not in ("", "Unassigned"):
+                dept_col = next((c for c in ["Department", "department", "dept"] if c in df_profiles.columns), None)
+                year_col = next((c for c in ["Year", "year"] if c in df_profiles.columns), None)
+                df_class = df_profiles[(df_profiles[dept_col] == s_dept) & (df_profiles[year_col] == s_year)] if (dept_col and year_col) else df_profiles
+                group_members = df_class[df_class["Assigned Group"] == s_group]
+
+                st.markdown(f'<div class="group-banner"><div style="font-size:0.7rem;opacity:0.7;text-transform:uppercase;letter-spacing:2px;">General Project Group</div><div style="font-size:1.5rem;font-weight:900;">{s_group}</div><div style="font-size:0.82rem;opacity:0.85;">{len(group_members)} member(s)</div></div>', unsafe_allow_html=True)
+
+                for _, member in group_members.iterrows():
+                    m_name   = member["Student Name"]
+                    m_reg    = member["Reg Number"]
+                    m_course = member.get("Course Code", "")
+                    m_avatar = str(member.get("Avatar", member.get("avatar_url", "")))
+                    is_you   = (m_reg == s_reg)
+                    you_html = '<span style="background:#dbeafe;color:#1a56db;font-size:0.65rem;font-weight:700;padding:1px 8px;border-radius:10px;margin-left:6px;">You</span>' if is_you else ""
+
+                    m_avatar_html = render_avatar_html(m_avatar, m_name, size=42, color=primary, light=light)
+
+                    st.markdown(f"""
+                    <div class="member-card">
+                        {m_avatar_html}
+                        <div>
+                            <div style="font-weight:700;">{m_name}{you_html}</div>
+                            <div style="font-size:0.75rem;color:#94a3b8;">{m_course} · {m_reg}</div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-        else:
-            st.info("No course unit groups assigned yet.")
-        
-        st.markdown("---")
-        if s_group and s_group.strip() not in ("", "Unassigned"):
-            dept_col = next((c for c in ["Department", "department", "dept"] if c in df_profiles.columns), None)
-            year_col = next((c for c in ["Year", "year"] if c in df_profiles.columns), None)
-            df_class = df_profiles[(df_profiles[dept_col] == s_dept) & (df_profiles[year_col] == s_year)] if (dept_col and year_col) else df_profiles
-            group_members = df_class[df_class["Assigned Group"] == s_group]
 
-            st.markdown(f'<div class="group-banner"><div style="font-size:0.7rem;opacity:0.7;text-transform:uppercase;letter-spacing:2px;">General Project Group</div><div style="font-size:1.5rem;font-weight:900;">{s_group}</div><div style="font-size:0.82rem;opacity:0.85;">{len(group_members)} member(s)</div></div>', unsafe_allow_html=True)
-
-            for _, member in group_members.iterrows():
-                m_name   = member["Student Name"]
-                m_reg    = member["Reg Number"]
-                m_course = member.get("Course Code", "")
-                m_avatar = str(member.get("Avatar", member.get("avatar_url", "")))
-                is_you   = (m_reg == s_reg)
-                you_html = '<span style="background:#dbeafe;color:#1a56db;font-size:0.65rem;font-weight:700;padding:1px 8px;border-radius:10px;margin-left:6px;">You</span>' if is_you else ""
-                
-                m_avatar_html = render_avatar_html(m_avatar, m_name, size=42, color=primary, light=light)
-
-                st.markdown(f"""
-                <div class="member-card">
-                    {m_avatar_html}
-                    <div>
-                        <div style="font-weight:700;">{m_name}{you_html}</div>
-                        <div style="font-size:0.75rem;color:#94a3b8;">{m_course} · {m_reg}</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+        # -------------------------------------------------------------
+        # TAB 5: MESSAGE
+        # -------------------------------------------------------------
 
     # -------------------------------------------------------------
-    # TAB 5: MESSAGE
+    # 3. NOTICES & COMMUNICATION HUB
     # -------------------------------------------------------------
-    with tab_message:
-        st.markdown("### ✉️ Message Class Rep")
-        st.markdown(f'<div class="msg-info-card">🔒 <strong>Private & Confidential</strong> — Only your {s_year} Class Rep can see your message.</div>', unsafe_allow_html=True)
+    with tab_comms:
+        sub_notices, sub_message, sub_replies = st.tabs([
+            f"📢 Noticeboard ({unread_count})" if unread_count else "📢 Noticeboard",
+            "✉️ Message Class Rep",
+            f"💬 Rep Replies ({unread_rep_count})" if unread_rep_count else "💬 Rep Replies"
+        ])
+        with sub_notices:
+            st.markdown("### 📢 Noticeboard")
+            if unread_count:
+                st.warning(f"You have **{unread_count} unread** announcement(s)")
 
-        all_feedback = cached_fetch_feedback(dept=s_dept, year=s_year)
-        my_messages  = [
-            m for m in all_feedback
-            if isinstance(m, list) and len(m) >= 5 and str(m[1]).strip().lower() == s_reg.strip().lower()
-        ]
+            col_s, col_f = st.columns([3, 1])
+            with col_s:
+                ann_search = st.text_input("🔍 Search notices", placeholder="Search by keyword...", key="ann_search_input")
+            with col_f:
+                ann_filter = st.selectbox("Filter", ["All", "Unread", "Urgent", "Broadcast"], key="ann_filter_sel")
 
-        if my_messages:
-            st.markdown("#### 📤 Sent Messages")
-            for midx, msg in enumerate(my_messages):
-                ts     = str(msg[0])
-                status = str(msg[3])
-                text   = str(msg[4])
-                sc     = "#16a34a" if status.lower() == "reviewed" else "#d4820a"
-                st.markdown(f'<div style="background:white;border-radius:10px;padding:14px;margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {primary};"><div style="font-size:0.78rem;color:#94a3b8;">🕒 {ts} · <span style="color:{sc};font-weight:600;">{status}</span></div><div style="font-size:0.9rem;margin-top:4px;">{text}</div></div>', unsafe_allow_html=True)
-                if st.button("Delete", key=f"del_msg_{midx}"):
-                    if db.delete_feedback(ts, s_reg):
-                        st.rerun()
+            display_anns = all_anns
+            if ann_search:
+                display_anns = [a for a in display_anns if ann_search.lower() in (a.get("text", "") if isinstance(a, dict) else str(a)).lower()]
+            if ann_filter == "Unread":
+                display_anns = [a for a in display_anns if (a.get("id", a.get("text", ""))[:20] if isinstance(a, dict) else str(a)[:20]) not in st.session_state.read_announcements]
+            elif ann_filter == "Urgent":
+                display_anns = [a for a in display_anns if isinstance(a, dict) and a.get("priority", "").lower() == "urgent"]
+            elif ann_filter == "Broadcast":
+                display_anns = [a for a in display_anns if isinstance(a, dict) and a.get("dept", "") == "ALL"]
 
-        st.markdown("#### ✍️ New Message")
-        if st.session_state.get("fb_success_msg"):
-            st.success(st.session_state.fb_success_msg)
-            st.session_state.fb_success_msg = ""
-        
-        with st.expander("🤖 AI Message Assistant", expanded=False):
-            ai_topic = st.text_input("What do you need help with?", placeholder="e.g., Workshop attendance, Course materials...", key="msg_ai_topic")
-            ai_tone  = st.selectbox("Message tone:", ["Professional", "Friendly", "Urgent", "Inquiry"], key="msg_ai_tone")
-            if st.button("Generate Draft with AI", key="ai_draft_msg_btn"):
-                if ai_topic.strip():
-                    with st.spinner("Drafting message..."):
-                        draft = ai_study.ask_ai(
-                            question=f"Draft a {ai_tone.lower()} student message to their Class Rep about: {ai_topic}. Keep it 3-4 sentences, professional, and clear.",
-                            chat_history=[],
-                            student_reg=s_reg
-                        )
-                        if draft and not draft.startswith("⚠️"):
-                            st.session_state.ai_draft = draft
-                            st.success("Draft created! Copied into the message box below.")
-                        else:
-                            st.error("Could not generate draft.")
-        
-        with st.form("student_feedback_form", clear_on_submit=True):
-            default_msg = st.session_state.get("ai_draft", "")
-            user_msg = st.text_area("Type your message:", value=default_msg, height=140)
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                submit_fb = st.form_submit_button("Send Private Message", use_container_width=True)
-            with col2:
-                if st.form_submit_button("Clear Draft", use_container_width=True):
-                    st.session_state.ai_draft = ""
-                    st.rerun()
-            
-            if submit_fb:
-                if user_msg.strip():
-                    if db.submit_feedback(s_reg, s_name, user_msg, dept=s_dept, year=s_year):
-                        cached_fetch_feedback.clear()
-                        st.session_state.fb_success_msg = "✅ Message delivered to your Class Rep!"
-                        st.rerun()
-                    else:
-                        st.error("⚠️ Submission failed. Please try again.")
-                else:
-                    st.warning("Please type a message.")
+            st.caption(f"Showing {len(display_anns)} of {len(all_anns)} notices")
 
-    # -------------------------------------------------------------
-    # TAB 6: REP REPLIES
-    # -------------------------------------------------------------
-    with tab_replies:
-        st.markdown("### 💬 Messages from Class Rep")
-        if unread_rep_count:
-            st.info(f"🔔 You have **{unread_rep_count} unread** message(s).")
-        elif my_rep_replies:
-            st.success("✅ All messages read.")
+            if display_anns:
+                for idx, ann in enumerate(display_anns):
+                    ann_text = ann.get("text", str(ann)) if isinstance(ann, dict) else str(ann)
+                    ann_id   = ann.get("id", ann_text[:20]) if isinstance(ann, dict) else ann_text[:20]
+                    priority = ann.get("priority", "normal").lower() if isinstance(ann, dict) else "normal"
+                    is_read  = ann_id in st.session_state.read_announcements
+                    is_global = isinstance(ann, dict) and ann.get("dept", "") == "ALL"
 
-        if my_rep_replies:
-            for ridx, reply in enumerate(my_rep_replies):
-                r_time  = reply.get("timestamp",  "N/A")
-                r_rep   = reply.get("rep_name",   "Class Rep")
-                r_msg   = reply.get("message",    "")
-                is_read = reply.get("read_status", "Unread").lower() == "read"
-                
-                with st.container(border=True):
-                    st.write(f"**{r_rep}** • {r_time} {'🔴 *NEW*' if not is_read else ''}")
-                    st.divider()
-                    st.write(r_msg)
+                    badge = "🌍 BROADCAST" if is_global else ("🚨 URGENT" if priority == "urgent" else "NOTICE")
+                    card_cls = "urgent" if priority == "urgent" and not is_read else ("read" if is_read else "")
+                    badge_cls = "badge-urgent" if priority == "urgent" else ("badge-read" if is_read else "badge-normal")
 
-                if not is_read:
-                    if st.button("Mark as Read", key=f"rep_read_{ridx}"):
-                        if db.mark_rep_reply_read(r_time, s_reg):
-                            cached_fetch_rep_replies.clear()
-                            st.rerun()
-        else:
-            st.info("No messages from your Class Rep yet.")
-
-    # -------------------------------------------------------------
-    # TAB 7: TIMETABLE
-    # -------------------------------------------------------------
-    with tab_timetable:
-        st.markdown("### 📅 Class Timetable")
-        TT_PALETTE = ["#1a56db","#16a34a","#ea580c","#7c3aed","#dc2626","#db2777","#0d9488","#b45309"]
-        TT_LIGHTS = ["#dbeafe","#dcfce7","#ffedd5","#ede9fe","#fee2e2","#fce7f3","#ccfbf1","#fef3c7"]
-        def auto_color_s(course_name):
-            idx = sum(ord(c) for c in course_name.upper()) % len(TT_PALETTE)
-            return TT_PALETTE[idx], TT_LIGHTS[idx]
-
-        timetable = cached_fetch_timetable(dept=s_dept, year=s_year)
-        if not timetable:
-            st.info("Your Class Rep has not posted a timetable yet.")
-        else:
-            day_order = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-            by_day = {}
-            for entry in timetable:
-                d = entry.get("day","Other")
-                by_day.setdefault(d, []).append(entry)
-
-            view_mode = st.radio("View", ["📋 List", "🔲 Grid"], horizontal=True, label_visibility="collapsed", key="tt_view_mode")
-            if view_mode == "📋 List":
-                for day in day_order:
-                    if day not in by_day or not by_day[day]:
-                        continue
-                    st.markdown(f'<div style="background:{primary};color:white;border-radius:10px;padding:8px 16px;margin:12px 0 6px 0;font-weight:700;font-size:0.9rem;">📅 {day}</div>', unsafe_allow_html=True)
-                    entries = sorted(by_day[day], key=lambda x: x.get("time", ""))
-                    for entry in entries:
-                        e_color = entry.get("color", "") or auto_color_s(entry.get("course", ""))[0]
-                        lect = entry.get("lecturer", "")
-                        lect_part = f'<div style="font-size:0.82rem;color:#475569;font-weight:600;margin-top:4px;">👨‍🏫 {lect.title()}</div>' if lect else ""
-                        st.markdown(f'<div style="background:white;border-radius:10px;padding:12px 18px;margin-bottom:6px;border:1px solid #e2e8f7;border-left:4px solid {e_color};"><span style="font-weight:800;color:{e_color};min-width:90px;">{entry.get("time","")}</span> <span style="color:#1e293b;font-weight:600;">{entry.get("course","")}</span>{lect_part}</div>', unsafe_allow_html=True)
-
-    # -------------------------------------------------------------
-    # TAB 8: PROFILE & ATTACH PHOTO
-    # -------------------------------------------------------------
-    with tab_profile:
-        st.markdown("### 👤 Student Profile")
-        s_contact = str(student_data.get("Contact", student_data.get("contact", "")))
-        profile_avatar_html = render_avatar_html(s_avatar, s_name, size=76, color=primary, light=light)
-
-        st.markdown(f"""
-        <div class="profile-card">
-            <div class="profile-avatar-wrap">
-                {profile_avatar_html}
-                <div>
-                    <div style="font-size:1.3rem;font-weight:800;color:#1e293b;">{s_name}</div>
-                    <div style="font-size:0.82rem;color:#94a3b8;">{s_reg}</div>
-                    <div style="font-size:0.75rem;color:#16a34a;font-weight:700;margin-top:2px;">● Active Student</div>
-                </div>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Department</span><span style="font-weight:700;">{s_dept_name}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Year</span><span style="font-weight:700;">{s_year}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Course Code</span><span style="font-weight:700;">{s_course}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Assigned Group</span><span style="font-weight:700;">{s_group}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:0.88rem;"><span style="color:#94a3b8;">Contact</span><span style="font-weight:700;">{s_contact if s_contact else "Not set"}</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-        st.markdown("#### 📸 Profile Picture")
-        with st.expander("Update Profile Photo", expanded=bool(not s_avatar)):
-            new_avatar = st.file_uploader(
-                "Upload a portrait or selfie",
-                type=["png", "jpg", "jpeg", "webp"],
-                key="student_avatar_uploader",
-                help="Recommended: Square photo, JPG or PNG format"
-            )
-            col_av1, col_av2 = st.columns(2)
-            with col_av1:
-                if st.button("Save Profile Picture", use_container_width=True, type="primary"):
-                    if new_avatar:
-                        with st.spinner("Uploading and updating photo..."):
-                            url = db.upload_student_avatar(
-                                s_reg,
-                                new_avatar.getvalue(),
-                                new_avatar.type or "image/jpeg"
-                            )
-                        if url:
-                            cached_fetch_roster.clear()
-                            st.success("✅ Profile picture updated successfully!")
-                            st.rerun()
-                        else:
-                            st.error("⚠️ Failed to upload image. Please try another file.")
-                    else:
-                        st.warning("Please choose an image file first.")
-            with col_av2:
-                if s_avatar and st.button("🗑️ Remove Photo", use_container_width=True):
-                    with st.spinner("Removing photo..."):
-                        db.delete_student_avatar(s_reg)
-                    cached_fetch_roster.clear()
-                    st.success("Profile photo removed.")
-                    st.rerun()
-
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-        st.markdown("#### 🔒 Change PIN")
-        if not st.session_state.show_change_pin:
-            if st.button("Change My PIN", use_container_width=True):
-                st.session_state.show_change_pin = True
-                st.rerun()
-        else:
-            with st.form("change_pin_form", clear_on_submit=True):
-                old_pin  = st.text_input("Current PIN",     type="password", max_chars=6)
-                new_pin1 = st.text_input("New PIN",         type="password", max_chars=6)
-                new_pin2 = st.text_input("Confirm New PIN", type="password", max_chars=6)
-                cp1, cp2 = st.columns(2)
-                with cp1: save_pin   = st.form_submit_button("Save", use_container_width=True)
-                with cp2: cancel_pin = st.form_submit_button("Cancel", use_container_width=True)
-
-                if cancel_pin:
-                    st.session_state.show_change_pin = False
-                    st.rerun()
-                if save_pin:
-                    if not old_pin or not new_pin1:
-                        st.warning("Please fill in all fields.")
-                    elif not new_pin1.isdigit() or len(new_pin1) < 4:
-                        st.error("⚠️ PIN must be at least 4 digits.")
-                    elif new_pin1 != new_pin2:
-                        st.error("⚠️ New PINs do not match.")
-                    else:
-                        with st.spinner("Verifying..."):
-                            check = db.verify_student(s_reg, old_pin)
-                        if check.get("status") != "success":
-                            st.error("⚠️ Current PIN is incorrect.")
-                        else:
-                            with st.spinner("Updating..."):
-                                ok = db.set_pin(s_reg, new_pin1)
-                            if ok:
-                                st.success("✅ PIN changed successfully!")
-                                st.session_state.show_change_pin = False
+                    with st.expander(f"{'✅ ' if is_read else '🚨 ' if priority=='urgent' else '📌 '} {ann_text[:60]}..."):
+                        st.markdown(f'<div class="ann-card {card_cls}" style="margin:0;"><span class="ann-badge {badge_cls}">{badge}</span><div>{ann_text}</div></div>', unsafe_allow_html=True)
+                        if not is_read:
+                            if st.checkbox("Mark as Read", key=f"notice_{idx}_{ann_id}"):
+                                st.session_state.read_announcements.append(ann_id)
                                 st.rerun()
+                        else:
+                            st.caption("✅ Read")
+            else:
+                st.info("No announcements yet.")
+
+        # -------------------------------------------------------------
+        # TAB 3: MATERIALS
+        # -------------------------------------------------------------
+
+        with sub_message:
+            st.markdown("### ✉️ Message Class Rep")
+            st.markdown(f'<div class="msg-info-card">🔒 <strong>Private & Confidential</strong> — Only your {s_year} Class Rep can see your message.</div>', unsafe_allow_html=True)
+
+            all_feedback = cached_fetch_feedback(dept=s_dept, year=s_year)
+            my_messages  = [
+                m for m in all_feedback
+                if isinstance(m, list) and len(m) >= 5 and str(m[1]).strip().lower() == s_reg.strip().lower()
+            ]
+
+            if my_messages:
+                st.markdown("#### 📤 Sent Messages")
+                for midx, msg in enumerate(my_messages):
+                    ts     = str(msg[0])
+                    status = str(msg[3])
+                    text   = str(msg[4])
+                    sc     = "#16a34a" if status.lower() == "reviewed" else "#d4820a"
+                    st.markdown(f'<div style="background:white;border-radius:10px;padding:14px;margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {primary};"><div style="font-size:0.78rem;color:#94a3b8;">🕒 {ts} · <span style="color:{sc};font-weight:600;">{status}</span></div><div style="font-size:0.9rem;margin-top:4px;">{text}</div></div>', unsafe_allow_html=True)
+                    if st.button("Delete", key=f"del_msg_{midx}"):
+                        if db.delete_feedback(ts, s_reg):
+                            st.rerun()
+
+            st.markdown("#### ✍️ New Message")
+            if st.session_state.get("fb_success_msg"):
+                st.success(st.session_state.fb_success_msg)
+                st.session_state.fb_success_msg = ""
+
+            with st.expander("🤖 AI Message Assistant", expanded=False):
+                ai_topic = st.text_input("What do you need help with?", placeholder="e.g., Workshop attendance, Course materials...", key="msg_ai_topic")
+                ai_tone  = st.selectbox("Message tone:", ["Professional", "Friendly", "Urgent", "Inquiry"], key="msg_ai_tone")
+                if st.button("Generate Draft with AI", key="ai_draft_msg_btn"):
+                    if ai_topic.strip():
+                        with st.spinner("Drafting message..."):
+                            draft = ai_study.ask_ai(
+                                question=f"Draft a {ai_tone.lower()} student message to their Class Rep about: {ai_topic}. Keep it 3-4 sentences, professional, and clear.",
+                                chat_history=[],
+                                student_reg=s_reg
+                            )
+                            if draft and not draft.startswith("⚠️"):
+                                st.session_state.ai_draft = draft
+                                st.success("Draft created! Copied into the message box below.")
                             else:
-                                st.error("⚠️ Could not update PIN.")
+                                st.error("Could not generate draft.")
 
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-        st.markdown("#### 📱 Update Contact Info")
-        if not st.session_state.show_update_contact:
-            if st.button("Update My Contact Number", use_container_width=True):
-                st.session_state.show_update_contact = True
-                st.rerun()
-        else:
-            with st.form("update_contact_form", clear_on_submit=True):
-                new_contact = st.text_input("New Contact Number", placeholder="e.g. 0741234567", value=s_contact)
-                c1, c2 = st.columns(2)
-                with c1: save_c = st.form_submit_button("Save", use_container_width=True)
-                with c2: canc_c = st.form_submit_button("Cancel", use_container_width=True)
+            with st.form("student_feedback_form", clear_on_submit=True):
+                default_msg = st.session_state.get("ai_draft", "")
+                user_msg = st.text_area("Type your message:", value=default_msg, height=140)
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    submit_fb = st.form_submit_button("Send Private Message", use_container_width=True)
+                with col2:
+                    if st.form_submit_button("Clear Draft", use_container_width=True):
+                        st.session_state.ai_draft = ""
+                        st.rerun()
 
-                if canc_c:
-                    st.session_state.show_update_contact = False
-                    st.rerun()
-
-                if save_c:
-                    if not new_contact.strip():
-                        st.warning("Please enter a contact number.")
-                    else:
-                        with st.spinner("Updating..."):
-                            ok = db.update_contact(s_reg, new_contact.strip())
-                        if ok:
-                            st.success("✅ Contact updated!")
-                            st.session_state.show_update_contact = False
-                            cached_fetch_roster.clear()
+                if submit_fb:
+                    if user_msg.strip():
+                        if db.submit_feedback(s_reg, s_name, user_msg, dept=s_dept, year=s_year):
+                            cached_fetch_feedback.clear()
+                            st.session_state.fb_success_msg = "✅ Message delivered to your Class Rep!"
                             st.rerun()
                         else:
-                            st.error("⚠️ Update failed.")
+                            st.error("⚠️ Submission failed. Please try again.")
+                    else:
+                        st.warning("Please type a message.")
+
+        # -------------------------------------------------------------
+        # TAB 6: REP REPLIES
+        # -------------------------------------------------------------
+
+        with sub_replies:
+            st.markdown("### 💬 Messages from Class Rep")
+            if unread_rep_count:
+                st.info(f"🔔 You have **{unread_rep_count} unread** message(s).")
+            elif my_rep_replies:
+                st.success("✅ All messages read.")
+
+            if my_rep_replies:
+                for ridx, reply in enumerate(my_rep_replies):
+                    r_time  = reply.get("timestamp",  "N/A")
+                    r_rep   = reply.get("rep_name",   "Class Rep")
+                    r_msg   = reply.get("message",    "")
+                    is_read = reply.get("read_status", "Unread").lower() == "read"
+
+                    with st.container(border=True):
+                        st.write(f"**{r_rep}** • {r_time} {'🔴 *NEW*' if not is_read else ''}")
+                        st.divider()
+                        st.write(r_msg)
+
+                    if not is_read:
+                        if st.button("Mark as Read", key=f"rep_read_{ridx}"):
+                            if db.mark_rep_reply_read(r_time, s_reg):
+                                cached_fetch_rep_replies.clear()
+                                st.rerun()
+            else:
+                st.info("No messages from your Class Rep yet.")
+
+        # -------------------------------------------------------------
+        # TAB 7: TIMETABLE
+        # -------------------------------------------------------------
 
     # -------------------------------------------------------------
-    # TAB 9: AI ASSISTANT
+    # 4. MODERN AI STUDY TUTOR
     # -------------------------------------------------------------
     with tab_ai:
         from ai_engine import extract_pdf_text, generate_image
@@ -1949,23 +1852,165 @@ Requirements:
     # -------------------------------------------------------------
     # TAB 10: FEATURES
     # -------------------------------------------------------------
-    with tab_features:
-        render_student_slots(db, s_reg, s_name, s_dept, s_year, primary, light)
 
     # -------------------------------------------------------------
-    # LOGOUT
+    # 5. PROFILE & CUSTOM TOOLS
     # -------------------------------------------------------------
-    st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-    if st.button("🚪 Log Out"):
-        keys = [
-            "student_logged_in", "read_announcements", "open_expanders",
-            "show_ai_tab", "ai_chat_history", "ai_pdf_text",
-            "ai_selected_file", "ai_summary_shown",
-            "confirm_clear_all", "go_to_home"
-        ]
-        for k in keys:
-            if k in st.session_state:
+    with tab_profile_tools:
+        sub_profile, sub_features = st.tabs([
+            "👤 My Profile & Security",
+            "🧩 Class Features"
+        ])
+        with sub_profile:
+            st.markdown("### 👤 Student Profile")
+            s_contact = str(student_data.get("Contact", student_data.get("contact", "")))
+            profile_avatar_html = render_avatar_html(s_avatar, s_name, size=76, color=primary, light=light)
+
+            st.markdown(f"""
+            <div class="profile-card">
+                <div class="profile-avatar-wrap">
+                    {profile_avatar_html}
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:800;color:#1e293b;">{s_name}</div>
+                        <div style="font-size:0.82rem;color:#94a3b8;">{s_reg}</div>
+                        <div style="font-size:0.75rem;color:#16a34a;font-weight:700;margin-top:2px;">● Active Student</div>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Department</span><span style="font-weight:700;">{s_dept_name}</span></div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Year</span><span style="font-weight:700;">{s_year}</span></div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Course Code</span><span style="font-weight:700;">{s_course}</span></div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Assigned Group</span><span style="font-weight:700;">{s_group}</span></div>
+                <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:0.88rem;"><span style="color:#94a3b8;">Contact</span><span style="font-weight:700;">{s_contact if s_contact else "Not set"}</span></div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+            st.markdown("#### 📸 Profile Picture")
+            with st.expander("Update Profile Photo", expanded=bool(not s_avatar)):
+                new_avatar = st.file_uploader(
+                    "Upload a portrait or selfie",
+                    type=["png", "jpg", "jpeg", "webp"],
+                    key="student_avatar_uploader",
+                    help="Recommended: Square photo, JPG or PNG format"
+                )
+                col_av1, col_av2 = st.columns(2)
+                with col_av1:
+                    if st.button("Save Profile Picture", use_container_width=True, type="primary"):
+                        if new_avatar:
+                            with st.spinner("Uploading and updating photo..."):
+                                url = db.upload_student_avatar(
+                                    s_reg,
+                                    new_avatar.getvalue(),
+                                    new_avatar.type or "image/jpeg"
+                                )
+                            if url:
+                                cached_fetch_roster.clear()
+                                st.success("✅ Profile picture updated successfully!")
+                                st.rerun()
+                            else:
+                                st.error("⚠️ Failed to upload image. Please try another file.")
+                        else:
+                            st.warning("Please choose an image file first.")
+                with col_av2:
+                    if s_avatar and st.button("🗑️ Remove Photo", use_container_width=True):
+                        with st.spinner("Removing photo..."):
+                            db.delete_student_avatar(s_reg)
+                        cached_fetch_roster.clear()
+                        st.success("Profile photo removed.")
+                        st.rerun()
+
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+            st.markdown("#### 🔒 Change PIN")
+            if not st.session_state.show_change_pin:
+                if st.button("Change My PIN", use_container_width=True):
+                    st.session_state.show_change_pin = True
+                    st.rerun()
+            else:
+                with st.form("change_pin_form", clear_on_submit=True):
+                    old_pin  = st.text_input("Current PIN",     type="password", max_chars=6)
+                    new_pin1 = st.text_input("New PIN",         type="password", max_chars=6)
+                    new_pin2 = st.text_input("Confirm New PIN", type="password", max_chars=6)
+                    cp1, cp2 = st.columns(2)
+                    with cp1: save_pin   = st.form_submit_button("Save", use_container_width=True)
+                    with cp2: cancel_pin = st.form_submit_button("Cancel", use_container_width=True)
+
+                    if cancel_pin:
+                        st.session_state.show_change_pin = False
+                        st.rerun()
+                    if save_pin:
+                        if not old_pin or not new_pin1:
+                            st.warning("Please fill in all fields.")
+                        elif not new_pin1.isdigit() or len(new_pin1) < 4:
+                            st.error("⚠️ PIN must be at least 4 digits.")
+                        elif new_pin1 != new_pin2:
+                            st.error("⚠️ New PINs do not match.")
+                        else:
+                            with st.spinner("Verifying..."):
+                                check = db.verify_student(s_reg, old_pin)
+                            if check.get("status") != "success":
+                                st.error("⚠️ Current PIN is incorrect.")
+                            else:
+                                with st.spinner("Updating..."):
+                                    ok = db.set_pin(s_reg, new_pin1)
+                                if ok:
+                                    st.success("✅ PIN changed successfully!")
+                                    st.session_state.show_change_pin = False
+                                    st.rerun()
+                                else:
+                                    st.error("⚠️ Could not update PIN.")
+
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+            st.markdown("#### 📱 Update Contact Info")
+            if not st.session_state.show_update_contact:
+                if st.button("Update My Contact Number", use_container_width=True):
+                    st.session_state.show_update_contact = True
+                    st.rerun()
+            else:
+                with st.form("update_contact_form", clear_on_submit=True):
+                    new_contact = st.text_input("New Contact Number", placeholder="e.g. 0741234567", value=s_contact)
+                    c1, c2 = st.columns(2)
+                    with c1: save_c = st.form_submit_button("Save", use_container_width=True)
+                    with c2: canc_c = st.form_submit_button("Cancel", use_container_width=True)
+
+                    if canc_c:
+                        st.session_state.show_update_contact = False
+                        st.rerun()
+
+                    if save_c:
+                        if not new_contact.strip():
+                            st.warning("Please enter a contact number.")
+                        else:
+                            with st.spinner("Updating..."):
+                                ok = db.update_contact(s_reg, new_contact.strip())
+                            if ok:
+                                st.success("✅ Contact updated!")
+                                st.session_state.show_update_contact = False
+                                cached_fetch_roster.clear()
+                                st.rerun()
+                            else:
+                                st.error("⚠️ Update failed.")
+
+        # -------------------------------------------------------------
+        # TAB 9: AI ASSISTANT
+        # -------------------------------------------------------------
+
+        with sub_features:
+            render_student_slots(db, s_reg, s_name, s_dept, s_year, primary, light)
+
+        # -------------------------------------------------------------
+        # LOGOUT
+        # -------------------------------------------------------------
+        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+        if st.button("🚪 Log Out"):
+            keys = [
+                "student_logged_in", "read_announcements", "open_expanders",
+                "show_ai_tab", "ai_chat_history", "ai_pdf_text",
+                "ai_selected_file", "ai_summary_shown",
+                "confirm_clear_all", "go_to_home"
+            ]
+            for k in keys:
+                if k in st.session_state:
+                    del st.session_state[k]
+            for k in [k for k in st.session_state if k.startswith("ai_last_request_")]:
                 del st.session_state[k]
-        for k in [k for k in st.session_state if k.startswith("ai_last_request_")]:
-            del st.session_state[k]
-        st.rerun()
+            st.rerun()

@@ -24,8 +24,11 @@ def inject_admin_css():
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
-    html, body, [class*="css"] {{
+    body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        line-height: 1.55;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }}
     
     #MainMenu, footer {{ visibility: hidden !important; }}
@@ -434,836 +437,1944 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
     </div>
     """, unsafe_allow_html=True)
 
-    #  Tabs 
-    tabs = st.tabs([
-        " Overview", " Departments", " Manage Reps",
-        " Broadcast", " All Students",
-        " All Feedback", " AI Insights", " Advanced Tools",
-        " Master AI"
+    #  Primary Hub Tabs (5 Clean Categorized Sections)
+    tab_overview, tab_people, tab_broadcast, tab_ai, tab_tools = st.tabs([
+        "🏛️ University Overview",
+        "👥 Reps & Students",
+        "📢 Broadcast & Feedback",
+        "🤖 AI Intelligence",
+        "⚙️ System Tools"
     ])
 
-    # 
-    #  OVERVIEW
-    # 
-    with tabs[0]:
-        st.markdown("###  Department Overview")
+    # 1. OVERVIEW & DEPARTMENTS
+    with tab_overview:
+        sub_overview, sub_depts = st.tabs([
+            "📊 University Analytics",
+            f"🏢 Departments ({total_depts})"
+        ])
+        with sub_overview:
+            st.markdown("###  Department Overview")
 
-        cols = st.columns(len(get_departments()))
-        for ci, (code, info) in enumerate(get_departments().items()):
-            with cols[ci]:
-                dept_count = 0
-                if not df_all.empty:
-                    for col in ["Department", "department", "dept"]:
-                        if col in df_all.columns:
-                            dept_count = len(df_all[df_all[col] == code])
-                            break
-                color = info["color"]
-                st.markdown(f"""
-                <div class="dept-card" style="--dc:{color};">
-                    <div style="font-size:0.78rem;font-weight:700;color:#94a3b8;
-                        text-transform:uppercase;letter-spacing:1px;">{code}</div>
-                    <div style="font-size:1.4rem;font-weight:900;color:{color};
-                        margin:4px 0;">{dept_count}</div>
-                    <div style="font-size:0.78rem;color:#1e293b;">{info['name']}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-
-        # Enrollment pivot table
-        st.markdown("###  Enrollment by Department × Year")
-        if not df_all.empty:
-            dept_col = next((c for c in ["Department","department","dept"]
-                             if c in df_all.columns), None)
-            year_col = next((c for c in ["Year","year"] if c in df_all.columns), None)
-            if dept_col and year_col:
-                pivot = df_all.groupby([dept_col, year_col]).size().unstack(fill_value=0)
-                st.dataframe(pivot, use_container_width=True)
-            else:
-                st.info("Department/Year columns not yet populated in the roster.")
-        else:
-            st.info("No enrollment data yet.")
-
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-
-        # Rep coverage table
-        st.markdown("###  Rep Coverage")
-        rep_map = {}
-        for r in reps_list:
-            d = str(r.get("dept", r.get("department", ""))).strip().upper()
-            y = str(r.get("year", "")).strip()
-            n = str(r.get("rep_name", r.get("name", ""))).strip()
-            rep_map[(d, y)] = n
-
-        coverage_rows = []
-        for code in get_dept_codes():
-            for year in YEARS:
-                rep = rep_map.get((code, year), "")
-                coverage_rows.append({
-                    "Department": dept_name(code),
-                    "Year":       year,
-                    "Rep":        rep if rep else " Not assigned",
-                    "Status":     "" if rep else ""
-                })
-        st.dataframe(pd.DataFrame(coverage_rows), use_container_width=True)
-
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-        st.markdown("### 📸 Super Admin Profile Photo")
-        with st.expander("Update Admin Photo", expanded=bool(not admin_avatar)):
-            new_admin_av = st.file_uploader("Upload Admin Profile Photo (JPG/PNG)", type=["png", "jpg", "jpeg", "webp"], key="sa_av_uploader")
-            sa_col1, sa_col2 = st.columns(2)
-            with sa_col1:
-                if st.button("💾 Save Admin Photo", key="save_sa_photo_btn", use_container_width=True, type="primary"):
-                    if new_admin_av:
-                        with st.spinner("Uploading admin avatar..."):
-                            url = db.upload_admin_avatar(new_admin_av.getvalue(), new_admin_av.type or "image/jpeg")
-                        if url:
-                            st.success("✅ Super Admin photo updated!")
-                            st.rerun()
-                        else:
-                            st.error("Failed to upload image.")
-                    else:
-                        st.warning("Please select an image file.")
-            with sa_col2:
-                if admin_avatar and st.button("🗑️ Remove Photo", key="del_sa_photo_btn", use_container_width=True):
-                    with st.spinner("Removing..."):
-                        db.delete_admin_avatar()
-                    st.success("Admin photo removed.")
-                    st.rerun()
-
-
-    # 
-    #  DEPARTMENTS
-    # 
-    with tabs[1]:
-        st.markdown("###  Manage Departments")
-        depts = get_departments()
-
-        #  Add / Edit 
-        st.markdown("####  Add New Department")
-        with st.form("add_dept_form", clear_on_submit=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                new_code = st.text_input("Department Code", placeholder="e.g. CVL",
-                    help="Short uppercase code — cannot be changed later")
-                new_name = st.text_input("Full Name", placeholder="e.g. Civil Engineering")
-            with col2:
-                new_courses = st.text_input("Course Codes (comma separated)",
-                    placeholder="e.g. BCIV,BSTR,BENV")
-
-            # Colour palette picker
-            st.markdown("**Pick a Colour:**")
-            palette_cols = st.columns(len(COLOUR_PALETTE))
-            selected_color = COLOUR_PALETTE[0]["hex"]
-            selected_light = COLOUR_PALETTE[0]["light"]
-            for pi, pal in enumerate(COLOUR_PALETTE):
-                with palette_cols[pi]:
+            cols = st.columns(len(get_departments()))
+            for ci, (code, info) in enumerate(get_departments().items()):
+                with cols[ci]:
+                    dept_count = 0
+                    if not df_all.empty:
+                        for col in ["Department", "department", "dept"]:
+                            if col in df_all.columns:
+                                dept_count = len(df_all[df_all[col] == code])
+                                break
+                    color = info["color"]
                     st.markdown(f"""
-                    <div style="width:28px;height:28px;border-radius:50%;
-                        background:{pal['hex']};margin:0 auto;
-                        border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.2);"
-                        title="{pal['name']}"></div>
-                    <div style="font-size:0.6rem;text-align:center;color:#94a3b8;margin-top:2px;">
-                        {pal['name']}
+                    <div class="dept-card" style="--dc:{color};">
+                        <div style="font-size:0.78rem;font-weight:700;color:#94a3b8;
+                            text-transform:uppercase;letter-spacing:1px;">{code}</div>
+                        <div style="font-size:1.4rem;font-weight:900;color:{color};
+                            margin:4px 0;">{dept_count}</div>
+                        <div style="font-size:0.78rem;color:#1e293b;">{info['name']}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
-            colour_names = [p["name"] for p in COLOUR_PALETTE]
-            chosen_colour = st.selectbox("Select Colour", colour_names, key="new_dept_colour")
-            chosen_pal    = next(p for p in COLOUR_PALETTE if p["name"] == chosen_colour)
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
 
-            if st.form_submit_button(" Add Department", use_container_width=True):
-                if not new_code or not new_name or not new_courses:
-                    st.warning("Please fill in all fields.")
-                elif new_code.strip().upper() in depts:
-                    st.error(f" Department code '{new_code.upper()}' already exists.")
-                else:
-                    with st.spinner("Adding..."):
-                        ok = db.add_department(
-                            new_code, new_name,
-                            chosen_pal["hex"], chosen_pal["light"], new_courses
-                        )
-                    if ok:
-                        st.success(f" Department '{new_name}' added!")
-                        st.rerun()
-                    else:
-                        st.error(" Failed. Check your GAS deployment.")
-
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-
-        #  Current departments 
-        st.markdown("####  Current Departments")
-        if not depts:
-            st.info("No departments loaded.")
-        else:
-            for didx, (code, info) in enumerate(depts.items()):
-                color   = info.get("color", "#1a56db")
-                lcolor  = info.get("light", "#dbeafe")
-                dname   = info.get("name",  code)
-                courses = ", ".join(info.get("courses", []))
-
-                # Count students in this dept
-                student_count = 0
-                if not df_all.empty:
-                    dcol = next((c for c in ["Department","department","dept"]
+            # Enrollment pivot table
+            st.markdown("###  Enrollment by Department × Year")
+            if not df_all.empty:
+                dept_col = next((c for c in ["Department","department","dept"]
                                  if c in df_all.columns), None)
-                    if dcol:
-                        student_count = len(df_all[df_all[dcol] == code])
+                year_col = next((c for c in ["Year","year"] if c in df_all.columns), None)
+                if dept_col and year_col:
+                    pivot = df_all.groupby([dept_col, year_col]).size().unstack(fill_value=0)
+                    st.dataframe(pivot, use_container_width=True)
+                else:
+                    st.info("Department/Year columns not yet populated in the roster.")
+            else:
+                st.info("No enrollment data yet.")
 
-                with st.expander(f" {dname} ({code}) — {student_count} students"):
-                    # Edit form
-                    with st.form(f"edit_dept_{code}"):
-                        e_name    = st.text_input("Full Name",    value=dname)
-                        e_courses = st.text_input("Course Codes", value=courses,
-                            help="Comma separated, e.g. BMEC,BBPE")
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
 
-                        st.markdown("**Change Colour:**")
-                        e_colour_name = st.selectbox(
-                            "Colour", [p["name"] for p in COLOUR_PALETTE],
-                            index=next((i for i,p in enumerate(COLOUR_PALETTE)
-                                        if p["hex"]==color), 0),
-                            key=f"edit_col_{code}"
-                        )
-                        e_pal = next(p for p in COLOUR_PALETTE if p["name"] == e_colour_name)
+            # Rep coverage table
+            st.markdown("###  Rep Coverage")
+            rep_map = {}
+            for r in reps_list:
+                d = str(r.get("dept", r.get("department", ""))).strip().upper()
+                y = str(r.get("year", "")).strip()
+                n = str(r.get("rep_name", r.get("name", ""))).strip()
+                rep_map[(d, y)] = n
 
-                        # Preview swatch
+            coverage_rows = []
+            for code in get_dept_codes():
+                for year in YEARS:
+                    rep = rep_map.get((code, year), "")
+                    coverage_rows.append({
+                        "Department": dept_name(code),
+                        "Year":       year,
+                        "Rep":        rep if rep else " Not assigned",
+                        "Status":     "" if rep else ""
+                    })
+            st.dataframe(pd.DataFrame(coverage_rows), use_container_width=True)
+
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+            st.markdown("### 📸 Super Admin Profile Photo")
+            with st.expander("Update Admin Photo", expanded=bool(not admin_avatar)):
+                new_admin_av = st.file_uploader("Upload Admin Profile Photo (JPG/PNG)", type=["png", "jpg", "jpeg", "webp"], key="sa_av_uploader")
+                sa_col1, sa_col2 = st.columns(2)
+                with sa_col1:
+                    if st.button("💾 Save Admin Photo", key="save_sa_photo_btn", use_container_width=True, type="primary"):
+                        if new_admin_av:
+                            with st.spinner("Uploading admin avatar..."):
+                                url = db.upload_admin_avatar(new_admin_av.getvalue(), new_admin_av.type or "image/jpeg")
+                            if url:
+                                st.success("✅ Super Admin photo updated!")
+                                st.rerun()
+                            else:
+                                st.error("Failed to upload image.")
+                        else:
+                            st.warning("Please select an image file.")
+                with sa_col2:
+                    if admin_avatar and st.button("🗑️ Remove Photo", key="del_sa_photo_btn", use_container_width=True):
+                        with st.spinner("Removing..."):
+                            db.delete_admin_avatar()
+                        st.success("Admin photo removed.")
+                        st.rerun()
+
+
+        # 
+        #  DEPARTMENTS
+        # 
+
+        with sub_depts:
+            st.markdown("###  Manage Departments")
+            depts = get_departments()
+
+            #  Add / Edit 
+            st.markdown("####  Add New Department")
+            with st.form("add_dept_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    new_code = st.text_input("Department Code", placeholder="e.g. CVL",
+                        help="Short uppercase code — cannot be changed later")
+                    new_name = st.text_input("Full Name", placeholder="e.g. Civil Engineering")
+                with col2:
+                    new_courses = st.text_input("Course Codes (comma separated)",
+                        placeholder="e.g. BCIV,BSTR,BENV")
+
+                # Colour palette picker
+                st.markdown("**Pick a Colour:**")
+                palette_cols = st.columns(len(COLOUR_PALETTE))
+                selected_color = COLOUR_PALETTE[0]["hex"]
+                selected_light = COLOUR_PALETTE[0]["light"]
+                for pi, pal in enumerate(COLOUR_PALETTE):
+                    with palette_cols[pi]:
                         st.markdown(f"""
-                        <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
-                            <div style="width:24px;height:24px;border-radius:50%;
-                                background:{e_pal['hex']};border:2px solid white;
-                                box-shadow:0 1px 4px rgba(0,0,0,0.2);"></div>
-                            <span style="font-size:0.85rem;color:#475569;">
-                                Preview: {e_pal['name']}
-                            </span>
+                        <div style="width:28px;height:28px;border-radius:50%;
+                            background:{pal['hex']};margin:0 auto;
+                            border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.2);"
+                            title="{pal['name']}"></div>
+                        <div style="font-size:0.6rem;text-align:center;color:#94a3b8;margin-top:2px;">
+                            {pal['name']}
                         </div>
                         """, unsafe_allow_html=True)
 
-                        sc1, sc2 = st.columns(2)
-                        with sc1:
-                            if st.form_submit_button(" Save Changes", use_container_width=True):
-                                with st.spinner("Saving..."):
-                                    ok = db.update_department(
-                                        code, e_name, e_pal["hex"],
-                                        e_pal["light"], e_courses
-                                    )
+                colour_names = [p["name"] for p in COLOUR_PALETTE]
+                chosen_colour = st.selectbox("Select Colour", colour_names, key="new_dept_colour")
+                chosen_pal    = next(p for p in COLOUR_PALETTE if p["name"] == chosen_colour)
+
+                if st.form_submit_button(" Add Department", use_container_width=True):
+                    if not new_code or not new_name or not new_courses:
+                        st.warning("Please fill in all fields.")
+                    elif new_code.strip().upper() in depts:
+                        st.error(f" Department code '{new_code.upper()}' already exists.")
+                    else:
+                        with st.spinner("Adding..."):
+                            ok = db.add_department(
+                                new_code, new_name,
+                                chosen_pal["hex"], chosen_pal["light"], new_courses
+                            )
+                        if ok:
+                            st.success(f" Department '{new_name}' added!")
+                            st.rerun()
+                        else:
+                            st.error(" Failed. Check your GAS deployment.")
+
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+
+            #  Current departments 
+            st.markdown("####  Current Departments")
+            if not depts:
+                st.info("No departments loaded.")
+            else:
+                for didx, (code, info) in enumerate(depts.items()):
+                    color   = info.get("color", "#1a56db")
+                    lcolor  = info.get("light", "#dbeafe")
+                    dname   = info.get("name",  code)
+                    courses = ", ".join(info.get("courses", []))
+
+                    # Count students in this dept
+                    student_count = 0
+                    if not df_all.empty:
+                        dcol = next((c for c in ["Department","department","dept"]
+                                     if c in df_all.columns), None)
+                        if dcol:
+                            student_count = len(df_all[df_all[dcol] == code])
+
+                    with st.expander(f" {dname} ({code}) — {student_count} students"):
+                        # Edit form
+                        with st.form(f"edit_dept_{code}"):
+                            e_name    = st.text_input("Full Name",    value=dname)
+                            e_courses = st.text_input("Course Codes", value=courses,
+                                help="Comma separated, e.g. BMEC,BBPE")
+
+                            st.markdown("**Change Colour:**")
+                            e_colour_name = st.selectbox(
+                                "Colour", [p["name"] for p in COLOUR_PALETTE],
+                                index=next((i for i,p in enumerate(COLOUR_PALETTE)
+                                            if p["hex"]==color), 0),
+                                key=f"edit_col_{code}"
+                            )
+                            e_pal = next(p for p in COLOUR_PALETTE if p["name"] == e_colour_name)
+
+                            # Preview swatch
+                            st.markdown(f"""
+                            <div style="display:flex;align-items:center;gap:10px;margin:8px 0;">
+                                <div style="width:24px;height:24px;border-radius:50%;
+                                    background:{e_pal['hex']};border:2px solid white;
+                                    box-shadow:0 1px 4px rgba(0,0,0,0.2);"></div>
+                                <span style="font-size:0.85rem;color:#475569;">
+                                    Preview: {e_pal['name']}
+                                </span>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                            sc1, sc2 = st.columns(2)
+                            with sc1:
+                                if st.form_submit_button(" Save Changes", use_container_width=True):
+                                    with st.spinner("Saving..."):
+                                        ok = db.update_department(
+                                            code, e_name, e_pal["hex"],
+                                            e_pal["light"], e_courses
+                                        )
+                                    if ok:
+                                        st.success(" Updated!")
+                                        st.rerun()
+                                    else:
+                                        st.error(" Failed.")
+                            with sc2:
+                                if st.form_submit_button(" Delete", use_container_width=True,
+                                                          type="secondary"):
+                                    st.session_state[f"confirm_del_dept_{code}"] = True
+                                    st.rerun()
+
+                        # Confirm delete
+                        if st.session_state.get(f"confirm_del_dept_{code}"):
+                            if student_count > 0:
+                                st.error(
+                                    f" Cannot delete **{dname}** — "
+                                    f"**{student_count} student(s)** are registered here. "
+                                    f"Transfer or remove all {code} students first."
+                                )
+                                if st.button("OK", key=f"ok_block_{code}"):
+                                    st.session_state[f"confirm_del_dept_{code}"] = False
+                                    st.rerun()
+                            else:
+                                st.warning(f" Delete **{dname} ({code})**? This cannot be undone.")
+                                da, db_ = st.columns(2)
+                                with da:
+                                    if st.button(" Yes, delete", key=f"yes_dept_{code}"):
+                                        with st.spinner("Deleting..."):
+                                            result = db.delete_department(code)
+                                        if result.get("status") == "success":
+                                            st.session_state[f"confirm_del_dept_{code}"] = False
+                                            st.success(f" {dname} deleted.")
+                                            st.rerun()
+                                        else:
+                                            st.error(f" {result.get('message','Failed')}")
+                                with db_:
+                                    if st.button(" Cancel", key=f"no_dept_{code}"):
+                                        st.session_state[f"confirm_del_dept_{code}"] = False
+                                        st.rerun()
+
+        # 
+        #  MANAGE REPS
+        # 
+
+
+    # 2. REPS & STUDENTS
+    with tab_people:
+        sub_reps, sub_students = st.tabs([
+            f"🎖️ Class Reps ({len(reps_list)})",
+            f"🎓 Student Database ({total_students})"
+        ])
+        with sub_reps:
+            st.markdown("###  Class Rep Accounts")
+            st.info(
+                "Create or update a rep account here. "
+                "The rep uses their department, year and password to log in — "
+                "no code changes needed."
+            )
+
+            #  Create / Update rep 
+            st.markdown("####  Create or Update Rep Account")
+            with st.form("assign_rep_form", clear_on_submit=True):
+                dept_opts = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
+                d_label   = st.selectbox("Department", list(dept_opts.keys()), key="ar_dept")
+                sel_dept  = dept_opts[d_label]
+                sel_year  = st.selectbox("Year Group", YEARS, key="ar_year")
+
+                rep_name  = st.text_input("Rep Full Name",    placeholder="e.g., Alice Nakamura")
+                rep_reg   = st.text_input("Rep Reg Number",   placeholder="e.g., 25/U/0001/PS")
+                rep_email = st.text_input("Rep Email Address", placeholder="e.g., alice@gmail.com",
+                                           help="Used to email the rep whenever a student sends new feedback. Optional but recommended.")
+                rep_pw    = st.text_input(
+                    "Set Password",
+                    type="password",
+                    placeholder="Min 6 characters",
+                    help="The rep will use this to log in. They can change it later."
+                )
+                rep_pw2   = st.text_input("Confirm Password", type="password")
+
+                submitted = st.form_submit_button(" Save Rep Account", use_container_width=True)
+
+                if submitted:
+                    if not rep_name or not rep_reg or not rep_pw:
+                        st.warning("Please fill in all fields.")
+                    elif rep_pw != rep_pw2:
+                        st.error(" Passwords do not match.")
+                    elif len(rep_pw) < 6:
+                        st.error(" Password must be at least 6 characters.")
+                    elif rep_email and "@" not in rep_email:
+                        st.error(" Please enter a valid email address, or leave it blank.")
+                    else:
+                        with st.spinner("Saving..."):
+                            ok = db.assign_rep(sel_dept, sel_year, rep_name, rep_reg, rep_pw, email=rep_email)
+                        if ok:
+                            st.success(
+                                f" Rep account saved: **{rep_name}** → "
+                                f"{dept_name(sel_dept)} — {sel_year}"
+                            )
+                            st.rerun()
+                        else:
+                            st.error(" Failed to save. Please check the email format and try again.")
+
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+
+            #  Current rep accounts 
+            st.markdown("####  Current Rep Accounts")
+            if not reps_list:
+                st.info("No rep accounts created yet.")
+            else:
+                for ridx, rep in enumerate(reps_list):
+                    r_dept_code = str(rep.get("dept", rep.get("department", ""))).strip().upper()
+                    r_year      = str(rep.get("year", "")).strip()
+                    r_name      = str(rep.get("rep_name", rep.get("name", ""))).strip()
+                    r_reg       = str(rep.get("rep_reg",  rep.get("reg",  ""))).strip()
+                    r_has_pw    = rep.get("has_password", False)
+                    color       = dept_color(r_dept_code) if r_dept_code in get_departments() else ADMIN_ACCENT
+
+                    col1, col2 = st.columns([4, 1])
+                    with col1:
+                        rep_av_url = rep.get("avatar_url", "") or ""
+                        rep_card_av = render_avatar_html(rep_av_url, r_name, size=42, color=color, light=dept_light(r_dept_code) if r_dept_code in get_departments() else ADMIN_LIGHT)
+                        st.markdown(f"""
+                        <div class="rep-row" style="border-left-color:{color};display:flex;align-items:center;gap:14px;">
+                            {rep_card_av}
+                            <div>
+                                <div class="rr-info">
+                                     {r_name}
+                                    <span style="background:{dept_light(r_dept_code) if r_dept_code in get_departments() else ADMIN_LIGHT};
+                                        color:{color};font-size:0.7rem;font-weight:700;
+                                        padding:2px 8px;border-radius:10px;margin-left:8px;">
+                                        {r_dept_code} · {r_year}
+                                    </span>
+                                </div>
+                                <div class="rr-meta">
+                                    {dept_name(r_dept_code)} &nbsp;·&nbsp;
+                                    Reg: {r_reg} &nbsp;·&nbsp;
+                                    Password: {' Set' if r_has_pw else ' Not set'}
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    with col2:
+                        if st.button(" Remove", key=f"del_rep_{ridx}"):
+                            st.session_state[f"confirm_del_rep_{ridx}"] = True
+                            st.rerun()
+
+                    # Confirm delete
+                    if st.session_state.get(f"confirm_del_rep_{ridx}"):
+                        st.warning(f" Remove **{r_name}** ({r_dept_code} {r_year})? This cannot be undone.")
+                        ca, cb = st.columns(2)
+                        with ca:
+                            if st.button(" Yes, remove", key=f"yes_del_{ridx}"):
+                                with st.spinner("Removing..."):
+                                    ok = db.delete_rep(r_dept_code, r_year)
                                 if ok:
-                                    st.success(" Updated!")
+                                    st.session_state[f"confirm_del_rep_{ridx}"] = False
+                                    st.success(" Rep account removed.")
                                     st.rerun()
                                 else:
                                     st.error(" Failed.")
-                        with sc2:
-                            if st.form_submit_button(" Delete", use_container_width=True,
-                                                      type="secondary"):
-                                st.session_state[f"confirm_del_dept_{code}"] = True
-                                st.rerun()
-
-                    # Confirm delete
-                    if st.session_state.get(f"confirm_del_dept_{code}"):
-                        if student_count > 0:
-                            st.error(
-                                f" Cannot delete **{dname}** — "
-                                f"**{student_count} student(s)** are registered here. "
-                                f"Transfer or remove all {code} students first."
-                            )
-                            if st.button("OK", key=f"ok_block_{code}"):
-                                st.session_state[f"confirm_del_dept_{code}"] = False
-                                st.rerun()
-                        else:
-                            st.warning(f" Delete **{dname} ({code})**? This cannot be undone.")
-                            da, db_ = st.columns(2)
-                            with da:
-                                if st.button(" Yes, delete", key=f"yes_dept_{code}"):
-                                    with st.spinner("Deleting..."):
-                                        result = db.delete_department(code)
-                                    if result.get("status") == "success":
-                                        st.session_state[f"confirm_del_dept_{code}"] = False
-                                        st.success(f" {dname} deleted.")
-                                        st.rerun()
-                                    else:
-                                        st.error(f" {result.get('message','Failed')}")
-                            with db_:
-                                if st.button(" Cancel", key=f"no_dept_{code}"):
-                                    st.session_state[f"confirm_del_dept_{code}"] = False
-                                    st.rerun()
-
-    # 
-    #  MANAGE REPS
-    # 
-    with tabs[2]:
-        st.markdown("###  Class Rep Accounts")
-        st.info(
-            "Create or update a rep account here. "
-            "The rep uses their department, year and password to log in — "
-            "no code changes needed."
-        )
-
-        #  Create / Update rep 
-        st.markdown("####  Create or Update Rep Account")
-        with st.form("assign_rep_form", clear_on_submit=True):
-            dept_opts = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
-            d_label   = st.selectbox("Department", list(dept_opts.keys()), key="ar_dept")
-            sel_dept  = dept_opts[d_label]
-            sel_year  = st.selectbox("Year Group", YEARS, key="ar_year")
-
-            rep_name  = st.text_input("Rep Full Name",    placeholder="e.g., Alice Nakamura")
-            rep_reg   = st.text_input("Rep Reg Number",   placeholder="e.g., 25/U/0001/PS")
-            rep_email = st.text_input("Rep Email Address", placeholder="e.g., alice@gmail.com",
-                                       help="Used to email the rep whenever a student sends new feedback. Optional but recommended.")
-            rep_pw    = st.text_input(
-                "Set Password",
-                type="password",
-                placeholder="Min 6 characters",
-                help="The rep will use this to log in. They can change it later."
-            )
-            rep_pw2   = st.text_input("Confirm Password", type="password")
-
-            submitted = st.form_submit_button(" Save Rep Account", use_container_width=True)
-
-            if submitted:
-                if not rep_name or not rep_reg or not rep_pw:
-                    st.warning("Please fill in all fields.")
-                elif rep_pw != rep_pw2:
-                    st.error(" Passwords do not match.")
-                elif len(rep_pw) < 6:
-                    st.error(" Password must be at least 6 characters.")
-                elif rep_email and "@" not in rep_email:
-                    st.error(" Please enter a valid email address, or leave it blank.")
-                else:
-                    with st.spinner("Saving..."):
-                        ok = db.assign_rep(sel_dept, sel_year, rep_name, rep_reg, rep_pw, email=rep_email)
-                    if ok:
-                        st.success(
-                            f" Rep account saved: **{rep_name}** → "
-                            f"{dept_name(sel_dept)} — {sel_year}"
-                        )
-                        st.rerun()
-                    else:
-                        st.error(" Failed to save. Please check the email format and try again.")
-
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-
-        #  Current rep accounts 
-        st.markdown("####  Current Rep Accounts")
-        if not reps_list:
-            st.info("No rep accounts created yet.")
-        else:
-            for ridx, rep in enumerate(reps_list):
-                r_dept_code = str(rep.get("dept", rep.get("department", ""))).strip().upper()
-                r_year      = str(rep.get("year", "")).strip()
-                r_name      = str(rep.get("rep_name", rep.get("name", ""))).strip()
-                r_reg       = str(rep.get("rep_reg",  rep.get("reg",  ""))).strip()
-                r_has_pw    = rep.get("has_password", False)
-                color       = dept_color(r_dept_code) if r_dept_code in get_departments() else ADMIN_ACCENT
-
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    rep_av_url = rep.get("avatar_url", "") or ""
-                    rep_card_av = render_avatar_html(rep_av_url, r_name, size=42, color=color, light=dept_light(r_dept_code) if r_dept_code in get_departments() else ADMIN_LIGHT)
-                    st.markdown(f"""
-                    <div class="rep-row" style="border-left-color:{color};display:flex;align-items:center;gap:14px;">
-                        {rep_card_av}
-                        <div>
-                            <div class="rr-info">
-                                 {r_name}
-                                <span style="background:{dept_light(r_dept_code) if r_dept_code in get_departments() else ADMIN_LIGHT};
-                                    color:{color};font-size:0.7rem;font-weight:700;
-                                    padding:2px 8px;border-radius:10px;margin-left:8px;">
-                                    {r_dept_code} · {r_year}
-                                </span>
-                            </div>
-                            <div class="rr-meta">
-                                {dept_name(r_dept_code)} &nbsp;·&nbsp;
-                                Reg: {r_reg} &nbsp;·&nbsp;
-                                Password: {' Set' if r_has_pw else ' Not set'}
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                with col2:
-                    if st.button(" Remove", key=f"del_rep_{ridx}"):
-                        st.session_state[f"confirm_del_rep_{ridx}"] = True
-                        st.rerun()
-
-                # Confirm delete
-                if st.session_state.get(f"confirm_del_rep_{ridx}"):
-                    st.warning(f" Remove **{r_name}** ({r_dept_code} {r_year})? This cannot be undone.")
-                    ca, cb = st.columns(2)
-                    with ca:
-                        if st.button(" Yes, remove", key=f"yes_del_{ridx}"):
-                            with st.spinner("Removing..."):
-                                ok = db.delete_rep(r_dept_code, r_year)
-                            if ok:
+                        with cb:
+                            if st.button(" Cancel", key=f"no_del_{ridx}"):
                                 st.session_state[f"confirm_del_rep_{ridx}"] = False
-                                st.success(" Rep account removed.")
                                 st.rerun()
-                            else:
-                                st.error(" Failed.")
-                    with cb:
-                        if st.button(" Cancel", key=f"no_del_{ridx}"):
-                            st.session_state[f"confirm_del_rep_{ridx}"] = False
-                            st.rerun()
 
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
 
-        #  Reset a rep's password 
-        st.markdown("####  Reset a Rep's Password")
-        st.caption("Use this if a rep is locked out and needs their password reset.")
+            #  Reset a rep's password 
+            st.markdown("####  Reset a Rep's Password")
+            st.caption("Use this if a rep is locked out and needs their password reset.")
 
-        if reps_list:
-            rep_labels = {
-                f"{r.get('rep_name','')} — {r.get('dept','')} {r.get('year','')}": r
-                for r in reps_list
-            }
-            sel_rep_label = st.selectbox(
-                "Select Rep", ["— Select —"] + list(rep_labels.keys()),
-                key="reset_pw_sel"
-            )
-            if sel_rep_label != "— Select —":
-                sel_rep = rep_labels[sel_rep_label]
-                with st.form("reset_pw_form", clear_on_submit=True):
-                    new_pw  = st.text_input("New Password",      type="password")
-                    new_pw2 = st.text_input("Confirm Password",  type="password")
-                    if st.form_submit_button(" Reset Password", use_container_width=True):
-                        if not new_pw:
-                            st.warning("Please enter a new password.")
-                        elif new_pw != new_pw2:
-                            st.error(" Passwords do not match.")
-                        elif len(new_pw) < 6:
-                            st.error(" Must be at least 6 characters.")
-                        else:
-                            # Admin resets by re-assigning with new password
-                            # We use assignRep which updates existing record
-                            with st.spinner("Resetting..."):
-                                ok = db.assign_rep(
-                                    dept     = str(sel_rep.get("dept","")).upper(),
-                                    year     = str(sel_rep.get("year","")),
-                                    rep_name = str(sel_rep.get("rep_name","")),
-                                    rep_reg  = str(sel_rep.get("rep_reg","")),
-                                    password = new_pw
-                                )
-                            if ok:
-                                st.success(f" Password reset for {sel_rep.get('rep_name','')}.")
-                            else:
-                                st.error(" Reset failed.")
-        else:
-            st.info("No rep accounts to reset yet.")
-
-    # 
-    #  BROADCAST
-    # 
-    with tabs[3]:
-        st.markdown("###  Broadcast Announcement")
-        st.info(
-            "Broadcasts appear for **all students** across all departments and years, "
-            "marked as  BROADCAST."
-        )
-
-        with st.form("broadcast_form", clear_on_submit=True):
-            b_text     = st.text_area("Announcement text", height=140)
-            b_priority = st.selectbox("Priority", ["Normal", "Urgent"])
-            c1, c2     = st.columns(2)
-            with c1: post_btn  = st.form_submit_button(" Broadcast Now",  use_container_width=True)
-            with c2: draft_btn = st.form_submit_button(" Draft with AI", use_container_width=True)
-
-            if draft_btn and b_text.strip():
-                with st.spinner("Drafting..."):
-                    st.session_state["admin_draft"] = ai_admin.generate_broadcast(
-                        b_text, b_priority
-                    )
-            if post_btn:
-                if b_text.strip():
-                    if db.broadcast_announcement(b_text, b_priority):
-                        st.success(" Broadcast sent to all departments!")
-                        st.rerun()
-                    else:
-                        st.error(" Failed.")
-                else:
-                    st.warning("Please enter announcement text.")
-
-        if st.session_state.get("admin_draft"):
-            st.markdown("**AI Draft — edit before posting:**")
-            edited = st.text_area("", value=st.session_state["admin_draft"], height=150)
-            pri2   = st.selectbox("Priority", ["Normal", "Urgent"], key="bc_pri2")
-            if st.button(" Post this Broadcast"):
-                if db.broadcast_announcement(edited, pri2):
-                    st.session_state["admin_draft"] = ""
-                    st.success(" Broadcast posted!")
-                    st.rerun()
-
-        st.markdown("---")
-        st.markdown("####  Recent Broadcasts")
-        broadcasts = [
-            a for a in all_anns
-            if isinstance(a, dict) and a.get("dept", "") == "ALL"
-        ]
-        if broadcasts:
-            for ann in broadcasts[:10]:
-                st.markdown(f"""
-                <div style="background:white;border-radius:10px;padding:12px 16px;
-                    margin-bottom:8px;border:1px solid #e2e8f7;
-                    border-left:4px solid {ADMIN_ACCENT};">
-                    <div style="font-size:0.75rem;color:#94a3b8;">
-                         {ann.get('timestamp','')} ·  ALL DEPTS
-                    </div>
-                    <div style="margin-top:4px;">{ann.get('text','')}</div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.info("No broadcasts sent yet.")
-
-    # 
-    #  ALL STUDENTS
-    # 
-    with tabs[4]:
-        st.markdown("###  All Registered Students")
-        if df_all.empty:
-            st.info("No students registered yet.")
-        else:
-            c1, c2, c3 = st.columns(3)
-            with c1: f_dept   = st.selectbox("Dept",   ["ALL"] + get_dept_codes(), key="f_dept")
-            with c2: f_year   = st.selectbox("Year",   ["ALL"] + YEARS,      key="f_year")
-            with c3: f_search = st.text_input("Search name/reg",              key="f_search")
-
-            df_show = df_all.copy()
-
-            # Normalise column names for filtering
-            col_rename = {}
-            for c in df_show.columns:
-                if c.lower() in ("department", "dept", "dep"):
-                    col_rename[c] = "Department"
-                elif c.lower() == "year":
-                    col_rename[c] = "Year"
-            df_show = df_show.rename(columns=col_rename)
-
-            if f_dept != "ALL" and "Department" in df_show.columns:
-                df_show = df_show[df_show["Department"] == f_dept]
-            if f_year != "ALL" and "Year" in df_show.columns:
-                df_show = df_show[df_show["Year"] == f_year]
-            if f_search:
-                mask = (
-                    df_show["Student Name"].str.contains(f_search, case=False, na=False) |
-                    df_show["Reg Number"].str.contains(f_search,   case=False, na=False)
+            if reps_list:
+                rep_labels = {
+                    f"{r.get('rep_name','')} — {r.get('dept','')} {r.get('year','')}": r
+                    for r in reps_list
+                }
+                sel_rep_label = st.selectbox(
+                    "Select Rep", ["— Select —"] + list(rep_labels.keys()),
+                    key="reset_pw_sel"
                 )
-                df_show = df_show[mask]
+                if sel_rep_label != "— Select —":
+                    sel_rep = rep_labels[sel_rep_label]
+                    with st.form("reset_pw_form", clear_on_submit=True):
+                        new_pw  = st.text_input("New Password",      type="password")
+                        new_pw2 = st.text_input("Confirm Password",  type="password")
+                        if st.form_submit_button(" Reset Password", use_container_width=True):
+                            if not new_pw:
+                                st.warning("Please enter a new password.")
+                            elif new_pw != new_pw2:
+                                st.error(" Passwords do not match.")
+                            elif len(new_pw) < 6:
+                                st.error(" Must be at least 6 characters.")
+                            else:
+                                # Admin resets by re-assigning with new password
+                                # We use assignRep which updates existing record
+                                with st.spinner("Resetting..."):
+                                    ok = db.assign_rep(
+                                        dept     = str(sel_rep.get("dept","")).upper(),
+                                        year     = str(sel_rep.get("year","")),
+                                        rep_name = str(sel_rep.get("rep_name","")),
+                                        rep_reg  = str(sel_rep.get("rep_reg","")),
+                                        password = new_pw
+                                    )
+                                if ok:
+                                    st.success(f" Password reset for {sel_rep.get('rep_name','')}.")
+                                else:
+                                    st.error(" Reset failed.")
+            else:
+                st.info("No rep accounts to reset yet.")
 
-            st.caption(f"Showing {len(df_show)} of {total_students} students")
-            st.dataframe(df_show, use_container_width=True)
+        # 
+        #  BROADCAST
+        # 
 
-            csv = df_show.to_csv(index=False)
-            st.download_button(
-                " Export to CSV", data=csv,
-                file_name="students.csv", mime="text/csv"
+        with sub_students:
+            st.markdown("###  All Registered Students")
+            if df_all.empty:
+                st.info("No students registered yet.")
+            else:
+                c1, c2, c3 = st.columns(3)
+                with c1: f_dept   = st.selectbox("Dept",   ["ALL"] + get_dept_codes(), key="f_dept")
+                with c2: f_year   = st.selectbox("Year",   ["ALL"] + YEARS,      key="f_year")
+                with c3: f_search = st.text_input("Search name/reg",              key="f_search")
+
+                df_show = df_all.copy()
+
+                # Normalise column names for filtering
+                col_rename = {}
+                for c in df_show.columns:
+                    if c.lower() in ("department", "dept", "dep"):
+                        col_rename[c] = "Department"
+                    elif c.lower() == "year":
+                        col_rename[c] = "Year"
+                df_show = df_show.rename(columns=col_rename)
+
+                if f_dept != "ALL" and "Department" in df_show.columns:
+                    df_show = df_show[df_show["Department"] == f_dept]
+                if f_year != "ALL" and "Year" in df_show.columns:
+                    df_show = df_show[df_show["Year"] == f_year]
+                if f_search:
+                    mask = (
+                        df_show["Student Name"].str.contains(f_search, case=False, na=False) |
+                        df_show["Reg Number"].str.contains(f_search,   case=False, na=False)
+                    )
+                    df_show = df_show[mask]
+
+                st.caption(f"Showing {len(df_show)} of {total_students} students")
+                st.dataframe(df_show, use_container_width=True)
+
+                csv = df_show.to_csv(index=False)
+                st.download_button(
+                    " Export to CSV", data=csv,
+                    file_name="students.csv", mime="text/csv"
+                )
+
+        # 
+        #  ALL FEEDBACK
+        # 
+
+
+    # 3. BROADCAST & FEEDBACK
+    with tab_broadcast:
+        sub_broad, sub_feed = st.tabs([
+            "📢 University Broadcast",
+            f"💬 Student Feedback ({total_feedback})"
+        ])
+        with sub_broad:
+            st.markdown("###  Broadcast Announcement")
+            st.info(
+                "Broadcasts appear for **all students** across all departments and years, "
+                "marked as  BROADCAST."
             )
 
-    # 
-    #  ALL FEEDBACK
-    # 
-    with tabs[5]:
-        st.markdown("###  All Student Feedback")
-        if not all_feedback:
-            st.info("No feedback messages yet.")
-        else:
-            f_dept2 = st.selectbox("Filter by Dept", ["ALL"] + get_dept_codes(), key="fb_dept")
+            with st.form("broadcast_form", clear_on_submit=True):
+                b_text     = st.text_area("Announcement text", height=140)
+                b_priority = st.selectbox("Priority", ["Normal", "Urgent"])
+                c1, c2     = st.columns(2)
+                with c1: post_btn  = st.form_submit_button(" Broadcast Now",  use_container_width=True)
+                with c2: draft_btn = st.form_submit_button(" Draft with AI", use_container_width=True)
 
-            filtered_fb = all_feedback
-            if f_dept2 != "ALL":
-                filtered_fb = [
-                    f for f in all_feedback
-                    if isinstance(f, list) and len(f) >= 6
-                    and str(f[5]).strip().upper() == f_dept2
-                ]
+                if draft_btn and b_text.strip():
+                    with st.spinner("Drafting..."):
+                        st.session_state["admin_draft"] = ai_admin.generate_broadcast(
+                            b_text, b_priority
+                        )
+                if post_btn:
+                    if b_text.strip():
+                        if db.broadcast_announcement(b_text, b_priority):
+                            st.success(" Broadcast sent to all departments!")
+                            st.rerun()
+                        else:
+                            st.error(" Failed.")
+                    else:
+                        st.warning("Please enter announcement text.")
 
-            st.caption(f"{len(filtered_fb)} messages")
+            if st.session_state.get("admin_draft"):
+                st.markdown("**AI Draft — edit before posting:**")
+                edited = st.text_area("", value=st.session_state["admin_draft"], height=150)
+                pri2   = st.selectbox("Priority", ["Normal", "Urgent"], key="bc_pri2")
+                if st.button(" Post this Broadcast"):
+                    if db.broadcast_announcement(edited, pri2):
+                        st.session_state["admin_draft"] = ""
+                        st.success(" Broadcast posted!")
+                        st.rerun()
 
-            for fb in filtered_fb[:50]:
-                if not (isinstance(fb, list) and len(fb) >= 5):
-                    continue
-                ts       = str(fb[0])
-                reg      = str(fb[1])
-                name     = str(fb[2])
-                status   = str(fb[3])
-                msg      = str(fb[4])
-                dept_fb  = str(fb[5]).strip().upper() if len(fb) > 5 else "?"
-                year_fb  = str(fb[6]).strip()         if len(fb) > 6 else "?"
-                sc       = "#16a34a" if status.lower() == "reviewed" else "#d4820a"
-                color    = dept_color(dept_fb) if dept_fb in get_departments() else ADMIN_ACCENT
-
-                st.markdown(f"""
-                <div style="background:white;border-radius:10px;padding:12px 16px;
-                    margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {color};">
-                    <div style="font-size:0.75rem;color:#94a3b8;">
-                         <strong>{name}</strong> · {reg}
-                        &nbsp;·&nbsp;
-                        <span style="background:{dept_color(dept_fb) if dept_fb in get_departments() else '#e2e8f7'};
-                            color:white;font-size:0.68rem;font-weight:700;
-                            padding:1px 7px;border-radius:8px;">{dept_fb}</span>
-                        {year_fb} ·  {ts}
-                        &nbsp;<span style="color:{sc};font-weight:600;">{status}</span>
-                    </div>
-                    <div style="margin-top:6px;font-size:0.9rem;">{msg}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-    # 
-    #  AI ENGINE
-    # 
-    with tabs[6]:
-        st.markdown("###  AI Engine Control Centre")
-        st.markdown(
-            f'<div style="background:{ADMIN_LIGHT};border:1px solid {ADMIN_ACCENT}44;'
-            f'border-radius:10px;padding:10px 16px;font-size:0.88rem;color:{ADMIN_ACCENT};'
-            f'font-weight:600;margin-bottom:16px;">'
-            f' Full visibility and control over all AI providers, keys and features.</div>',
-            unsafe_allow_html=True
-        )
-
-        ai_engine_tabs = st.tabs([
-            " Provider Status",
-            " Key Management",
-            " Feature Controls",
-            " Insights",
-            " Feedback Summary",
-        ])
-
-        # 
-        #  PROVIDER STATUS
-        # 
-        with ai_engine_tabs[0]:
-            st.markdown("####  AI Provider Status")
-            st.caption("Live status of all configured AI providers and keys.")
-
-            # Load keys from secrets
-            gemini_keys = []
-            for i in range(1, 20):
-                k = st.secrets.get(f"GEMINI_KEY_{i}", "")
-                if k:
-                    gemini_keys.append((f"Gemini Key {i}", k))
-
-            groq_key      = st.secrets.get("GROQ_API_KEY", "")
-            mistral_key   = st.secrets.get("MISTRAL_API_KEY", "")
-            hf_token      = st.secrets.get("HUGGINGFACE_TOKEN", "")
-            cf_token      = st.secrets.get("CLOUDFLARE_TOKEN", "")
-            cf_account    = st.secrets.get("CLOUDFLARE_ACCOUNT_ID", "")
-
-            st.markdown("** Gemini Keys**")
-            if gemini_keys:
-                for label, key in gemini_keys:
-                    masked = key[:8] + "..." + key[-4:]
+            st.markdown("---")
+            st.markdown("####  Recent Broadcasts")
+            broadcasts = [
+                a for a in all_anns
+                if isinstance(a, dict) and a.get("dept", "") == "ALL"
+            ]
+            if broadcasts:
+                for ann in broadcasts[:10]:
                     st.markdown(f"""
                     <div style="background:white;border-radius:10px;padding:12px 16px;
-                        margin-bottom:6px;border:1px solid #e2e8f7;
-                        border-left:4px solid #16a34a;
-                        display:flex;align-items:center;justify-content:space-between;">
-                        <div>
-                            <span style="font-weight:700;color:#1e293b;"> {label}</span>
-                            <span style="font-size:0.78rem;color:#94a3b8;margin-left:10px;">
-                                {masked}
-                            </span>
+                        margin-bottom:8px;border:1px solid #e2e8f7;
+                        border-left:4px solid {ADMIN_ACCENT};">
+                        <div style="font-size:0.75rem;color:#94a3b8;">
+                             {ann.get('timestamp','')} ·  ALL DEPTS
                         </div>
-                        <span style="background:#dcfce7;color:#16a34a;font-size:0.7rem;
-                            font-weight:700;padding:2px 10px;border-radius:10px;">ACTIVE</span>
+                        <div style="margin-top:4px;">{ann.get('text','')}</div>
                     </div>
                     """, unsafe_allow_html=True)
             else:
-                st.error(" No Gemini keys configured in secrets.toml")
+                st.info("No broadcasts sent yet.")
 
-            st.markdown("** Fallback Providers**")
-            providers = [
-                ("Groq",        bool(groq_key),    "GROQ_API_KEY"),
-                ("Mistral",     bool(mistral_key),  "MISTRAL_API_KEY"),
-                ("HuggingFace", bool(hf_token),     "HUGGINGFACE_TOKEN"),
-                ("Cloudflare",  bool(cf_token and cf_account), "CLOUDFLARE_TOKEN + CLOUDFLARE_ACCOUNT_ID"),
-            ]
-            for pname, is_set, secret_key in providers:
-                color  = "#16a34a" if is_set else "#dc2626"
-                bg     = "#dcfce7" if is_set else "#fee2e2"
-                status = " CONFIGURED" if is_set else " NOT SET"
-                st.markdown(f"""
-                <div style="background:white;border-radius:10px;padding:12px 16px;
-                    margin-bottom:6px;border:1px solid #e2e8f7;border-left:4px solid {color};
-                    display:flex;align-items:center;justify-content:space-between;">
-                    <div>
-                        <span style="font-weight:700;color:#1e293b;">{pname}</span>
-                        <span style="font-size:0.75rem;color:#94a3b8;margin-left:8px;">
-                            {secret_key}
-                        </span>
+        # 
+        #  ALL STUDENTS
+        # 
+
+        with sub_feed:
+            st.markdown("###  All Student Feedback")
+            if not all_feedback:
+                st.info("No feedback messages yet.")
+            else:
+                f_dept2 = st.selectbox("Filter by Dept", ["ALL"] + get_dept_codes(), key="fb_dept")
+
+                filtered_fb = all_feedback
+                if f_dept2 != "ALL":
+                    filtered_fb = [
+                        f for f in all_feedback
+                        if isinstance(f, list) and len(f) >= 6
+                        and str(f[5]).strip().upper() == f_dept2
+                    ]
+
+                st.caption(f"{len(filtered_fb)} messages")
+
+                for fb in filtered_fb[:50]:
+                    if not (isinstance(fb, list) and len(fb) >= 5):
+                        continue
+                    ts       = str(fb[0])
+                    reg      = str(fb[1])
+                    name     = str(fb[2])
+                    status   = str(fb[3])
+                    msg      = str(fb[4])
+                    dept_fb  = str(fb[5]).strip().upper() if len(fb) > 5 else "?"
+                    year_fb  = str(fb[6]).strip()         if len(fb) > 6 else "?"
+                    sc       = "#16a34a" if status.lower() == "reviewed" else "#d4820a"
+                    color    = dept_color(dept_fb) if dept_fb in get_departments() else ADMIN_ACCENT
+
+                    st.markdown(f"""
+                    <div style="background:white;border-radius:10px;padding:12px 16px;
+                        margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {color};">
+                        <div style="font-size:0.75rem;color:#94a3b8;">
+                             <strong>{name}</strong> · {reg}
+                            &nbsp;·&nbsp;
+                            <span style="background:{dept_color(dept_fb) if dept_fb in get_departments() else '#e2e8f7'};
+                                color:white;font-size:0.68rem;font-weight:700;
+                                padding:1px 7px;border-radius:8px;">{dept_fb}</span>
+                            {year_fb} ·  {ts}
+                            &nbsp;<span style="color:{sc};font-weight:600;">{status}</span>
+                        </div>
+                        <div style="margin-top:6px;font-size:0.9rem;">{msg}</div>
                     </div>
-                    <span style="background:{bg};color:{color};font-size:0.7rem;
-                        font-weight:700;padding:2px 10px;border-radius:10px;">{status}</span>
+                    """, unsafe_allow_html=True)
+
+        # 
+        #  AI ENGINE
+        # 
+
+
+    # 4. AI INTELLIGENCE & MASTER AI
+    with tab_ai:
+        sub_ai_insights, sub_master_ai = st.tabs([
+            "📈 Department AI Analytics",
+            "🧠 Master Super Admin AI"
+        ])
+        with sub_ai_insights:
+            st.markdown("###  AI Engine Control Centre")
+            st.markdown(
+                f'<div style="background:{ADMIN_LIGHT};border:1px solid {ADMIN_ACCENT}44;'
+                f'border-radius:10px;padding:10px 16px;font-size:0.88rem;color:{ADMIN_ACCENT};'
+                f'font-weight:600;margin-bottom:16px;">'
+                f' Full visibility and control over all AI providers, keys and features.</div>',
+                unsafe_allow_html=True
+            )
+
+            ai_engine_tabs = st.tabs([
+                " Provider Status",
+                " Key Management",
+                " Feature Controls",
+                " Insights",
+                " Feedback Summary",
+            ])
+
+            # 
+            #  PROVIDER STATUS
+            # 
+            with ai_engine_tabs[0]:
+                st.markdown("####  AI Provider Status")
+                st.caption("Live status of all configured AI providers and keys.")
+
+                # Load keys from secrets
+                gemini_keys = []
+                for i in range(1, 20):
+                    k = st.secrets.get(f"GEMINI_KEY_{i}", "")
+                    if k:
+                        gemini_keys.append((f"Gemini Key {i}", k))
+
+                groq_key      = st.secrets.get("GROQ_API_KEY", "")
+                mistral_key   = st.secrets.get("MISTRAL_API_KEY", "")
+                hf_token      = st.secrets.get("HUGGINGFACE_TOKEN", "")
+                cf_token      = st.secrets.get("CLOUDFLARE_TOKEN", "")
+                cf_account    = st.secrets.get("CLOUDFLARE_ACCOUNT_ID", "")
+
+                st.markdown("** Gemini Keys**")
+                if gemini_keys:
+                    for label, key in gemini_keys:
+                        masked = key[:8] + "..." + key[-4:]
+                        st.markdown(f"""
+                        <div style="background:white;border-radius:10px;padding:12px 16px;
+                            margin-bottom:6px;border:1px solid #e2e8f7;
+                            border-left:4px solid #16a34a;
+                            display:flex;align-items:center;justify-content:space-between;">
+                            <div>
+                                <span style="font-weight:700;color:#1e293b;"> {label}</span>
+                                <span style="font-size:0.78rem;color:#94a3b8;margin-left:10px;">
+                                    {masked}
+                                </span>
+                            </div>
+                            <span style="background:#dcfce7;color:#16a34a;font-size:0.7rem;
+                                font-weight:700;padding:2px 10px;border-radius:10px;">ACTIVE</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.error(" No Gemini keys configured in secrets.toml")
+
+                st.markdown("** Fallback Providers**")
+                providers = [
+                    ("Groq",        bool(groq_key),    "GROQ_API_KEY"),
+                    ("Mistral",     bool(mistral_key),  "MISTRAL_API_KEY"),
+                    ("HuggingFace", bool(hf_token),     "HUGGINGFACE_TOKEN"),
+                    ("Cloudflare",  bool(cf_token and cf_account), "CLOUDFLARE_TOKEN + CLOUDFLARE_ACCOUNT_ID"),
+                ]
+                for pname, is_set, secret_key in providers:
+                    color  = "#16a34a" if is_set else "#dc2626"
+                    bg     = "#dcfce7" if is_set else "#fee2e2"
+                    status = " CONFIGURED" if is_set else " NOT SET"
+                    st.markdown(f"""
+                    <div style="background:white;border-radius:10px;padding:12px 16px;
+                        margin-bottom:6px;border:1px solid #e2e8f7;border-left:4px solid {color};
+                        display:flex;align-items:center;justify-content:space-between;">
+                        <div>
+                            <span style="font-weight:700;color:#1e293b;">{pname}</span>
+                            <span style="font-size:0.75rem;color:#94a3b8;margin-left:8px;">
+                                {secret_key}
+                            </span>
+                        </div>
+                        <span style="background:{bg};color:{color};font-size:0.7rem;
+                            font-weight:700;padding:2px 10px;border-radius:10px;">{status}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+                st.markdown("** Fallback Chain**")
+                chain = ["Gemini (Key Rotation)"]
+                if groq_key:    chain.append("Groq")
+                if mistral_key: chain.append("Mistral")
+                if hf_token:    chain.append("HuggingFace")
+                if cf_token:    chain.append("Cloudflare")
+                chain_str = " → ".join([f"**{c}**" for c in chain])
+                st.markdown(f"When quota is hit: {chain_str}")
+                if len(chain) == 1:
+                    st.warning(" Only Gemini configured — add fallback providers for more resilience.")
+
+            # 
+            #  KEY MANAGEMENT
+            # 
+            with ai_engine_tabs[1]:
+                st.markdown("####  Gemini Key Management")
+                st.info(
+                    "Keys are stored in `.streamlit/secrets.toml` on your server. "
+                    "Add new keys there as `GEMINI_KEY_1`, `GEMINI_KEY_2`, etc. "
+                    "They will appear here automatically."
+                )
+
+                # Show all current keys
+                gemini_keys_all = []
+                for i in range(1, 20):
+                    k = st.secrets.get(f"GEMINI_KEY_{i}", "")
+                    if k: gemini_keys_all.append((i, k))
+
+                if gemini_keys_all:
+                    st.markdown(f"**{len(gemini_keys_all)} key(s) configured:**")
+                    for idx, (num, key) in enumerate(gemini_keys_all):
+                        masked = key[:12] + "•" * 15 + key[-4:]
+                        st.markdown(f"""
+                        <div style="background:white;border-radius:10px;padding:14px 18px;
+                            margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {ADMIN_ACCENT};">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div>
+                                    <span style="font-weight:800;color:{ADMIN_ACCENT};">
+                                        Key {num}
+                                    </span>
+                                    <span style="font-family:monospace;font-size:0.82rem;
+                                        color:#475569;margin-left:12px;">{masked}</span>
+                                </div>
+                                <span style="background:#dcfce7;color:#16a34a;font-size:0.7rem;
+                                    font-weight:700;padding:2px 10px;border-radius:10px;">
+                                    GEMINI_KEY_{num}
+                                </span>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.error(" No Gemini keys found.")
+
+                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+
+                st.markdown("####  How to Add a New Key")
+                st.code("""# In .streamlit/secrets.toml — add the next key number:
+    GEMINI_KEY_1 = "AIza...your_key..."
+    GEMINI_KEY_2 = "AIza...friend_key..."
+    GEMINI_KEY_3 = "AIza...new_key..."   # ← add new ones like this
+
+    # On Streamlit Cloud:
+    # Go to App Settings → Secrets → paste new key line → Save
+    # The app reloads automatically.""", language="toml")
+
+                st.markdown("####  Test a Key")
+                test_key = st.text_input(
+                    "Paste a key to test:",
+                    type="password",
+                    placeholder="AIza..."
+                )
+                if st.button(" Test Key", use_container_width=True) and test_key.strip():
+                    with st.spinner("Testing..."):
+                        try:
+                            import google as genai
+                            client = genai.Client(api_key=test_key.strip())
+                            _resp = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents="Say: Key works"
+                )
+                            st.success(f" Key is valid! Response: {_resp.text[:80]}")
+                        except Exception as e:
+                            st.error(f" Key failed: {str(e)[:120]}")
+
+            # 
+            #  FEATURE CONTROLS
+            # 
+            with ai_engine_tabs[2]:
+                st.markdown("####  AI Feature Controls")
+                st.info("Configure which AI features are active and their limits.")
+
+                st.markdown("**Student AI Features**")
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.toggle(" Class Assistant Chat",   value=True,  disabled=True)
+                    st.toggle(" Material Summarizer",    value=True,  disabled=True)
+                    st.toggle(" Revision Questions",     value=True,  disabled=True)
+                with c2:
+                    st.toggle(" Document Q&A",           value=True,  disabled=True)
+                    st.toggle(" Concept Explainer",      value=True,  disabled=True)
+
+                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+
+                st.markdown("**Class Rep AI Features**")
+                c3, c4 = st.columns(2)
+                with c3:
+                    st.toggle(" Inbox Analysis",         value=True,  disabled=True)
+                    st.toggle(" Announcement Drafting",  value=True,  disabled=True)
+                    st.toggle("⏰ Deadline Reminders",     value=True,  disabled=True)
+                with c4:
+                    st.toggle(" Group Allocation AI",    value=True,  disabled=True)
+                    st.toggle(" Timetable Generator",    value=True,  disabled=True)
+                    st.toggle(" Conflict Checker",       value=True,  disabled=True)
+
+                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+
+                st.markdown("**⏱ Cooldown Settings**")
+                st.caption("Minimum seconds between AI requests per student.")
+                cooldown = st.slider("Student cooldown (seconds)", 5, 120, 30)
+                st.caption(f"Current: **{cooldown}s** between requests per student")
+
+                st.markdown("** Token Limits**")
+                col_t1, col_t2 = st.columns(2)
+                with col_t1:
+                    st.metric("Summary tokens", "6,000")
+                    st.metric("Chat tokens",    "6,000")
+                with col_t2:
+                    st.metric("Revision Qs",    "6,000")
+                    st.metric("Rep Analysis",   "6,000")
+
+                st.info(
+                    " To change cooldowns or token limits, edit `ai_engine.py`. "
+                    "Dynamic controls coming in a future update."
+                )
+
+            # 
+            #  ENROLLMENT INSIGHTS
+            # 
+            with ai_engine_tabs[3]:
+                st.markdown("####  AI Enrollment Analysis")
+                if st.button(" Analyse Enrollment", use_container_width=True, type="primary"):
+                    with st.spinner("Analysing..."):
+                        result = ai_admin.analyze_enrollment(df_all)
+                    st.markdown(result)
+
+            # 
+            #  FEEDBACK SUMMARY
+            # 
+            with ai_engine_tabs[4]:
+                st.markdown("####  AI Feedback Summary")
+                f_dept3 = st.selectbox(
+                    "Scope", ["ALL"] + get_dept_codes(), key="ai_fb_dept"
+                )
+                if st.button(" Summarize Feedback", use_container_width=True, type="primary"):
+                    if f_dept3 == "ALL":
+                        fb_scope = all_feedback
+                    else:
+                        fb_scope = [
+                            f for f in all_feedback
+                            if isinstance(f, list) and len(f) > 5
+                            and str(f[5]).strip().upper() == f_dept3
+                        ]
+                    with st.spinner("Analysing..."):
+                        result = ai_admin.summarize_all_feedback(fb_scope, f_dept3)
+                    st.markdown(result)
+
+        # 
+        #  ADVANCED TOOLS  (tabs[7])
+        # 
+
+        with sub_master_ai:
+            st.markdown("###  Master Super Admin AI")
+
+            # Init master AI if not passed
+            if master_ai is None:
+                master_ai = MasterSuperAdminAI()
+
+            # Init chat history in session
+            if "master_ai_history" not in st.session_state:
+                st.session_state.master_ai_history = []
+
+            #  Greeting on first load only 
+            if "master_ai_greeted" not in st.session_state and len(st.session_state.master_ai_history) == 0:
+                with st.spinner(" Master AI initializing..."):
+                    greeting = master_ai.get_greeting(df_all, reps_list)
+                st.session_state.master_ai_history.append({
+                    "role": "assistant",
+                    "content": greeting
+                })
+                st.session_state.master_ai_greeted = True
+            #  Status bar 
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,{ADMIN_PRIMARY} 0%,{ADMIN_ACCENT} 100%);
+                border-radius:12px;padding:12px 20px;margin-bottom:16px;
+                display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                <div style="color:white;font-weight:700;font-size:0.95rem;">
+                     Master AI — Layer 1 Active
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <span style="background:rgba(255,255,255,0.15);color:white;
+                        font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:10px;">
+                         Chat Interface
+                    </span>
+                    <span style="background:rgba(255,255,255,0.15);color:white;
+                        font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:10px;">
+                         {len([i for i in range(1,20) if st.secrets.get(f"GEMINI_KEY_{i}","")])} Key(s) Active
+                    </span>
+                    <span style="background:rgba(255,255,255,0.15);color:white;
+                        font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:10px;">
+                         {len(st.session_state.master_ai_history)} Messages
+                    </span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            #  Chat history display 
+            chat_container = st.container()
+            with chat_container:
+                for msg in st.session_state.master_ai_history:
+                    if msg["role"] == "user":
+                        st.markdown(f"""
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+                            <div style="background:{ADMIN_ACCENT};color:white;border-radius:18px 18px 4px 18px;
+                                padding:10px 16px;max-width:80%;font-size:0.88rem;line-height:1.5;">
+                                {msg["content"]}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                        <div style="display:flex;justify-content:flex-start;margin-bottom:10px;">
+                            <div style="background:white;border:1px solid #e2e8f7;
+                                border-radius:18px 18px 18px 4px;
+                                padding:10px 16px;max-width:85%;font-size:0.88rem;line-height:1.5;
+                                color:#1e293b;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+                                {msg["content"]}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+            #  Pending Action Forms 
+            pending_form = st.session_state.get("master_ai_pending_form")
+            if pending_form:
+                form_type = pending_form.get("type")
+
+                #  ADD DEPARTMENT 
+                if form_type == "add_department":
+                    st.markdown(f"""
+                    <div style="background:#f0fdf4;border:2px solid #16a34a;
+                        border-radius:14px;padding:16px 20px;margin-bottom:16px;">
+                        <div style="font-weight:800;color:#15803d;font-size:1rem;">
+                             Add New Department
+                        </div>
+                        <div style="font-size:0.85rem;color:#166534;margin-top:4px;">
+                            Fill in the details below and confirm to add.
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    with st.form("master_ai_add_dept_form", clear_on_submit=True):
+                        fd1, fd2 = st.columns(2)
+                        with fd1:
+                            dept_code    = st.text_input("Department Code", placeholder="e.g. CVL")
+                            dept_name_in = st.text_input("Full Name", placeholder="e.g. Civil Engineering")
+                        with fd2:
+                            dept_courses_in = st.text_input("Course Codes (comma separated)", placeholder="e.g. BCIV,BSTR,BENV")
+                            colour_names  = [p["name"] for p in COLOUR_PALETTE]
+                            chosen_colour = st.selectbox("Colour", colour_names, key="ai_dept_colour")
+                            chosen_pal    = next(p for p in COLOUR_PALETTE if p["name"] == chosen_colour)
+                        fc1, fc2 = st.columns(2)
+                        with fc1:
+                            confirm_dept = st.form_submit_button(" Confirm & Add Department", use_container_width=True, type="primary")
+                        with fc2:
+                            cancel_dept = st.form_submit_button(" Cancel", use_container_width=True)
+                        if confirm_dept:
+                            if not dept_code.strip() or not dept_name_in.strip() or not dept_courses_in.strip():
+                                st.warning("Please fill in all fields.")
+                            else:
+                                with st.spinner("Adding department..."):
+                                    ok = db.add_department(
+                                        dept_code.strip().upper(),
+                                        dept_name_in.strip(),
+                                        chosen_pal["hex"],
+                                        chosen_pal["light"],
+                                        dept_courses_in.strip()
+                                    )
+                                if ok:
+                                    st.session_state["master_ai_pending_form"] = None
+                                    st.session_state.master_ai_history.append({
+                                        "role": "assistant",
+                                        "content": f" Department **{dept_name_in.strip()}** ({dept_code.strip().upper()}) added successfully!"
+                                    })
+                                    st.rerun()
+                                else:
+                                    st.error(" Failed to add department. Check your GAS deployment.")
+                        if cancel_dept:
+                            st.session_state["master_ai_pending_form"] = None
+                            st.session_state.master_ai_history.append({"role": "assistant", "content": " Department creation cancelled."})
+                            st.rerun()
+
+                #  ASSIGN REP 
+                elif form_type == "assign_rep":
+                    st.markdown(f"""
+                    <div style="background:#eff6ff;border:2px solid #1a56db;
+                        border-radius:14px;padding:16px 20px;margin-bottom:16px;">
+                        <div style="font-weight:800;color:#1e40af;font-size:1rem;">
+                             Assign Class Rep
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    with st.form("master_ai_assign_rep_form", clear_on_submit=True):
+                        dept_opts = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
+                        fr1, fr2 = st.columns(2)
+                        with fr1:
+                            r_dept_label = st.selectbox("Department", list(dept_opts.keys()), key="ai_rep_dept")
+                            r_dept       = dept_opts[r_dept_label]
+                            r_year       = st.selectbox("Year Group", YEARS, key="ai_rep_year")
+                            r_name       = st.text_input("Rep Full Name", placeholder="e.g. Alice Nakamura")
+                        with fr2:
+                            r_reg  = st.text_input("Rep Reg Number", placeholder="e.g. 25/U/0001/PS")
+                            r_pw   = st.text_input("Password", type="password", placeholder="Min 6 characters")
+                            r_pw2  = st.text_input("Confirm Password", type="password")
+                        fc1, fc2 = st.columns(2)
+                        with fc1:
+                            confirm_rep = st.form_submit_button(" Confirm & Assign Rep", use_container_width=True, type="primary")
+                        with fc2:
+                            cancel_rep = st.form_submit_button(" Cancel", use_container_width=True)
+                        if confirm_rep:
+                            if not r_name.strip() or not r_reg.strip() or not r_pw:
+                                st.warning("Please fill in all fields.")
+                            elif r_pw != r_pw2:
+                                st.error(" Passwords do not match.")
+                            elif len(r_pw) < 6:
+                                st.error(" Password must be at least 6 characters.")
+                            else:
+                                with st.spinner("Assigning rep..."):
+                                    ok = db.assign_rep(r_dept, r_year, r_name.strip(), r_reg.strip(), r_pw)
+                                if ok:
+                                    st.session_state["master_ai_pending_form"] = None
+                                    st.session_state.master_ai_history.append({
+                                        "role": "assistant",
+                                        "content": f" Class Rep **{r_name.strip()}** assigned to **{r_dept_label} — {r_year}** successfully!"
+                                    })
+                                    st.rerun()
+                                else:
+                                    st.error(" Failed to assign rep.")
+                        if cancel_rep:
+                            st.session_state["master_ai_pending_form"] = None
+                            st.rerun()
+
+                #  DELETE DEPARTMENT 
+                elif form_type == "delete_department":
+                    st.error(" Delete Department — This cannot be undone!")
+                    with st.form("master_ai_del_dept_form"):
+                        depts     = get_departments()
+                        dept_opts = {f"{v['name']} ({k})": k for k, v in depts.items()}
+                        d_label   = st.selectbox("Select Department to Delete", list(dept_opts.keys()), key="ai_del_dept")
+                        sel_dept  = dept_opts[d_label]
+                        st.warning(f"You are about to permanently delete **{d_label}**.")
+                        fc1, fc2 = st.columns(2)
+                        with fc1:
+                            if st.form_submit_button(" Confirm Delete", use_container_width=True, type="primary"):
+                                with st.spinner("Deleting..."):
+                                    result = db.delete_department(sel_dept)
+                                if result.get("status") == "success":
+                                    st.session_state["master_ai_pending_form"] = None
+                                    st.session_state.master_ai_history.append({
+                                        "role": "assistant",
+                                        "content": f" Department **{d_label}** deleted successfully."
+                                    })
+                                    st.rerun()
+                                else:
+                                    st.error(f" {result.get('message','Failed')}")
+                        with fc2:
+                            if st.form_submit_button(" Cancel", use_container_width=True):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+
+                #  DELETE REP 
+                elif form_type == "delete_rep":
+                    st.error(" Remove Class Rep — This cannot be undone!")
+                    with st.form("master_ai_del_rep_form"):
+                        rep_labels = {
+                            f"{r.get('rep_name','')} — {r.get('dept','')} {r.get('year','')}": r
+                            for r in reps_list
+                        }
+                        if rep_labels:
+                            sel_rep_label = st.selectbox("Select Rep to Remove", list(rep_labels.keys()), key="ai_del_rep")
+                            sel_rep = rep_labels[sel_rep_label]
+                            fc1, fc2 = st.columns(2)
+                            with fc1:
+                                if st.form_submit_button(" Confirm Remove", use_container_width=True, type="primary"):
+                                    with st.spinner("Removing..."):
+                                        ok = db.delete_rep(str(sel_rep.get("dept","")), str(sel_rep.get("year","")))
+                                    if ok:
+                                        st.session_state["master_ai_pending_form"] = None
+                                        st.session_state.master_ai_history.append({
+                                            "role": "assistant",
+                                            "content": f" Rep **{sel_rep_label}** removed successfully."
+                                        })
+                                        st.rerun()
+                                    else:
+                                        st.error(" Failed to remove rep.")
+                            with fc2:
+                                if st.form_submit_button(" Cancel", use_container_width=True):
+                                    st.session_state["master_ai_pending_form"] = None
+                                    st.rerun()
+                        else:
+                            st.info("No rep accounts found.")
+                            if st.form_submit_button(" Close"):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+
+                #  RESET REP PASSWORD 
+                elif form_type == "reset_rep_password":
+                    st.info(" Reset Rep Password")
+                    with st.form("master_ai_reset_pw_form"):
+                        rep_labels = {
+                            f"{r.get('rep_name','')} — {r.get('dept','')} {r.get('year','')}": r
+                            for r in reps_list
+                        }
+                        if rep_labels:
+                            sel_label = st.selectbox("Select Rep", list(rep_labels.keys()), key="ai_reset_rep")
+                            sel_rep   = rep_labels[sel_label]
+                            new_pw    = st.text_input("New Password", type="password")
+                            new_pw2   = st.text_input("Confirm Password", type="password")
+                            fc1, fc2  = st.columns(2)
+                            with fc1:
+                                if st.form_submit_button(" Reset Password", use_container_width=True, type="primary"):
+                                    if not new_pw or new_pw != new_pw2:
+                                        st.error(" Passwords don't match.")
+                                    elif len(new_pw) < 6:
+                                        st.error(" Min 6 characters.")
+                                    else:
+                                        with st.spinner("Resetting..."):
+                                            ok = db.assign_rep(
+                                                dept=str(sel_rep.get("dept","")),
+                                                year=str(sel_rep.get("year","")),
+                                                rep_name=str(sel_rep.get("rep_name","")),
+                                                rep_reg=str(sel_rep.get("rep_reg","")),
+                                                password=new_pw
+                                            )
+                                        if ok:
+                                            st.session_state["master_ai_pending_form"] = None
+                                            st.session_state.master_ai_history.append({
+                                                "role": "assistant",
+                                                "content": f" Password reset for **{sel_label}**."
+                                            })
+                                            st.rerun()
+                                        else:
+                                            st.error(" Failed.")
+                            with fc2:
+                                if st.form_submit_button(" Cancel", use_container_width=True):
+                                    st.session_state["master_ai_pending_form"] = None
+                                    st.rerun()
+                        else:
+                            st.info("No rep accounts found.")
+                            if st.form_submit_button(" Close"):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+
+                #  BROADCAST ANNOUNCEMENT 
+                elif form_type == "broadcast_announcement":
+                    st.info(" Broadcast to All Departments")
+                    with st.form("master_ai_broadcast_form"):
+                        b_text     = st.text_area("Announcement", height=120)
+                        b_priority = st.selectbox("Priority", ["Normal","Urgent"], key="ai_bc_pri")
+                        fc1, fc2   = st.columns(2)
+                        with fc1:
+                            if st.form_submit_button(" Broadcast Now", use_container_width=True, type="primary"):
+                                if not b_text.strip():
+                                    st.warning("Please enter announcement text.")
+                                else:
+                                    with st.spinner("Broadcasting..."):
+                                        ok = db.broadcast_announcement(b_text.strip(), b_priority)
+                                    if ok:
+                                        st.session_state["master_ai_pending_form"] = None
+                                        st.session_state.master_ai_history.append({
+                                            "role": "assistant",
+                                            "content": " Broadcast sent to all departments successfully!"
+                                        })
+                                        st.rerun()
+                                    else:
+                                        st.error(" Failed.")
+                        with fc2:
+                            if st.form_submit_button(" Cancel", use_container_width=True):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+
+                #  POST ANNOUNCEMENT 
+                elif form_type == "post_announcement":
+                    st.info(" Post Department Announcement")
+                    with st.form("master_ai_post_ann_form"):
+                        dept_opts  = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
+                        fa1, fa2   = st.columns(2)
+                        with fa1:
+                            a_dept_label = st.selectbox("Department", list(dept_opts.keys()), key="ai_ann_dept")
+                            a_dept       = dept_opts[a_dept_label]
+                        with fa2:
+                            a_year     = st.selectbox("Year Group", ["ALL"] + YEARS, key="ai_ann_year")
+                            a_priority = st.selectbox("Priority", ["Normal","Urgent"], key="ai_ann_pri")
+                        a_text = st.text_area("Announcement Text", height=120)
+                        fc1, fc2 = st.columns(2)
+                        with fc1:
+                            if st.form_submit_button(" Post Announcement", use_container_width=True, type="primary"):
+                                if not a_text.strip():
+                                    st.warning("Please enter text.")
+                                else:
+                                    with st.spinner("Posting..."):
+                                        ok = db.post_announcement(a_text.strip(), a_priority, a_dept, a_year)
+                                    if ok:
+                                        st.session_state["master_ai_pending_form"] = None
+                                        st.session_state.master_ai_history.append({
+                                            "role": "assistant",
+                                            "content": f" Announcement posted to **{a_dept_label} — {a_year}**!"
+                                        })
+                                        st.rerun()
+                                    else:
+                                        st.error(" Failed.")
+                        with fc2:
+                            if st.form_submit_button(" Cancel", use_container_width=True):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+
+                #  DELETE STUDENT 
+                elif form_type == "delete_student":
+                    st.error(" Remove Student — This cannot be undone!")
+                    with st.form("master_ai_del_student_form"):
+                        if df_all is not None and not df_all.empty:
+                            student_labels = {
+                                f"{r.get('Student Name','')} — {r.get('Reg Number','')}": r.get('Reg Number','')
+                                for _, r in df_all.iterrows()
+                            }
+                            sel_s_label = st.selectbox("Select Student", list(student_labels.keys()), key="ai_del_student")
+                            sel_s_reg   = student_labels[sel_s_label]
+                            st.warning(f"Remove **{sel_s_label}**?")
+                            fc1, fc2 = st.columns(2)
+                            with fc1:
+                                if st.form_submit_button(" Confirm Remove", use_container_width=True, type="primary"):
+                                    with st.spinner("Removing..."):
+                                        ok = db.delete_student(sel_s_reg)
+                                    if ok:
+                                        st.session_state["master_ai_pending_form"] = None
+                                        st.session_state.master_ai_history.append({
+                                            "role": "assistant",
+                                            "content": f" Student **{sel_s_label}** removed."
+                                        })
+                                        st.rerun()
+                                    else:
+                                        st.error(" Failed.")
+                            with fc2:
+                                if st.form_submit_button(" Cancel", use_container_width=True):
+                                    st.session_state["master_ai_pending_form"] = None
+                                    st.rerun()
+                        else:
+                            st.info("No students registered yet.")
+                            if st.form_submit_button(" Close"):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+
+                #  ASSIGN GROUP 
+                elif form_type == "assign_group":
+                    st.info(" Assign Student to Group")
+                    with st.form("master_ai_assign_group_form"):
+                        if df_all is not None and not df_all.empty:
+                            student_labels = {
+                                f"{r.get('Student Name','')} — {r.get('Reg Number','')}": r.get('Reg Number','')
+                                for _, r in df_all.iterrows()
+                            }
+                            sel_s_label = st.selectbox("Select Student", list(student_labels.keys()), key="ai_grp_student")
+                            sel_s_reg   = student_labels[sel_s_label]
+                            group_name  = st.text_input("Group Name", placeholder="e.g. Team Alpha")
+                            fc1, fc2    = st.columns(2)
+                            with fc1:
+                                if st.form_submit_button(" Assign Group", use_container_width=True, type="primary"):
+                                    if not group_name.strip():
+                                        st.warning("Please enter a group name.")
+                                    else:
+                                        with st.spinner("Assigning..."):
+                                            ok = db.assign_group(sel_s_reg, group_name.strip())
+                                        if ok:
+                                            st.session_state["master_ai_pending_form"] = None
+                                            st.session_state.master_ai_history.append({
+                                                "role": "assistant",
+                                                "content": f" **{sel_s_label}** assigned to **{group_name.strip()}**!"
+                                            })
+                                            st.rerun()
+                                        else:
+                                            st.error(" Failed.")
+                            with fc2:
+                                if st.form_submit_button(" Cancel", use_container_width=True):
+                                    st.session_state["master_ai_pending_form"] = None
+                                    st.rerun()
+                        else:
+                            st.info("No students registered yet.")
+                            if st.form_submit_button(" Close"):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+
+                #  POST TIMETABLE 
+                elif form_type == "post_timetable":
+                    st.info(" Add Timetable Entry")
+                    with st.form("master_ai_post_tt_form"):
+                        dept_opts    = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
+                        ft1, ft2     = st.columns(2)
+                        with ft1:
+                            t_dept_label = st.selectbox("Department", list(dept_opts.keys()), key="ai_tt_dept")
+                            t_dept       = dept_opts[t_dept_label]
+                            t_year       = st.selectbox("Year Group", YEARS, key="ai_tt_year")
+                            t_day        = st.selectbox("Day", ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"], key="ai_tt_day")
+                        with ft2:
+                            t_time     = st.text_input("Time", placeholder="e.g. 08:00 - 10:00")
+                            t_course   = st.text_input("Course", placeholder="e.g. Engineering Mathematics")
+                            t_lecturer = st.text_input("Lecturer", placeholder="e.g. Dr. Ouma")
+                            t_venue    = st.text_input("Venue", placeholder="e.g. LR 3")
+                        fc1, fc2 = st.columns(2)
+                        with fc1:
+                            if st.form_submit_button(" Add Entry", use_container_width=True, type="primary"):
+                                if not t_time.strip() or not t_course.strip():
+                                    st.warning("Time and Course are required.")
+                                else:
+                                    with st.spinner("Adding..."):
+                                        ok = db.add_timetable_entry(
+                                            dept=t_dept, year=t_year,
+                                            day=t_day, time=t_time.strip(),
+                                            course=t_course.strip(),
+                                            lecturer=t_lecturer.strip(),
+                                            venue=t_venue.strip()
+                                        )
+                                    if ok:
+                                        st.session_state["master_ai_pending_form"] = None
+                                        st.session_state.master_ai_history.append({
+                                            "role": "assistant",
+                                            "content": f" Timetable entry added — **{t_day} {t_time}** | {t_course} for {t_dept_label} {t_year}!"
+                                        })
+                                        st.rerun()
+                                    else:
+                                        st.error(" Failed.")
+                        with fc2:
+                            if st.form_submit_button(" Cancel", use_container_width=True):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+
+                #  DELETE TIMETABLE 
+                elif form_type == "delete_timetable":
+                    st.error(" Delete Timetable Entry")
+                    with st.form("master_ai_del_tt_form"):
+                        dept_opts    = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
+                        dt1, dt2     = st.columns(2)
+                        with dt1:
+                            dt_dept_label = st.selectbox("Department", list(dept_opts.keys()), key="ai_del_tt_dept")
+                            dt_dept       = dept_opts[dt_dept_label]
+                        with dt2:
+                            dt_year = st.selectbox("Year Group", YEARS, key="ai_del_tt_year")
+                            dt_day  = st.selectbox("Day", ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"], key="ai_del_tt_day")
+                        dt_course = st.text_input("Course Name to Delete", placeholder="e.g. Engineering Mathematics")
+                        fc1, fc2  = st.columns(2)
+                        with fc1:
+                            if st.form_submit_button(" Confirm Delete", use_container_width=True, type="primary"):
+                                if not dt_course.strip():
+                                    st.warning("Please enter the course name.")
+                                else:
+                                    with st.spinner("Deleting..."):
+                                        ok = db.delete_timetable_entry(dt_dept, dt_year, dt_day, dt_course.strip())
+                                    if ok:
+                                        st.session_state["master_ai_pending_form"] = None
+                                        st.session_state.master_ai_history.append({
+                                            "role": "assistant",
+                                            "content": f" Timetable entry deleted — {dt_course} on {dt_day} for {dt_dept_label} {dt_year}."
+                                        })
+                                        st.rerun()
+                                    else:
+                                        st.error(" Failed.")
+                        with fc2:
+                            if st.form_submit_button(" Cancel", use_container_width=True):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+
+                #  NOTIFY CLASS 
+                elif form_type == "notify_class":
+                    st.info(" Send WhatsApp Notification to Class")
+                    with st.form("master_ai_notify_form"):
+                        dept_opts    = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
+                        fn1, fn2     = st.columns(2)
+                        with fn1:
+                            n_dept_label = st.selectbox("Department", ["ALL DEPARTMENTS"] + list(dept_opts.keys()), key="ai_notify_dept")
+                            n_dept       = "ALL" if n_dept_label == "ALL DEPARTMENTS" else dept_opts[n_dept_label]
+                        with fn2:
+                            n_year = st.selectbox("Year Group", ["ALL"] + YEARS, key="ai_notify_year")
+                        n_msg = st.text_area("Message", height=120, placeholder="Type your WhatsApp message here...")
+                        fc1, fc2 = st.columns(2)
+                        with fc1:
+                            if st.form_submit_button(" Send Notification", use_container_width=True, type="primary"):
+                                if not n_msg.strip():
+                                    st.warning("Please enter a message.")
+                                else:
+                                    with st.spinner("Sending..."):
+                                        ok = db.notify_class_whatsapp(n_dept, n_year, n_msg.strip())
+                                    if ok:
+                                        st.session_state["master_ai_pending_form"] = None
+                                        st.session_state.master_ai_history.append({
+                                            "role": "assistant",
+                                            "content": f" WhatsApp notification sent to **{n_dept_label} — {n_year}**!"
+                                        })
+                                        st.rerun()
+                                    else:
+                                        st.error(" Failed. Check WhatsApp configuration.")
+                        with fc2:
+                            if st.form_submit_button(" Cancel", use_container_width=True):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+
+                #  DELETE ANNOUNCEMENT 
+                elif form_type == "delete_announcement":
+                    st.error(" Delete Announcement")
+                    with st.form("master_ai_del_ann_form"):
+                        if all_anns:
+                            ann_labels = {
+                                f"[{a.get('timestamp','')[:16]}] {a.get('text','')[:60]}": i
+                                for i, a in enumerate(all_anns[:30])
+                                if isinstance(a, dict)
+                            }
+                            sel_ann_label = st.selectbox("Select Announcement", list(ann_labels.keys()), key="ai_del_ann")
+                            sel_ann_idx   = ann_labels[sel_ann_label]
+                            sel_ann       = all_anns[sel_ann_idx]
+                            fc1, fc2 = st.columns(2)
+                            with fc1:
+                                if st.form_submit_button(" Confirm Delete", use_container_width=True, type="primary"):
+                                    with st.spinner("Deleting..."):
+                                        ok = db.delete_announcement(sel_ann.get("timestamp",""), sel_ann.get("dept",""))
+                                    if ok:
+                                        st.session_state["master_ai_pending_form"] = None
+                                        st.session_state.master_ai_history.append({
+                                            "role": "assistant",
+                                            "content": " Announcement deleted successfully."
+                                        })
+                                        st.rerun()
+                                    else:
+                                        st.error(" Failed.")
+                            with fc2:
+                                if st.form_submit_button(" Cancel", use_container_width=True):
+                                    st.session_state["master_ai_pending_form"] = None
+                                    st.rerun()
+                        else:
+                            st.info("No announcements found.")
+                            if st.form_submit_button(" Close"):
+                                st.session_state["master_ai_pending_form"] = None
+                                st.rerun()
+            #  Pending code change approval UI 
+            pending = st.session_state.get("master_ai_pending_change")
+            if pending and pending.get("status") == "pending_approval":
+                st.markdown(f"""
+                <div style="background:#fefce8;border:2px solid #eab308;
+                    border-radius:14px;padding:16px 20px;margin-bottom:16px;">
+                    <div style="font-weight:800;color:#854d0e;font-size:1rem;margin-bottom:6px;">
+                         Pending Code Change — Awaiting Your Approval
+                    </div>
+                    <div style="font-size:0.85rem;color:#713f12;">
+                        File: <strong>{pending['target_file']}</strong><br>
+                        Request: {pending['request']}
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
 
+                #  Validation result 
+                validation = pending.get("validation", {})
+                if validation:
+                    if validation.get("valid"):
+                        st.success(validation["summary"])
+                        st.caption(
+                            f" Lines: {validation.get('lines_original',0)} → "
+                            f"{validation.get('lines_new',0)} | "
+                            f" Functions preserved: {validation.get('funcs_preserved',0)}"
+                        )
+                    else:
+                        st.error(validation["summary"])
+                        for issue in validation.get("issues", []):
+                            st.warning(issue)
+                        st.info(" The AI attempted to auto-fix these issues. Review the code carefully before approving.")
+
+                with st.expander(" Preview Proposed Code", expanded=False):
+                    st.code(pending["new_code"], language="python")
+
+                col_local, col_github = st.columns(2)
+
+                #  Step 1: Test Locally 
+                with col_local:
+                    validation = pending.get("validation", {})
+                    can_proceed = validation.get("valid", True)
+                    if st.button(" Test Locally First",
+                                 use_container_width=True,
+                                 type="primary",
+                                 key="test_locally",
+                                 disabled=not can_proceed):
+                        if not can_proceed:
+                            st.error(" Cannot save — validation failed. Review issues above.")
+                        else:
+                            with st.spinner(" Saving locally..."):
+                                result = master_ai.save_locally(
+                                pending["target_file"],
+                                pending["new_code"]
+                            )
+                        if "error" in result:
+                            st.error(result["error"])
+                        else:
+                            st.success(result["message"])
+                            if result.get("backup_created"):
+                                st.info(f" Backup saved: `{result['backup_name']}`")
+                            # Mark as locally tested
+                            st.session_state["master_ai_pending_change"]["status"] = "locally_tested"
+                            st.session_state["master_ai_pending_change"]["backup_name"] = result.get("backup_name")
+                            st.session_state.master_ai_history.append({
+                                "role"   : "assistant",
+                                "content": (
+                                    f" `{pending['target_file']}` saved locally! "
+                                    f"Streamlit is reloading with the new code. "
+                                    f"Test it now — if it looks good, click **Deploy to GitHub** to make it permanent. "
+                                    f"If something is wrong, click **Rollback** to restore the original instantly."
+                                )
+                            })
+                            st.rerun()
+
+                #  Step 2: Deploy to GitHub 
+                with col_github:
+                    tested = pending.get("status") == "locally_tested"
+                    is_gas = pending.get("type") == "gas"
+                    deploy_label = (
+                        " Push to Apps Script" if is_gas
+                        else " Deploy to GitHub" if tested
+                        else " Skip Test & Deploy"
+                    )
+                    if st.button(
+                        deploy_label,
+                        use_container_width=True,
+                        type="primary" if (tested or is_gas) else "secondary",
+                        key="approve_code_change"
+                    ):
+                        with st.spinner(" Deploying..."):
+                            if is_gas:
+                                result = master_ai.gas_editor.write_file(
+                                    pending["target_file"],
+                                    pending["new_code"]
+                                )
+                            else:
+                                result = master_ai.deploy_code_change(
+                                    pending["target_file"],
+                                    pending["new_code"]
+                                )
+                        if "error" in result:
+                            st.error(result["error"])
+                        else:
+                            st.success(result["message"])
+                            st.session_state["master_ai_last_backup"] = {
+                                "file"   : pending["target_file"],
+                                "content": pending["original_code"],
+                                "type"   : pending.get("type","python")
+                            }
+                            st.session_state["master_ai_pending_change"] = None
+                            st.session_state.master_ai_history.append({
+                                "role"   : "assistant",
+                                "content": (
+                                    f" `{pending['target_file']}` deployed to "
+                                    f"{'Apps Script' if is_gas else 'GitHub'} successfully!"
+                                )
+                            })
+                            st.rerun()
+
+                #  Reject 
+                #  Reject 
+                if st.button(" Reject and Restore Original",
+                             use_container_width=True,
+                             key="reject_code_change"):
+                        # If locally tested, restore backup automatically
+                        backup_name = pending.get("backup_name")
+                        if backup_name:
+                            try:
+                                import shutil
+                                shutil.copy2(backup_name, pending["target_file"])
+                                import os
+                                os.remove(backup_name)
+                                restore_msg = f"↩ Original `{pending['target_file']}` restored automatically."
+                            except Exception:
+                                restore_msg = " Could not auto-restore — check your backup files."
+                        else:
+                            restore_msg = "No local changes were made."
+
+                        st.session_state["master_ai_pending_change"] = None
+                        st.session_state.master_ai_history.append({
+                            "role"   : "assistant",
+                            "content": f" Change rejected. {restore_msg}"
+                        })
+                        st.rerun()
+
+
+
+                # Rollback option
+                backup = st.session_state.get("master_ai_last_backup")
+                if backup:
+                    st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+                    st.markdown(f"** Last Backup:** `{backup['file']}`")
+                    if st.button("↩ Rollback to Previous Version",
+                                 key="rollback_btn",
+                                 use_container_width=True):
+                        with st.spinner("Rolling back..."):
+                            if backup.get("type") == "gas":
+                                result = master_ai.gas_editor.write_file(
+                                    backup["file"],
+                                    backup["content"]
+                                )
+                            else:
+                                result = master_ai.deploy_code_change(
+                                    backup["file"],
+                                    backup["content"]
+                                )
+                        if "error" in result:
+                            st.error(result["error"])
+                        else:
+                            st.success(f" Rolled back `{backup['file']}` successfully!")
+                            st.session_state["master_ai_last_backup"] = None
+                            st.rerun()
+
             st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-            st.markdown("** Fallback Chain**")
-            chain = ["Gemini (Key Rotation)"]
-            if groq_key:    chain.append("Groq")
-            if mistral_key: chain.append("Mistral")
-            if hf_token:    chain.append("HuggingFace")
-            if cf_token:    chain.append("Cloudflare")
-            chain_str = " → ".join([f"**{c}**" for c in chain])
-            st.markdown(f"When quota is hit: {chain_str}")
-            if len(chain) == 1:
-                st.warning(" Only Gemini configured — add fallback providers for more resilience.")
 
-        # 
-        #  KEY MANAGEMENT
-        # 
-        with ai_engine_tabs[1]:
-            st.markdown("####  Gemini Key Management")
-            st.info(
-                "Keys are stored in `.streamlit/secrets.toml` on your server. "
-                "Add new keys there as `GEMINI_KEY_1`, `GEMINI_KEY_2`, etc. "
-                "They will appear here automatically."
-            )
 
-            # Show all current keys
-            gemini_keys_all = []
-            for i in range(1, 20):
-                k = st.secrets.get(f"GEMINI_KEY_{i}", "")
-                if k: gemini_keys_all.append((i, k))
 
-            if gemini_keys_all:
-                st.markdown(f"**{len(gemini_keys_all)} key(s) configured:**")
-                for idx, (num, key) in enumerate(gemini_keys_all):
-                    masked = key[:12] + "•" * 15 + key[-4:]
-                    st.markdown(f"""
-                    <div style="background:white;border-radius:10px;padding:14px 18px;
-                        margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {ADMIN_ACCENT};">
-                        <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <div>
-                                <span style="font-weight:800;color:{ADMIN_ACCENT};">
-                                    Key {num}
-                                </span>
-                                <span style="font-family:monospace;font-size:0.82rem;
-                                    color:#475569;margin-left:12px;">{masked}</span>
-                            </div>
-                            <span style="background:#dcfce7;color:#16a34a;font-size:0.7rem;
-                                font-weight:700;padding:2px 10px;border-radius:10px;">
-                                GEMINI_KEY_{num}
-                            </span>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.error(" No Gemini keys found.")
 
-            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+            #  Input clear trick 
+            if "master_ai_input_key" not in st.session_state:
+                st.session_state.master_ai_input_key = 0
 
-            st.markdown("####  How to Add a New Key")
-            st.code("""# In .streamlit/secrets.toml — add the next key number:
-GEMINI_KEY_1 = "AIza...your_key..."
-GEMINI_KEY_2 = "AIza...friend_key..."
-GEMINI_KEY_3 = "AIza...new_key..."   # ← add new ones like this
+            col_input, col_send = st.columns([5, 1])
+            with col_input:
+                user_input = st.text_input(
+                    "Message",
+                    placeholder="Ask me anything about the portal...",
+                    label_visibility="collapsed",
+                    key=f"master_ai_input_{st.session_state.master_ai_input_key}"
+                )
+            with col_send:
+                send_btn = st.button(" Send", use_container_width=True, type="primary")
+            #  Quick action buttons 
+            st.markdown("**Quick Actions:**")
+            qc1, qc2, qc3, qc4, qc5,qc6 = st.columns(6)
+            with qc1:
+                if st.button(" Portal Status", use_container_width=True, key="qa_status"):
+                    user_input = "Give me a full status report of the portal right now."
+                    send_btn = True
+            with qc2:
+                if st.button(" Suggest Improvements", use_container_width=True, key="qa_suggest"):
+                    user_input = "Suggest improvements for the portal."
+                    send_btn = True
+            with qc3:
+                if st.button(" Analyze Students", use_container_width=True, key="qa_students"):
+                    user_input = "Analyze the current student enrollment and tell me what you see."
+                    send_btn = True
+            with qc4:
+                if st.button(" Audit Code", use_container_width=True, key="qa_audit"):
+                    user_input = "Analyze my code and tell me what's wrong and what can be improved."
+                    send_btn = True
+            with qc5:
+                if st.button(" Clear Chat", use_container_width=True, key="qa_clear"):
+                    st.session_state.master_ai_history = []
+                    st.session_state.master_ai_greeted = False
+                    st.rerun()
+            with qc6:
+                if st.button(" View Memory", use_container_width=True, key="qa_memory"):
+                    user_input = "Show me everything you remember about me and the portal."
+                    send_btn = True
+            #  Memory Manager 
+            with st.expander(" Memory Manager", expanded=False):
+                st.caption("View and manage what the Master AI remembers about you and your portal.")
 
-# On Streamlit Cloud:
-# Go to App Settings → Secrets → paste new key line → Save
-# The app reloads automatically.""", language="toml")
+                mem_tabs = st.tabs([
+                    " Preferences", " Decisions",
+                    " Conversations", " Insights"
+                ])
 
-            st.markdown("####  Test a Key")
-            test_key = st.text_input(
-                "Paste a key to test:",
-                type="password",
-                placeholder="AIza..."
-            )
-            if st.button(" Test Key", use_container_width=True) and test_key.strip():
-                with st.spinner("Testing..."):
-                    try:
-                        import google as genai
-                        client = genai.Client(api_key=test_key.strip())
-                        _resp = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents="Say: Key works"
-            )
-                        st.success(f" Key is valid! Response: {_resp.text[:80]}")
-                    except Exception as e:
-                        st.error(f" Key failed: {str(e)[:120]}")
+                memory_system = MasterAIMemorySystem(db)
 
-        # 
-        #  FEATURE CONTROLS
-        # 
-        with ai_engine_tabs[2]:
-            st.markdown("####  AI Feature Controls")
-            st.info("Configure which AI features are active and their limits.")
+                for tab_idx, mem_type in enumerate(["preference","decision","conversation","insight"]):
+                    with mem_tabs[tab_idx]:
+                        memories = memory_system.load_type(mem_type)
+                        if memories:
+                            for mem in memories:
+                                col_m, col_d = st.columns([5,1])
+                                with col_m:
+                                    st.markdown(f"""
+                                    <div style="background:white;border-radius:8px;
+                                        padding:10px 14px;margin-bottom:6px;
+                                        border:1px solid #e2e8f7;
+                                        border-left:3px solid {ADMIN_ACCENT};">
+                                        <div style="font-size:0.75rem;color:#94a3b8;">
+                                            {mem.get('timestamp','')[:16]}
+                                        </div>
+                                        <div style="font-weight:700;font-size:0.85rem;">
+                                            {mem.get('key','')}
+                                        </div>
+                                        <div style="font-size:0.85rem;color:#475569;">
+                                            {mem.get('value','')}
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                with col_d:
+                                    if st.button("", key=f"del_mem_{mem_type}_{mem.get('key','')}"):
+                                        db.delete_master_ai_memory(mem_type, mem.get('key',''))
+                                        st.rerun()
+                        else:
+                            st.info(f"No {mem_type} memories yet.")
 
-            st.markdown("**Student AI Features**")
-            c1, c2 = st.columns(2)
-            with c1:
-                st.toggle(" Class Assistant Chat",   value=True,  disabled=True)
-                st.toggle(" Material Summarizer",    value=True,  disabled=True)
-                st.toggle(" Revision Questions",     value=True,  disabled=True)
-            with c2:
-                st.toggle(" Document Q&A",           value=True,  disabled=True)
-                st.toggle(" Concept Explainer",      value=True,  disabled=True)
+                        if memories:
+                            if st.button(f" Clear All {mem_type.title()} Memories",
+                                         key=f"clear_{mem_type}_mem",
+                                         use_container_width=True):
+                                db.clear_master_ai_memory(mem_type)
+                                st.rerun()
 
-            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+                if st.button(" Save Current Conversation to Memory",
+                             use_container_width=True, key="save_conv_mem"):
+                    if st.session_state.master_ai_history:
+                        with st.spinner("Extracting memories..."):
+                            result = memory_system.extract_and_save_memories(
+                                st.session_state.master_ai_history, db
+                            )
+                        if result.get("saved", 0) > 0:
+                            st.success(f" Saved {result['saved']} memory item(s)!")
+                        else:
+                            st.info("Nothing memorable found in this conversation.")
+                    else:
+                        st.info("No conversation to save yet.")
+                #  Monitor & Notifications 
+            with st.expander(" Portal Monitor & Notifications", expanded=False):
+                st.caption("Check portal health and send alerts to your WhatsApp/Telegram.")
 
-            st.markdown("**Class Rep AI Features**")
-            c3, c4 = st.columns(2)
-            with c3:
-                st.toggle(" Inbox Analysis",         value=True,  disabled=True)
-                st.toggle(" Announcement Drafting",  value=True,  disabled=True)
-                st.toggle("⏰ Deadline Reminders",     value=True,  disabled=True)
-            with c4:
-                st.toggle(" Group Allocation AI",    value=True,  disabled=True)
-                st.toggle(" Timetable Generator",    value=True,  disabled=True)
-                st.toggle(" Conflict Checker",       value=True,  disabled=True)
+                monitor = MasterAIMonitor(db)
 
-            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-
-            st.markdown("**⏱ Cooldown Settings**")
-            st.caption("Minimum seconds between AI requests per student.")
-            cooldown = st.slider("Student cooldown (seconds)", 5, 120, 30)
-            st.caption(f"Current: **{cooldown}s** between requests per student")
-
-            st.markdown("** Token Limits**")
-            col_t1, col_t2 = st.columns(2)
-            with col_t1:
-                st.metric("Summary tokens", "6,000")
-                st.metric("Chat tokens",    "6,000")
-            with col_t2:
-                st.metric("Revision Qs",    "6,000")
-                st.metric("Rep Analysis",   "6,000")
-
-            st.info(
-                " To change cooldowns or token limits, edit `ai_engine.py`. "
-                "Dynamic controls coming in a future update."
-            )
-
-        # 
-        #  ENROLLMENT INSIGHTS
-        # 
-        with ai_engine_tabs[3]:
-            st.markdown("####  AI Enrollment Analysis")
-            if st.button(" Analyse Enrollment", use_container_width=True, type="primary"):
-                with st.spinner("Analysing..."):
-                    result = ai_admin.analyze_enrollment(df_all)
-                st.markdown(result)
-
-        # 
-        #  FEEDBACK SUMMARY
-        # 
-        with ai_engine_tabs[4]:
-            st.markdown("####  AI Feedback Summary")
-            f_dept3 = st.selectbox(
-                "Scope", ["ALL"] + get_dept_codes(), key="ai_fb_dept"
-            )
-            if st.button(" Summarize Feedback", use_container_width=True, type="primary"):
-                if f_dept3 == "ALL":
-                    fb_scope = all_feedback
+                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+                st.markdown("** GAS Code Reader:**")
+                gas_files = master_ai.gas_editor.get_file_list()
+                if gas_files:
+                    sel_gas_file = st.selectbox(
+                        "Select GAS file to read",
+                        gas_files,
+                        key="gas_file_sel"
+                    )
+                    if st.button(" Read File", use_container_width=True, key="read_gas_btn"):
+                        content = master_ai.gas_editor.read_file(sel_gas_file)
+                        st.code(content, language="javascript")
                 else:
-                    fb_scope = [
-                        f for f in all_feedback
-                        if isinstance(f, list) and len(f) > 5
-                        and str(f[5]).strip().upper() == f_dept3
-                    ]
-                with st.spinner("Analysing..."):
-                    result = ai_admin.summarize_all_feedback(fb_scope, f_dept3)
-                st.markdown(result)
+                    st.warning("GAS Editor not connected. Check credentials.")
 
-    # 
-    #  ADVANCED TOOLS  (tabs[7])
-    # 
-    with tabs[7]:
+                #  Health Check 
+                if st.button(" Run Health Check",
+                             use_container_width=True,
+                             type="primary",
+                             key="run_health_check"):
+                    with st.spinner("Checking portal health..."):
+                        health = monitor.check_portal_health(
+                            df_all=df_all,
+                            reps_list=reps_list,
+                            all_feedback=all_feedback,
+                            all_anns=all_anns
+                        )
+
+                    # Display results
+                    overall = health["overall"]
+                    if "" in overall:
+                        st.error(overall)
+                    elif "" in overall:
+                        st.warning(overall)
+                    else:
+                        st.success(overall)
+
+                    if health["issues"]:
+                        st.markdown("** Critical Issues:**")
+                        for issue in health["issues"]:
+                            st.error(issue)
+
+                    if health["warnings"]:
+                        st.markdown("** Warnings:**")
+                        for w in health["warnings"]:
+                            st.warning(w)
+
+                    if health["healthy"]:
+                        st.markdown("** Healthy:**")
+                        for h in health["healthy"]:
+                            st.success(h)
+
+                    # Store for sending
+                    st.session_state["last_health_check"] = health
+
+                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+
+                #  Notification Channel 
+                st.markdown("** Send Alert To:**")
+                notif_channel = st.radio(
+                    "Channel",
+                    ["Both", "WhatsApp Only", "Telegram Only"],
+                    horizontal=True,
+                    key="notif_channel",
+                    label_visibility="collapsed"
+                )
+                channel_map = {
+                    "Both"          : "both",
+                    "WhatsApp Only" : "whatsapp",
+                    "Telegram Only" : "telegram"
+                }
+                selected_channel = channel_map[notif_channel]
+
+                #  Send Daily Report 
+                if st.button(" Send Daily Report",
+                             use_container_width=True,
+                             key="send_daily_report"):
+                    with st.spinner("Generating and sending report..."):
+                        report = monitor.generate_daily_report(
+                            df_all=df_all,
+                            reps_list=reps_list,
+                            all_feedback=all_feedback,
+                            all_anns=all_anns
+                        )
+                        result = monitor.send_alert(report, selected_channel)
+
+                    st.markdown("** Report sent:**")
+                    st.code(report)
+
+                    for ch, res in result.items():
+                        if "error" in res:
+                            st.error(f"{ch}: {res['error']}")
+                        else:
+                            st.success(f" {ch.title()}: Sent successfully!")
+
+                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+
+                #  Custom Alert 
+                st.markdown("** Send Custom Alert:**")
+                custom_msg = st.text_area(
+                    "Message",
+                    placeholder="Type your alert message...",
+                    height=80,
+                    key="custom_alert_msg",
+                    label_visibility="collapsed"
+                )
+                ca1, ca2 = st.columns(2)
+                with ca1:
+                    if st.button(" Send Custom",
+                                 use_container_width=True,
+                                 key="send_custom_alert"):
+                        if custom_msg.strip():
+                            with st.spinner("Sending..."):
+                                result = monitor.send_alert(
+                                    custom_msg.strip(), selected_channel
+                                )
+                            for ch, res in result.items():
+                                if "error" in res:
+                                    st.error(f"{ch}: {res['error']}")
+                                else:
+                                    st.success(f" {ch.title()}: Sent!")
+                        else:
+                            st.warning("Please type a message.")
+                with ca2:
+                    if st.button(" AI Generate Alert",
+                                 use_container_width=True,
+                                 key="ai_gen_alert"):
+                        health = st.session_state.get("last_health_check", {})
+                        with st.spinner("AI generating alert..."):
+                            ai_msg = monitor.ai_generate_alert(
+                                event_type="portal_health_summary",
+                                event_data=health.get("counts", {})
+                            )
+                        st.session_state["ai_generated_alert"] = ai_msg
+                        st.rerun()
+
+                if st.session_state.get("ai_generated_alert"):
+                    st.markdown("** AI Generated Alert — Edit before sending:**")
+                    edited_alert = st.text_area(
+                        "",
+                        value=st.session_state["ai_generated_alert"],
+                        height=100,
+                        key="edited_ai_alert",
+                        label_visibility="collapsed"
+                    )
+                    if st.button(" Send This Alert",
+                                 use_container_width=True,
+                                 key="send_ai_alert"):
+                        with st.spinner("Sending..."):
+                            result = monitor.send_alert(edited_alert, selected_channel)
+                        for ch, res in result.items():
+                            if "error" in res:
+                                st.error(f"{ch}: {res['error']}")
+                            else:
+                                st.success(f" {ch.title()}: Sent!")
+                        st.session_state["ai_generated_alert"] = ""
+                        st.rerun()
+
+                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+
+                #  Auto-notify settings 
+                st.markdown("** Auto Notification Triggers:**")
+                st.caption("These fire automatically when conditions are met.")
+                st.toggle(" Alert on critical issues",     value=True,  key="notif_critical",  disabled=True)
+                st.toggle(" Alert on 5+ pending feedback", value=True,  key="notif_feedback",  disabled=True)
+                st.toggle(" Daily morning report (8AM)",   value=False, key="notif_daily",     disabled=True)
+                st.info(" Auto-triggers run via `notifier.py` scheduler. Enable them there.")
+
+            #  Send message 
+            if send_btn and user_input.strip():
+                captured_input = user_input.strip()
+                # Clear the input box by bumping the key
+                st.session_state.master_ai_input_key += 1
+
+                # Add user message to history
+                st.session_state.master_ai_history.append({
+                    "role": "user",
+                    "content": captured_input
+                })
+
+                # Get AI response
+                with st.spinner(" Master AI thinking..."):
+                    response = master_ai.chat(
+                        user_message=captured_input,
+                        chat_history=st.session_state.master_ai_history,
+                        db=db,
+                        df_all=df_all,
+                        reps_list=reps_list,
+                        all_feedback=all_feedback,
+                        all_anns=all_anns
+                    )
+
+                # Add response to history
+                st.session_state.master_ai_history.append({
+                    "role": "assistant",
+                    "content": response
+                })
+
+                st.rerun()
+
+        #  Logout 
+        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+        if st.button(" Log Out"):
+            st.session_state.admin_logged_in = False
+            for k in ["admin_draft", "sheets_list", "config_data", "funcs_list", "slot_cfg_list", "new_slot_fields"]:
+                if k in st.session_state:
+                    del st.session_state[k]
+            st.rerun()
+
+    # 5. SYSTEM TOOLS
+    with tab_tools:
         st.markdown("###  Advanced Tools")
         st.info(
             "Direct access to Sheet Manager, Config, Data Explorer, "
@@ -1677,1077 +2788,3 @@ GEMINI_KEY_3 = "AIza...new_key..."   # ← add new ones like this
         # 
     #  MASTER SUPER ADMIN AI  (tabs[8])
     # 
-    with tabs[8]:
-        st.markdown("###  Master Super Admin AI")
-
-        # Init master AI if not passed
-        if master_ai is None:
-            master_ai = MasterSuperAdminAI()
-
-        # Init chat history in session
-        if "master_ai_history" not in st.session_state:
-            st.session_state.master_ai_history = []
-
-        #  Greeting on first load only 
-        if "master_ai_greeted" not in st.session_state and len(st.session_state.master_ai_history) == 0:
-            with st.spinner(" Master AI initializing..."):
-                greeting = master_ai.get_greeting(df_all, reps_list)
-            st.session_state.master_ai_history.append({
-                "role": "assistant",
-                "content": greeting
-            })
-            st.session_state.master_ai_greeted = True
-        #  Status bar 
-        st.markdown(f"""
-        <div style="background:linear-gradient(135deg,{ADMIN_PRIMARY} 0%,{ADMIN_ACCENT} 100%);
-            border-radius:12px;padding:12px 20px;margin-bottom:16px;
-            display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-            <div style="color:white;font-weight:700;font-size:0.95rem;">
-                 Master AI — Layer 1 Active
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <span style="background:rgba(255,255,255,0.15);color:white;
-                    font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:10px;">
-                     Chat Interface
-                </span>
-                <span style="background:rgba(255,255,255,0.15);color:white;
-                    font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:10px;">
-                     {len([i for i in range(1,20) if st.secrets.get(f"GEMINI_KEY_{i}","")])} Key(s) Active
-                </span>
-                <span style="background:rgba(255,255,255,0.15);color:white;
-                    font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:10px;">
-                     {len(st.session_state.master_ai_history)} Messages
-                </span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        #  Chat history display 
-        chat_container = st.container()
-        with chat_container:
-            for msg in st.session_state.master_ai_history:
-                if msg["role"] == "user":
-                    st.markdown(f"""
-                    <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-                        <div style="background:{ADMIN_ACCENT};color:white;border-radius:18px 18px 4px 18px;
-                            padding:10px 16px;max-width:80%;font-size:0.88rem;line-height:1.5;">
-                            {msg["content"]}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div style="display:flex;justify-content:flex-start;margin-bottom:10px;">
-                        <div style="background:white;border:1px solid #e2e8f7;
-                            border-radius:18px 18px 18px 4px;
-                            padding:10px 16px;max-width:85%;font-size:0.88rem;line-height:1.5;
-                            color:#1e293b;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-                            {msg["content"]}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-        #  Pending Action Forms 
-        pending_form = st.session_state.get("master_ai_pending_form")
-        if pending_form:
-            form_type = pending_form.get("type")
-
-            #  ADD DEPARTMENT 
-            if form_type == "add_department":
-                st.markdown(f"""
-                <div style="background:#f0fdf4;border:2px solid #16a34a;
-                    border-radius:14px;padding:16px 20px;margin-bottom:16px;">
-                    <div style="font-weight:800;color:#15803d;font-size:1rem;">
-                         Add New Department
-                    </div>
-                    <div style="font-size:0.85rem;color:#166534;margin-top:4px;">
-                        Fill in the details below and confirm to add.
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                with st.form("master_ai_add_dept_form", clear_on_submit=True):
-                    fd1, fd2 = st.columns(2)
-                    with fd1:
-                        dept_code    = st.text_input("Department Code", placeholder="e.g. CVL")
-                        dept_name_in = st.text_input("Full Name", placeholder="e.g. Civil Engineering")
-                    with fd2:
-                        dept_courses_in = st.text_input("Course Codes (comma separated)", placeholder="e.g. BCIV,BSTR,BENV")
-                        colour_names  = [p["name"] for p in COLOUR_PALETTE]
-                        chosen_colour = st.selectbox("Colour", colour_names, key="ai_dept_colour")
-                        chosen_pal    = next(p for p in COLOUR_PALETTE if p["name"] == chosen_colour)
-                    fc1, fc2 = st.columns(2)
-                    with fc1:
-                        confirm_dept = st.form_submit_button(" Confirm & Add Department", use_container_width=True, type="primary")
-                    with fc2:
-                        cancel_dept = st.form_submit_button(" Cancel", use_container_width=True)
-                    if confirm_dept:
-                        if not dept_code.strip() or not dept_name_in.strip() or not dept_courses_in.strip():
-                            st.warning("Please fill in all fields.")
-                        else:
-                            with st.spinner("Adding department..."):
-                                ok = db.add_department(
-                                    dept_code.strip().upper(),
-                                    dept_name_in.strip(),
-                                    chosen_pal["hex"],
-                                    chosen_pal["light"],
-                                    dept_courses_in.strip()
-                                )
-                            if ok:
-                                st.session_state["master_ai_pending_form"] = None
-                                st.session_state.master_ai_history.append({
-                                    "role": "assistant",
-                                    "content": f" Department **{dept_name_in.strip()}** ({dept_code.strip().upper()}) added successfully!"
-                                })
-                                st.rerun()
-                            else:
-                                st.error(" Failed to add department. Check your GAS deployment.")
-                    if cancel_dept:
-                        st.session_state["master_ai_pending_form"] = None
-                        st.session_state.master_ai_history.append({"role": "assistant", "content": " Department creation cancelled."})
-                        st.rerun()
-
-            #  ASSIGN REP 
-            elif form_type == "assign_rep":
-                st.markdown(f"""
-                <div style="background:#eff6ff;border:2px solid #1a56db;
-                    border-radius:14px;padding:16px 20px;margin-bottom:16px;">
-                    <div style="font-weight:800;color:#1e40af;font-size:1rem;">
-                         Assign Class Rep
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                with st.form("master_ai_assign_rep_form", clear_on_submit=True):
-                    dept_opts = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
-                    fr1, fr2 = st.columns(2)
-                    with fr1:
-                        r_dept_label = st.selectbox("Department", list(dept_opts.keys()), key="ai_rep_dept")
-                        r_dept       = dept_opts[r_dept_label]
-                        r_year       = st.selectbox("Year Group", YEARS, key="ai_rep_year")
-                        r_name       = st.text_input("Rep Full Name", placeholder="e.g. Alice Nakamura")
-                    with fr2:
-                        r_reg  = st.text_input("Rep Reg Number", placeholder="e.g. 25/U/0001/PS")
-                        r_pw   = st.text_input("Password", type="password", placeholder="Min 6 characters")
-                        r_pw2  = st.text_input("Confirm Password", type="password")
-                    fc1, fc2 = st.columns(2)
-                    with fc1:
-                        confirm_rep = st.form_submit_button(" Confirm & Assign Rep", use_container_width=True, type="primary")
-                    with fc2:
-                        cancel_rep = st.form_submit_button(" Cancel", use_container_width=True)
-                    if confirm_rep:
-                        if not r_name.strip() or not r_reg.strip() or not r_pw:
-                            st.warning("Please fill in all fields.")
-                        elif r_pw != r_pw2:
-                            st.error(" Passwords do not match.")
-                        elif len(r_pw) < 6:
-                            st.error(" Password must be at least 6 characters.")
-                        else:
-                            with st.spinner("Assigning rep..."):
-                                ok = db.assign_rep(r_dept, r_year, r_name.strip(), r_reg.strip(), r_pw)
-                            if ok:
-                                st.session_state["master_ai_pending_form"] = None
-                                st.session_state.master_ai_history.append({
-                                    "role": "assistant",
-                                    "content": f" Class Rep **{r_name.strip()}** assigned to **{r_dept_label} — {r_year}** successfully!"
-                                })
-                                st.rerun()
-                            else:
-                                st.error(" Failed to assign rep.")
-                    if cancel_rep:
-                        st.session_state["master_ai_pending_form"] = None
-                        st.rerun()
-
-            #  DELETE DEPARTMENT 
-            elif form_type == "delete_department":
-                st.error(" Delete Department — This cannot be undone!")
-                with st.form("master_ai_del_dept_form"):
-                    depts     = get_departments()
-                    dept_opts = {f"{v['name']} ({k})": k for k, v in depts.items()}
-                    d_label   = st.selectbox("Select Department to Delete", list(dept_opts.keys()), key="ai_del_dept")
-                    sel_dept  = dept_opts[d_label]
-                    st.warning(f"You are about to permanently delete **{d_label}**.")
-                    fc1, fc2 = st.columns(2)
-                    with fc1:
-                        if st.form_submit_button(" Confirm Delete", use_container_width=True, type="primary"):
-                            with st.spinner("Deleting..."):
-                                result = db.delete_department(sel_dept)
-                            if result.get("status") == "success":
-                                st.session_state["master_ai_pending_form"] = None
-                                st.session_state.master_ai_history.append({
-                                    "role": "assistant",
-                                    "content": f" Department **{d_label}** deleted successfully."
-                                })
-                                st.rerun()
-                            else:
-                                st.error(f" {result.get('message','Failed')}")
-                    with fc2:
-                        if st.form_submit_button(" Cancel", use_container_width=True):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-
-            #  DELETE REP 
-            elif form_type == "delete_rep":
-                st.error(" Remove Class Rep — This cannot be undone!")
-                with st.form("master_ai_del_rep_form"):
-                    rep_labels = {
-                        f"{r.get('rep_name','')} — {r.get('dept','')} {r.get('year','')}": r
-                        for r in reps_list
-                    }
-                    if rep_labels:
-                        sel_rep_label = st.selectbox("Select Rep to Remove", list(rep_labels.keys()), key="ai_del_rep")
-                        sel_rep = rep_labels[sel_rep_label]
-                        fc1, fc2 = st.columns(2)
-                        with fc1:
-                            if st.form_submit_button(" Confirm Remove", use_container_width=True, type="primary"):
-                                with st.spinner("Removing..."):
-                                    ok = db.delete_rep(str(sel_rep.get("dept","")), str(sel_rep.get("year","")))
-                                if ok:
-                                    st.session_state["master_ai_pending_form"] = None
-                                    st.session_state.master_ai_history.append({
-                                        "role": "assistant",
-                                        "content": f" Rep **{sel_rep_label}** removed successfully."
-                                    })
-                                    st.rerun()
-                                else:
-                                    st.error(" Failed to remove rep.")
-                        with fc2:
-                            if st.form_submit_button(" Cancel", use_container_width=True):
-                                st.session_state["master_ai_pending_form"] = None
-                                st.rerun()
-                    else:
-                        st.info("No rep accounts found.")
-                        if st.form_submit_button(" Close"):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-
-            #  RESET REP PASSWORD 
-            elif form_type == "reset_rep_password":
-                st.info(" Reset Rep Password")
-                with st.form("master_ai_reset_pw_form"):
-                    rep_labels = {
-                        f"{r.get('rep_name','')} — {r.get('dept','')} {r.get('year','')}": r
-                        for r in reps_list
-                    }
-                    if rep_labels:
-                        sel_label = st.selectbox("Select Rep", list(rep_labels.keys()), key="ai_reset_rep")
-                        sel_rep   = rep_labels[sel_label]
-                        new_pw    = st.text_input("New Password", type="password")
-                        new_pw2   = st.text_input("Confirm Password", type="password")
-                        fc1, fc2  = st.columns(2)
-                        with fc1:
-                            if st.form_submit_button(" Reset Password", use_container_width=True, type="primary"):
-                                if not new_pw or new_pw != new_pw2:
-                                    st.error(" Passwords don't match.")
-                                elif len(new_pw) < 6:
-                                    st.error(" Min 6 characters.")
-                                else:
-                                    with st.spinner("Resetting..."):
-                                        ok = db.assign_rep(
-                                            dept=str(sel_rep.get("dept","")),
-                                            year=str(sel_rep.get("year","")),
-                                            rep_name=str(sel_rep.get("rep_name","")),
-                                            rep_reg=str(sel_rep.get("rep_reg","")),
-                                            password=new_pw
-                                        )
-                                    if ok:
-                                        st.session_state["master_ai_pending_form"] = None
-                                        st.session_state.master_ai_history.append({
-                                            "role": "assistant",
-                                            "content": f" Password reset for **{sel_label}**."
-                                        })
-                                        st.rerun()
-                                    else:
-                                        st.error(" Failed.")
-                        with fc2:
-                            if st.form_submit_button(" Cancel", use_container_width=True):
-                                st.session_state["master_ai_pending_form"] = None
-                                st.rerun()
-                    else:
-                        st.info("No rep accounts found.")
-                        if st.form_submit_button(" Close"):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-
-            #  BROADCAST ANNOUNCEMENT 
-            elif form_type == "broadcast_announcement":
-                st.info(" Broadcast to All Departments")
-                with st.form("master_ai_broadcast_form"):
-                    b_text     = st.text_area("Announcement", height=120)
-                    b_priority = st.selectbox("Priority", ["Normal","Urgent"], key="ai_bc_pri")
-                    fc1, fc2   = st.columns(2)
-                    with fc1:
-                        if st.form_submit_button(" Broadcast Now", use_container_width=True, type="primary"):
-                            if not b_text.strip():
-                                st.warning("Please enter announcement text.")
-                            else:
-                                with st.spinner("Broadcasting..."):
-                                    ok = db.broadcast_announcement(b_text.strip(), b_priority)
-                                if ok:
-                                    st.session_state["master_ai_pending_form"] = None
-                                    st.session_state.master_ai_history.append({
-                                        "role": "assistant",
-                                        "content": " Broadcast sent to all departments successfully!"
-                                    })
-                                    st.rerun()
-                                else:
-                                    st.error(" Failed.")
-                    with fc2:
-                        if st.form_submit_button(" Cancel", use_container_width=True):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-
-            #  POST ANNOUNCEMENT 
-            elif form_type == "post_announcement":
-                st.info(" Post Department Announcement")
-                with st.form("master_ai_post_ann_form"):
-                    dept_opts  = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
-                    fa1, fa2   = st.columns(2)
-                    with fa1:
-                        a_dept_label = st.selectbox("Department", list(dept_opts.keys()), key="ai_ann_dept")
-                        a_dept       = dept_opts[a_dept_label]
-                    with fa2:
-                        a_year     = st.selectbox("Year Group", ["ALL"] + YEARS, key="ai_ann_year")
-                        a_priority = st.selectbox("Priority", ["Normal","Urgent"], key="ai_ann_pri")
-                    a_text = st.text_area("Announcement Text", height=120)
-                    fc1, fc2 = st.columns(2)
-                    with fc1:
-                        if st.form_submit_button(" Post Announcement", use_container_width=True, type="primary"):
-                            if not a_text.strip():
-                                st.warning("Please enter text.")
-                            else:
-                                with st.spinner("Posting..."):
-                                    ok = db.post_announcement(a_text.strip(), a_priority, a_dept, a_year)
-                                if ok:
-                                    st.session_state["master_ai_pending_form"] = None
-                                    st.session_state.master_ai_history.append({
-                                        "role": "assistant",
-                                        "content": f" Announcement posted to **{a_dept_label} — {a_year}**!"
-                                    })
-                                    st.rerun()
-                                else:
-                                    st.error(" Failed.")
-                    with fc2:
-                        if st.form_submit_button(" Cancel", use_container_width=True):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-
-            #  DELETE STUDENT 
-            elif form_type == "delete_student":
-                st.error(" Remove Student — This cannot be undone!")
-                with st.form("master_ai_del_student_form"):
-                    if df_all is not None and not df_all.empty:
-                        student_labels = {
-                            f"{r.get('Student Name','')} — {r.get('Reg Number','')}": r.get('Reg Number','')
-                            for _, r in df_all.iterrows()
-                        }
-                        sel_s_label = st.selectbox("Select Student", list(student_labels.keys()), key="ai_del_student")
-                        sel_s_reg   = student_labels[sel_s_label]
-                        st.warning(f"Remove **{sel_s_label}**?")
-                        fc1, fc2 = st.columns(2)
-                        with fc1:
-                            if st.form_submit_button(" Confirm Remove", use_container_width=True, type="primary"):
-                                with st.spinner("Removing..."):
-                                    ok = db.delete_student(sel_s_reg)
-                                if ok:
-                                    st.session_state["master_ai_pending_form"] = None
-                                    st.session_state.master_ai_history.append({
-                                        "role": "assistant",
-                                        "content": f" Student **{sel_s_label}** removed."
-                                    })
-                                    st.rerun()
-                                else:
-                                    st.error(" Failed.")
-                        with fc2:
-                            if st.form_submit_button(" Cancel", use_container_width=True):
-                                st.session_state["master_ai_pending_form"] = None
-                                st.rerun()
-                    else:
-                        st.info("No students registered yet.")
-                        if st.form_submit_button(" Close"):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-
-            #  ASSIGN GROUP 
-            elif form_type == "assign_group":
-                st.info(" Assign Student to Group")
-                with st.form("master_ai_assign_group_form"):
-                    if df_all is not None and not df_all.empty:
-                        student_labels = {
-                            f"{r.get('Student Name','')} — {r.get('Reg Number','')}": r.get('Reg Number','')
-                            for _, r in df_all.iterrows()
-                        }
-                        sel_s_label = st.selectbox("Select Student", list(student_labels.keys()), key="ai_grp_student")
-                        sel_s_reg   = student_labels[sel_s_label]
-                        group_name  = st.text_input("Group Name", placeholder="e.g. Team Alpha")
-                        fc1, fc2    = st.columns(2)
-                        with fc1:
-                            if st.form_submit_button(" Assign Group", use_container_width=True, type="primary"):
-                                if not group_name.strip():
-                                    st.warning("Please enter a group name.")
-                                else:
-                                    with st.spinner("Assigning..."):
-                                        ok = db.assign_group(sel_s_reg, group_name.strip())
-                                    if ok:
-                                        st.session_state["master_ai_pending_form"] = None
-                                        st.session_state.master_ai_history.append({
-                                            "role": "assistant",
-                                            "content": f" **{sel_s_label}** assigned to **{group_name.strip()}**!"
-                                        })
-                                        st.rerun()
-                                    else:
-                                        st.error(" Failed.")
-                        with fc2:
-                            if st.form_submit_button(" Cancel", use_container_width=True):
-                                st.session_state["master_ai_pending_form"] = None
-                                st.rerun()
-                    else:
-                        st.info("No students registered yet.")
-                        if st.form_submit_button(" Close"):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-
-            #  POST TIMETABLE 
-            elif form_type == "post_timetable":
-                st.info(" Add Timetable Entry")
-                with st.form("master_ai_post_tt_form"):
-                    dept_opts    = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
-                    ft1, ft2     = st.columns(2)
-                    with ft1:
-                        t_dept_label = st.selectbox("Department", list(dept_opts.keys()), key="ai_tt_dept")
-                        t_dept       = dept_opts[t_dept_label]
-                        t_year       = st.selectbox("Year Group", YEARS, key="ai_tt_year")
-                        t_day        = st.selectbox("Day", ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"], key="ai_tt_day")
-                    with ft2:
-                        t_time     = st.text_input("Time", placeholder="e.g. 08:00 - 10:00")
-                        t_course   = st.text_input("Course", placeholder="e.g. Engineering Mathematics")
-                        t_lecturer = st.text_input("Lecturer", placeholder="e.g. Dr. Ouma")
-                        t_venue    = st.text_input("Venue", placeholder="e.g. LR 3")
-                    fc1, fc2 = st.columns(2)
-                    with fc1:
-                        if st.form_submit_button(" Add Entry", use_container_width=True, type="primary"):
-                            if not t_time.strip() or not t_course.strip():
-                                st.warning("Time and Course are required.")
-                            else:
-                                with st.spinner("Adding..."):
-                                    ok = db.add_timetable_entry(
-                                        dept=t_dept, year=t_year,
-                                        day=t_day, time=t_time.strip(),
-                                        course=t_course.strip(),
-                                        lecturer=t_lecturer.strip(),
-                                        venue=t_venue.strip()
-                                    )
-                                if ok:
-                                    st.session_state["master_ai_pending_form"] = None
-                                    st.session_state.master_ai_history.append({
-                                        "role": "assistant",
-                                        "content": f" Timetable entry added — **{t_day} {t_time}** | {t_course} for {t_dept_label} {t_year}!"
-                                    })
-                                    st.rerun()
-                                else:
-                                    st.error(" Failed.")
-                    with fc2:
-                        if st.form_submit_button(" Cancel", use_container_width=True):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-
-            #  DELETE TIMETABLE 
-            elif form_type == "delete_timetable":
-                st.error(" Delete Timetable Entry")
-                with st.form("master_ai_del_tt_form"):
-                    dept_opts    = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
-                    dt1, dt2     = st.columns(2)
-                    with dt1:
-                        dt_dept_label = st.selectbox("Department", list(dept_opts.keys()), key="ai_del_tt_dept")
-                        dt_dept       = dept_opts[dt_dept_label]
-                    with dt2:
-                        dt_year = st.selectbox("Year Group", YEARS, key="ai_del_tt_year")
-                        dt_day  = st.selectbox("Day", ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"], key="ai_del_tt_day")
-                    dt_course = st.text_input("Course Name to Delete", placeholder="e.g. Engineering Mathematics")
-                    fc1, fc2  = st.columns(2)
-                    with fc1:
-                        if st.form_submit_button(" Confirm Delete", use_container_width=True, type="primary"):
-                            if not dt_course.strip():
-                                st.warning("Please enter the course name.")
-                            else:
-                                with st.spinner("Deleting..."):
-                                    ok = db.delete_timetable_entry(dt_dept, dt_year, dt_day, dt_course.strip())
-                                if ok:
-                                    st.session_state["master_ai_pending_form"] = None
-                                    st.session_state.master_ai_history.append({
-                                        "role": "assistant",
-                                        "content": f" Timetable entry deleted — {dt_course} on {dt_day} for {dt_dept_label} {dt_year}."
-                                    })
-                                    st.rerun()
-                                else:
-                                    st.error(" Failed.")
-                    with fc2:
-                        if st.form_submit_button(" Cancel", use_container_width=True):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-
-            #  NOTIFY CLASS 
-            elif form_type == "notify_class":
-                st.info(" Send WhatsApp Notification to Class")
-                with st.form("master_ai_notify_form"):
-                    dept_opts    = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
-                    fn1, fn2     = st.columns(2)
-                    with fn1:
-                        n_dept_label = st.selectbox("Department", ["ALL DEPARTMENTS"] + list(dept_opts.keys()), key="ai_notify_dept")
-                        n_dept       = "ALL" if n_dept_label == "ALL DEPARTMENTS" else dept_opts[n_dept_label]
-                    with fn2:
-                        n_year = st.selectbox("Year Group", ["ALL"] + YEARS, key="ai_notify_year")
-                    n_msg = st.text_area("Message", height=120, placeholder="Type your WhatsApp message here...")
-                    fc1, fc2 = st.columns(2)
-                    with fc1:
-                        if st.form_submit_button(" Send Notification", use_container_width=True, type="primary"):
-                            if not n_msg.strip():
-                                st.warning("Please enter a message.")
-                            else:
-                                with st.spinner("Sending..."):
-                                    ok = db.notify_class_whatsapp(n_dept, n_year, n_msg.strip())
-                                if ok:
-                                    st.session_state["master_ai_pending_form"] = None
-                                    st.session_state.master_ai_history.append({
-                                        "role": "assistant",
-                                        "content": f" WhatsApp notification sent to **{n_dept_label} — {n_year}**!"
-                                    })
-                                    st.rerun()
-                                else:
-                                    st.error(" Failed. Check WhatsApp configuration.")
-                    with fc2:
-                        if st.form_submit_button(" Cancel", use_container_width=True):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-
-            #  DELETE ANNOUNCEMENT 
-            elif form_type == "delete_announcement":
-                st.error(" Delete Announcement")
-                with st.form("master_ai_del_ann_form"):
-                    if all_anns:
-                        ann_labels = {
-                            f"[{a.get('timestamp','')[:16]}] {a.get('text','')[:60]}": i
-                            for i, a in enumerate(all_anns[:30])
-                            if isinstance(a, dict)
-                        }
-                        sel_ann_label = st.selectbox("Select Announcement", list(ann_labels.keys()), key="ai_del_ann")
-                        sel_ann_idx   = ann_labels[sel_ann_label]
-                        sel_ann       = all_anns[sel_ann_idx]
-                        fc1, fc2 = st.columns(2)
-                        with fc1:
-                            if st.form_submit_button(" Confirm Delete", use_container_width=True, type="primary"):
-                                with st.spinner("Deleting..."):
-                                    ok = db.delete_announcement(sel_ann.get("timestamp",""), sel_ann.get("dept",""))
-                                if ok:
-                                    st.session_state["master_ai_pending_form"] = None
-                                    st.session_state.master_ai_history.append({
-                                        "role": "assistant",
-                                        "content": " Announcement deleted successfully."
-                                    })
-                                    st.rerun()
-                                else:
-                                    st.error(" Failed.")
-                        with fc2:
-                            if st.form_submit_button(" Cancel", use_container_width=True):
-                                st.session_state["master_ai_pending_form"] = None
-                                st.rerun()
-                    else:
-                        st.info("No announcements found.")
-                        if st.form_submit_button(" Close"):
-                            st.session_state["master_ai_pending_form"] = None
-                            st.rerun()
-        #  Pending code change approval UI 
-        pending = st.session_state.get("master_ai_pending_change")
-        if pending and pending.get("status") == "pending_approval":
-            st.markdown(f"""
-            <div style="background:#fefce8;border:2px solid #eab308;
-                border-radius:14px;padding:16px 20px;margin-bottom:16px;">
-                <div style="font-weight:800;color:#854d0e;font-size:1rem;margin-bottom:6px;">
-                     Pending Code Change — Awaiting Your Approval
-                </div>
-                <div style="font-size:0.85rem;color:#713f12;">
-                    File: <strong>{pending['target_file']}</strong><br>
-                    Request: {pending['request']}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            #  Validation result 
-            validation = pending.get("validation", {})
-            if validation:
-                if validation.get("valid"):
-                    st.success(validation["summary"])
-                    st.caption(
-                        f" Lines: {validation.get('lines_original',0)} → "
-                        f"{validation.get('lines_new',0)} | "
-                        f" Functions preserved: {validation.get('funcs_preserved',0)}"
-                    )
-                else:
-                    st.error(validation["summary"])
-                    for issue in validation.get("issues", []):
-                        st.warning(issue)
-                    st.info(" The AI attempted to auto-fix these issues. Review the code carefully before approving.")
-
-            with st.expander(" Preview Proposed Code", expanded=False):
-                st.code(pending["new_code"], language="python")
-
-            col_local, col_github = st.columns(2)
-
-            #  Step 1: Test Locally 
-            with col_local:
-                validation = pending.get("validation", {})
-                can_proceed = validation.get("valid", True)
-                if st.button(" Test Locally First",
-                             use_container_width=True,
-                             type="primary",
-                             key="test_locally",
-                             disabled=not can_proceed):
-                    if not can_proceed:
-                        st.error(" Cannot save — validation failed. Review issues above.")
-                    else:
-                        with st.spinner(" Saving locally..."):
-                            result = master_ai.save_locally(
-                            pending["target_file"],
-                            pending["new_code"]
-                        )
-                    if "error" in result:
-                        st.error(result["error"])
-                    else:
-                        st.success(result["message"])
-                        if result.get("backup_created"):
-                            st.info(f" Backup saved: `{result['backup_name']}`")
-                        # Mark as locally tested
-                        st.session_state["master_ai_pending_change"]["status"] = "locally_tested"
-                        st.session_state["master_ai_pending_change"]["backup_name"] = result.get("backup_name")
-                        st.session_state.master_ai_history.append({
-                            "role"   : "assistant",
-                            "content": (
-                                f" `{pending['target_file']}` saved locally! "
-                                f"Streamlit is reloading with the new code. "
-                                f"Test it now — if it looks good, click **Deploy to GitHub** to make it permanent. "
-                                f"If something is wrong, click **Rollback** to restore the original instantly."
-                            )
-                        })
-                        st.rerun()
-
-            #  Step 2: Deploy to GitHub 
-            with col_github:
-                tested = pending.get("status") == "locally_tested"
-                is_gas = pending.get("type") == "gas"
-                deploy_label = (
-                    " Push to Apps Script" if is_gas
-                    else " Deploy to GitHub" if tested
-                    else " Skip Test & Deploy"
-                )
-                if st.button(
-                    deploy_label,
-                    use_container_width=True,
-                    type="primary" if (tested or is_gas) else "secondary",
-                    key="approve_code_change"
-                ):
-                    with st.spinner(" Deploying..."):
-                        if is_gas:
-                            result = master_ai.gas_editor.write_file(
-                                pending["target_file"],
-                                pending["new_code"]
-                            )
-                        else:
-                            result = master_ai.deploy_code_change(
-                                pending["target_file"],
-                                pending["new_code"]
-                            )
-                    if "error" in result:
-                        st.error(result["error"])
-                    else:
-                        st.success(result["message"])
-                        st.session_state["master_ai_last_backup"] = {
-                            "file"   : pending["target_file"],
-                            "content": pending["original_code"],
-                            "type"   : pending.get("type","python")
-                        }
-                        st.session_state["master_ai_pending_change"] = None
-                        st.session_state.master_ai_history.append({
-                            "role"   : "assistant",
-                            "content": (
-                                f" `{pending['target_file']}` deployed to "
-                                f"{'Apps Script' if is_gas else 'GitHub'} successfully!"
-                            )
-                        })
-                        st.rerun()
-
-            #  Reject 
-            #  Reject 
-            if st.button(" Reject and Restore Original",
-                         use_container_width=True,
-                         key="reject_code_change"):
-                    # If locally tested, restore backup automatically
-                    backup_name = pending.get("backup_name")
-                    if backup_name:
-                        try:
-                            import shutil
-                            shutil.copy2(backup_name, pending["target_file"])
-                            import os
-                            os.remove(backup_name)
-                            restore_msg = f"↩ Original `{pending['target_file']}` restored automatically."
-                        except Exception:
-                            restore_msg = " Could not auto-restore — check your backup files."
-                    else:
-                        restore_msg = "No local changes were made."
-
-                    st.session_state["master_ai_pending_change"] = None
-                    st.session_state.master_ai_history.append({
-                        "role"   : "assistant",
-                        "content": f" Change rejected. {restore_msg}"
-                    })
-                    st.rerun()
-
-           
-
-            # Rollback option
-            backup = st.session_state.get("master_ai_last_backup")
-            if backup:
-                st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-                st.markdown(f"** Last Backup:** `{backup['file']}`")
-                if st.button("↩ Rollback to Previous Version",
-                             key="rollback_btn",
-                             use_container_width=True):
-                    with st.spinner("Rolling back..."):
-                        if backup.get("type") == "gas":
-                            result = master_ai.gas_editor.write_file(
-                                backup["file"],
-                                backup["content"]
-                            )
-                        else:
-                            result = master_ai.deploy_code_change(
-                                backup["file"],
-                                backup["content"]
-                            )
-                    if "error" in result:
-                        st.error(result["error"])
-                    else:
-                        st.success(f" Rolled back `{backup['file']}` successfully!")
-                        st.session_state["master_ai_last_backup"] = None
-                        st.rerun()
-
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-
-    
-
-        
-        #  Input clear trick 
-        if "master_ai_input_key" not in st.session_state:
-            st.session_state.master_ai_input_key = 0
-
-        col_input, col_send = st.columns([5, 1])
-        with col_input:
-            user_input = st.text_input(
-                "Message",
-                placeholder="Ask me anything about the portal...",
-                label_visibility="collapsed",
-                key=f"master_ai_input_{st.session_state.master_ai_input_key}"
-            )
-        with col_send:
-            send_btn = st.button(" Send", use_container_width=True, type="primary")
-        #  Quick action buttons 
-        st.markdown("**Quick Actions:**")
-        qc1, qc2, qc3, qc4, qc5,qc6 = st.columns(6)
-        with qc1:
-            if st.button(" Portal Status", use_container_width=True, key="qa_status"):
-                user_input = "Give me a full status report of the portal right now."
-                send_btn = True
-        with qc2:
-            if st.button(" Suggest Improvements", use_container_width=True, key="qa_suggest"):
-                user_input = "Suggest improvements for the portal."
-                send_btn = True
-        with qc3:
-            if st.button(" Analyze Students", use_container_width=True, key="qa_students"):
-                user_input = "Analyze the current student enrollment and tell me what you see."
-                send_btn = True
-        with qc4:
-            if st.button(" Audit Code", use_container_width=True, key="qa_audit"):
-                user_input = "Analyze my code and tell me what's wrong and what can be improved."
-                send_btn = True
-        with qc5:
-            if st.button(" Clear Chat", use_container_width=True, key="qa_clear"):
-                st.session_state.master_ai_history = []
-                st.session_state.master_ai_greeted = False
-                st.rerun()
-        with qc6:
-            if st.button(" View Memory", use_container_width=True, key="qa_memory"):
-                user_input = "Show me everything you remember about me and the portal."
-                send_btn = True
-        #  Memory Manager 
-        with st.expander(" Memory Manager", expanded=False):
-            st.caption("View and manage what the Master AI remembers about you and your portal.")
-
-            mem_tabs = st.tabs([
-                " Preferences", " Decisions",
-                " Conversations", " Insights"
-            ])
-
-            memory_system = MasterAIMemorySystem(db)
-
-            for tab_idx, mem_type in enumerate(["preference","decision","conversation","insight"]):
-                with mem_tabs[tab_idx]:
-                    memories = memory_system.load_type(mem_type)
-                    if memories:
-                        for mem in memories:
-                            col_m, col_d = st.columns([5,1])
-                            with col_m:
-                                st.markdown(f"""
-                                <div style="background:white;border-radius:8px;
-                                    padding:10px 14px;margin-bottom:6px;
-                                    border:1px solid #e2e8f7;
-                                    border-left:3px solid {ADMIN_ACCENT};">
-                                    <div style="font-size:0.75rem;color:#94a3b8;">
-                                        {mem.get('timestamp','')[:16]}
-                                    </div>
-                                    <div style="font-weight:700;font-size:0.85rem;">
-                                        {mem.get('key','')}
-                                    </div>
-                                    <div style="font-size:0.85rem;color:#475569;">
-                                        {mem.get('value','')}
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            with col_d:
-                                if st.button("", key=f"del_mem_{mem_type}_{mem.get('key','')}"):
-                                    db.delete_master_ai_memory(mem_type, mem.get('key',''))
-                                    st.rerun()
-                    else:
-                        st.info(f"No {mem_type} memories yet.")
-
-                    if memories:
-                        if st.button(f" Clear All {mem_type.title()} Memories",
-                                     key=f"clear_{mem_type}_mem",
-                                     use_container_width=True):
-                            db.clear_master_ai_memory(mem_type)
-                            st.rerun()
-
-            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-            if st.button(" Save Current Conversation to Memory",
-                         use_container_width=True, key="save_conv_mem"):
-                if st.session_state.master_ai_history:
-                    with st.spinner("Extracting memories..."):
-                        result = memory_system.extract_and_save_memories(
-                            st.session_state.master_ai_history, db
-                        )
-                    if result.get("saved", 0) > 0:
-                        st.success(f" Saved {result['saved']} memory item(s)!")
-                    else:
-                        st.info("Nothing memorable found in this conversation.")
-                else:
-                    st.info("No conversation to save yet.")
-            #  Monitor & Notifications 
-        with st.expander(" Portal Monitor & Notifications", expanded=False):
-            st.caption("Check portal health and send alerts to your WhatsApp/Telegram.")
-
-            monitor = MasterAIMonitor(db)
-
-            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-            st.markdown("** GAS Code Reader:**")
-            gas_files = master_ai.gas_editor.get_file_list()
-            if gas_files:
-                sel_gas_file = st.selectbox(
-                    "Select GAS file to read",
-                    gas_files,
-                    key="gas_file_sel"
-                )
-                if st.button(" Read File", use_container_width=True, key="read_gas_btn"):
-                    content = master_ai.gas_editor.read_file(sel_gas_file)
-                    st.code(content, language="javascript")
-            else:
-                st.warning("GAS Editor not connected. Check credentials.")
-
-            #  Health Check 
-            if st.button(" Run Health Check",
-                         use_container_width=True,
-                         type="primary",
-                         key="run_health_check"):
-                with st.spinner("Checking portal health..."):
-                    health = monitor.check_portal_health(
-                        df_all=df_all,
-                        reps_list=reps_list,
-                        all_feedback=all_feedback,
-                        all_anns=all_anns
-                    )
-
-                # Display results
-                overall = health["overall"]
-                if "" in overall:
-                    st.error(overall)
-                elif "" in overall:
-                    st.warning(overall)
-                else:
-                    st.success(overall)
-
-                if health["issues"]:
-                    st.markdown("** Critical Issues:**")
-                    for issue in health["issues"]:
-                        st.error(issue)
-
-                if health["warnings"]:
-                    st.markdown("** Warnings:**")
-                    for w in health["warnings"]:
-                        st.warning(w)
-
-                if health["healthy"]:
-                    st.markdown("** Healthy:**")
-                    for h in health["healthy"]:
-                        st.success(h)
-
-                # Store for sending
-                st.session_state["last_health_check"] = health
-
-            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-
-            #  Notification Channel 
-            st.markdown("** Send Alert To:**")
-            notif_channel = st.radio(
-                "Channel",
-                ["Both", "WhatsApp Only", "Telegram Only"],
-                horizontal=True,
-                key="notif_channel",
-                label_visibility="collapsed"
-            )
-            channel_map = {
-                "Both"          : "both",
-                "WhatsApp Only" : "whatsapp",
-                "Telegram Only" : "telegram"
-            }
-            selected_channel = channel_map[notif_channel]
-
-            #  Send Daily Report 
-            if st.button(" Send Daily Report",
-                         use_container_width=True,
-                         key="send_daily_report"):
-                with st.spinner("Generating and sending report..."):
-                    report = monitor.generate_daily_report(
-                        df_all=df_all,
-                        reps_list=reps_list,
-                        all_feedback=all_feedback,
-                        all_anns=all_anns
-                    )
-                    result = monitor.send_alert(report, selected_channel)
-
-                st.markdown("** Report sent:**")
-                st.code(report)
-
-                for ch, res in result.items():
-                    if "error" in res:
-                        st.error(f"{ch}: {res['error']}")
-                    else:
-                        st.success(f" {ch.title()}: Sent successfully!")
-
-            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-
-            #  Custom Alert 
-            st.markdown("** Send Custom Alert:**")
-            custom_msg = st.text_area(
-                "Message",
-                placeholder="Type your alert message...",
-                height=80,
-                key="custom_alert_msg",
-                label_visibility="collapsed"
-            )
-            ca1, ca2 = st.columns(2)
-            with ca1:
-                if st.button(" Send Custom",
-                             use_container_width=True,
-                             key="send_custom_alert"):
-                    if custom_msg.strip():
-                        with st.spinner("Sending..."):
-                            result = monitor.send_alert(
-                                custom_msg.strip(), selected_channel
-                            )
-                        for ch, res in result.items():
-                            if "error" in res:
-                                st.error(f"{ch}: {res['error']}")
-                            else:
-                                st.success(f" {ch.title()}: Sent!")
-                    else:
-                        st.warning("Please type a message.")
-            with ca2:
-                if st.button(" AI Generate Alert",
-                             use_container_width=True,
-                             key="ai_gen_alert"):
-                    health = st.session_state.get("last_health_check", {})
-                    with st.spinner("AI generating alert..."):
-                        ai_msg = monitor.ai_generate_alert(
-                            event_type="portal_health_summary",
-                            event_data=health.get("counts", {})
-                        )
-                    st.session_state["ai_generated_alert"] = ai_msg
-                    st.rerun()
-
-            if st.session_state.get("ai_generated_alert"):
-                st.markdown("** AI Generated Alert — Edit before sending:**")
-                edited_alert = st.text_area(
-                    "",
-                    value=st.session_state["ai_generated_alert"],
-                    height=100,
-                    key="edited_ai_alert",
-                    label_visibility="collapsed"
-                )
-                if st.button(" Send This Alert",
-                             use_container_width=True,
-                             key="send_ai_alert"):
-                    with st.spinner("Sending..."):
-                        result = monitor.send_alert(edited_alert, selected_channel)
-                    for ch, res in result.items():
-                        if "error" in res:
-                            st.error(f"{ch}: {res['error']}")
-                        else:
-                            st.success(f" {ch.title()}: Sent!")
-                    st.session_state["ai_generated_alert"] = ""
-                    st.rerun()
-
-            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-
-            #  Auto-notify settings 
-            st.markdown("** Auto Notification Triggers:**")
-            st.caption("These fire automatically when conditions are met.")
-            st.toggle(" Alert on critical issues",     value=True,  key="notif_critical",  disabled=True)
-            st.toggle(" Alert on 5+ pending feedback", value=True,  key="notif_feedback",  disabled=True)
-            st.toggle(" Daily morning report (8AM)",   value=False, key="notif_daily",     disabled=True)
-            st.info(" Auto-triggers run via `notifier.py` scheduler. Enable them there.")
-
-        #  Send message 
-        if send_btn and user_input.strip():
-            captured_input = user_input.strip()
-            # Clear the input box by bumping the key
-            st.session_state.master_ai_input_key += 1
-
-            # Add user message to history
-            st.session_state.master_ai_history.append({
-                "role": "user",
-                "content": captured_input
-            })
-
-            # Get AI response
-            with st.spinner(" Master AI thinking..."):
-                response = master_ai.chat(
-                    user_message=captured_input,
-                    chat_history=st.session_state.master_ai_history,
-                    db=db,
-                    df_all=df_all,
-                    reps_list=reps_list,
-                    all_feedback=all_feedback,
-                    all_anns=all_anns
-                )
-
-            # Add response to history
-            st.session_state.master_ai_history.append({
-                "role": "assistant",
-                "content": response
-            })
-
-            st.rerun()
-
-    #  Logout 
-    st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-    if st.button(" Log Out"):
-        st.session_state.admin_logged_in = False
-        for k in ["admin_draft", "sheets_list", "config_data", "funcs_list", "slot_cfg_list", "new_slot_fields"]:
-            if k in st.session_state:
-                del st.session_state[k]
-        st.rerun()

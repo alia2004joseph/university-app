@@ -53,6 +53,10 @@ class SupabaseDatabaseManager:
     def fetch_roster(self, dept: str = "ALL", year: str = "ALL") -> List[Dict]:
         return _students.fetch_roster_rows(dept, year)
 
+    def fetch_all_roster(self):
+        from cache import cached_fetch_roster
+        return cached_fetch_roster(dept="ALL", year="ALL")
+
     def register_student(
         self, name: str, reg: str, code: str, contact: str, dept: str, year: str,
         pin: Optional[str] = None, whatsapp_phone: str = "", email: str = "",
@@ -102,6 +106,12 @@ class SupabaseDatabaseManager:
     def fetch_announcements(self, dept: str = "ALL", year: str = "ALL") -> List:
         return _announcements.fetch_announcements(dept, year)
 
+    def fetch_all_announcements(self) -> List:
+        return _announcements.fetch_announcements(dept="ALL", year="ALL")
+
+    def broadcast_announcement(self, text: str, priority: str = "Normal") -> bool:
+        return _announcements.post_announcement(text=text, dept="ALL", year="ALL", priority=priority, posted_by="Super Admin")
+
     def post_announcement(self, text: str, dept: str = "ALL", year: str = "ALL",
                            priority: str = "Normal", pinned: bool = False,
                            posted_by: str = "Class Rep") -> bool:
@@ -113,6 +123,9 @@ class SupabaseDatabaseManager:
     # ── MATERIALS ───────────────────────────────────────────────
     def fetch_materials(self, dept: str = "ALL", year: str = "ALL") -> List:
         return _materials.fetch_materials(dept, year)
+
+    def fetch_all_materials(self) -> List:
+        return _materials.fetch_materials(dept="ALL", year="ALL")
 
     def upload_material(self, file_bytes, file_name: str, mime_type: str,
                         dept: str = "ALL", year: str = "ALL",
@@ -130,6 +143,9 @@ class SupabaseDatabaseManager:
     # ── FEEDBACK / MESSAGES ─────────────────────────────────────
     def fetch_feedback(self, dept: str = "ALL", year: str = "ALL") -> List:
         return _feedback.fetch_feedback(dept, year)
+
+    def fetch_all_feedback(self) -> List:
+        return _feedback.fetch_feedback(dept="ALL", year="ALL")
 
     def submit_feedback(self, reg_number: str, student_name: str, message: str,
                         dept: str = "ALL", year: str = "ALL") -> bool:
@@ -151,6 +167,10 @@ class SupabaseDatabaseManager:
     def send_rep_reply(self, reg_number: str, message: str, rep_name: str = "Class Rep",
                        dept: str = "ALL", year: str = "ALL") -> bool:
         return _rep_replies.send_rep_reply(reg_number, message, rep_name, dept, year)
+
+    def post_rep_reply(self, reg_number: str, student_name: str, message: str, rep_name: str = "Class Rep",
+                       dept: str = "ALL", year: str = "ALL") -> bool:
+        return _rep_replies.post_rep_reply(reg_number, student_name, message, rep_name, dept=dept, year=year)
 
     def mark_rep_reply_read(self, timestamp: str, reg_number: str) -> bool:
         return _rep_replies.mark_rep_reply_read(timestamp, reg_number)

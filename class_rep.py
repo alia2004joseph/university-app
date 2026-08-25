@@ -17,8 +17,11 @@ def inject_rep_css(primary: str, light: str):
     css = f"""
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
-    html, body, [class*="css"] {{
+    body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        line-height: 1.55;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }}
     
     #MainMenu, footer {{ visibility: hidden !important; }}
@@ -480,373 +483,390 @@ def render_class_rep_interface(
     </div>
     """, unsafe_allow_html=True)
 
-    #  Tabs 
-    tabs = st.tabs([
-        "Roster", "Groups", "Notices",
-        "Materials", "Timetable", "Feedback",
-        "Replies", "AI Tools", "Settings", "Features"
+    #  Primary Hub Tabs (Organized into 5 Clean Sections)
+    tab_roster, tab_notices, tab_tt, tab_feedback, tab_ai_settings = st.tabs([
+        "👥 Students & Groups",
+        "📢 Notices & Materials",
+        "📅 Class Timetable",
+        "💬 Feedback & Replies" + (f" ({pending_feedback})" if pending_feedback else ""),
+        "⚙️ AI Tools & Settings"
     ])
 
-    # 
-    # ROSTER
-    # 
-    #  ROSTER (mobile-friendly) 
-    with tabs[0]:
-        st.markdown(f"### {d_name} — {r_year} Students")
-        if df_class.empty:
-            st.info("No students registered for your class yet.")
-        else:
-            search = st.text_input("Search", placeholder="Name or reg number...")
-            df_show = df_class.copy()
-            if search:
-                mask = (
-                    df_show["Student Name"].str.contains(search, case=False, na=False) |
-                    df_show["Reg Number"].str.contains(search, case=False, na=False)
-                )
-                df_show = df_show[mask]
-            if is_mob:
-                render_rep_roster_mobile(df_show, total_students)
+    # 1. STUDENTS & GROUPS
+    with tab_roster:
+        sub_roster, sub_groups = st.tabs([
+            f"📋 Class Roster ({total_students})",
+            "👥 Group Allocations"
+        ])
+        with sub_roster:
+            st.markdown(f"### {d_name} — {r_year} Students")
+            if df_class.empty:
+                st.info("No students registered for your class yet.")
             else:
-                st.dataframe(df_show, use_container_width=True)
-                st.caption(f"Showing {len(df_show)} of {total_students} students")
-
-            # WhatsApp coverage stats
-            wa_col = "WhatsApp Phone"
-            key_col = "CallMeBot Key"
-            if wa_col in df_class.columns and key_col in df_class.columns:
-                wa_ready = df_class[
-                    df_class[wa_col].astype(str).str.strip().ne("") &
-                    df_class[key_col].astype(str).str.strip().ne("")
-                ]
-                wa_count = len(wa_ready)
-                no_wa = total_students - wa_count
-                pct = int(wa_count / total_students * 100) if total_students else 0
-                wc1, wc2, wc3 = st.columns(3)
-                wc1.metric(" WhatsApp Ready", wa_count)
-                wc2.metric(" Not Set Up", no_wa)
-                wc3.metric(" Coverage", f"{pct}%")
-                if no_wa > 0:
-                    st.caption(
-                        f" {no_wa} student(s) won't receive WhatsApp notifications. "
-                        "Ask them to set up CallMeBot in their Profile tab."
+                search = st.text_input("Search", placeholder="Name or reg number...")
+                df_show = df_class.copy()
+                if search:
+                    mask = (
+                        df_show["Student Name"].str.contains(search, case=False, na=False) |
+                        df_show["Reg Number"].str.contains(search, case=False, na=False)
                     )
-
-            # Export to CSV
-            csv = df_show.to_csv(index=False)
-            st.download_button(
-                "Export Class List to CSV",
-                data=csv,
-                file_name=f"{r_dept}_{r_year.replace(' ','_')}_students.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-
-            st.markdown("####  Delete Student")
-            del_name = st.selectbox(
-                "Select student",
-                ["— Select —"] + list(df_class["Student Name"].values),
-                key="del_student_sel"
-            )
-            if del_name != "— Select —":
-                if st.button(f" Delete {del_name}", type="secondary"):
-                    result = db.delete_student(del_name)
-                    if result.get("status") == "success":
-                        st.success(f"{del_name} deleted.")
-                        st.rerun()
-                    else:
-                        st.error(f"{result.get('message', 'Error')}")
-
-            st.markdown("---")
-            st.markdown("#### Reset Student PIN")
-            st.caption("Use this if a student is locked out and cannot reset their PIN themselves.")
-            reset_sel = st.selectbox(
-                "Select student to reset PIN",
-                ["— Select —"] + list(df_class["Student Name"].values),
-                key="reset_pin_sel"
-            )
-            if reset_sel != "— Select —":
-                new_pin_rep = st.text_input(
-                    "New PIN for student", type="password",
-                    max_chars=6, key="rep_reset_pin_input",
-                    placeholder="4-digit PIN"
-                )
-                if st.button("Reset PIN", key="rep_reset_pin_btn"):
-                    if not new_pin_rep or not new_pin_rep.isdigit() or len(new_pin_rep) < 4:
-                        st.error("PIN must be at least 4 digits.")
-                    else:
-                        reg_row = df_class[df_class["Student Name"] == reset_sel]
-                        if not reg_row.empty:
-                            reg = reg_row.iloc[0]["Reg Number"]
-                            with st.spinner("Resetting..."):
-                                ok = db.set_pin(reg, new_pin_rep)
-                            if ok:
-                                st.success(f"PIN reset for {reset_sel}. Share the new PIN with them securely.")
-                            else:
-                                st.error("Reset failed.")
-
-    # 
-    #  GROUPS
-    # 
-    with tabs[1]:
-        st.markdown("###  Group Allocation")
-        if df_class.empty:
-            st.warning("No students to allocate.")
-        else:
-            st.markdown("####  AI Auto-Allocation")
-            team_size = st.slider("Students per group", 2, 10, 4)
-            instructions = st.text_area(
-                "Custom instructions (optional)",
-                placeholder="e.g., Mix course codes, keep students with same contact apart..."
-            )
-            if st.button("Auto-Allocate with AI", use_container_width=True):
-                with st.spinner("Generating groups..."):
-                    result = ai.generate_teams(df_class, team_size, instructions)
-                if "error" in result:
-                    st.error(f"{result['error']}")
+                    df_show = df_show[mask]
+                if is_mob:
+                    render_rep_roster_mobile(df_show, total_students)
                 else:
-                    st.session_state["pending_allocations"] = result
-                    st.success(f"{len(set(result.values()))} groups for {len(result)} students.")
+                    st.dataframe(df_show, use_container_width=True)
+                    st.caption(f"Showing {len(df_show)} of {total_students} students")
 
-            if "pending_allocations" in st.session_state:
-                alloc = st.session_state["pending_allocations"]
-                preview = {}
-                for reg, grp in alloc.items():
-                    preview.setdefault(grp, []).append(reg)
-                st.markdown("**Preview:**")
-                for grp, members in preview.items():
-                    st.markdown(f"**{grp}** — {', '.join(members)}")
-                if st.button("Save Groups", use_container_width=True, type="primary"):
-                    with st.spinner("Saving..."):
-                        res = db.save_group_allocations(alloc)
-                    if res.get("status") == "success":
-                        del st.session_state["pending_allocations"]
-                        st.success("Groups saved!")
-                        st.rerun()
-                    else:
-                        st.error("Failed to save.")
+                # WhatsApp coverage stats
+                wa_col = "WhatsApp Phone"
+                key_col = "CallMeBot Key"
+                if wa_col in df_class.columns and key_col in df_class.columns:
+                    wa_ready = df_class[
+                        df_class[wa_col].astype(str).str.strip().ne("") &
+                        df_class[key_col].astype(str).str.strip().ne("")
+                    ]
+                    wa_count = len(wa_ready)
+                    no_wa = total_students - wa_count
+                    pct = int(wa_count / total_students * 100) if total_students else 0
+                    wc1, wc2, wc3 = st.columns(3)
+                    wc1.metric(" WhatsApp Ready", wa_count)
+                    wc2.metric(" Not Set Up", no_wa)
+                    wc3.metric(" Coverage", f"{pct}%")
+                    if no_wa > 0:
+                        st.caption(
+                            f" {no_wa} student(s) won't receive WhatsApp notifications. "
+                            "Ask them to set up CallMeBot in their Profile tab."
+                        )
 
-            st.markdown("---")
-            st.markdown("####  Manual Assignment")
-            with st.form("manual_group_form"):
-                student_sel = st.selectbox("Student", df_class["Student Name"].values)
-                group_name = st.text_input("Group Name", placeholder="e.g., Team Alpha")
-                if st.form_submit_button("Assign"):
-                    reg = df_class[df_class["Student Name"] == student_sel]["Reg Number"].values
-                    if len(reg):
-                        res = db.save_group_allocations({reg[0]: group_name})
-                        if res.get("status") == "success":
-                            st.success(f"{student_sel} → {group_name}")
-                            st.rerun()
-
-            st.markdown("---")
-            st.markdown("####  Course Unit Groups (with AI)")
-            st.info("Create groups for different course units (e.g., Thermodynamics, Mathematics, Physics). Each student will have a group for each course.")
-            
-            with st.expander("Create Course Unit Groups", expanded=False):
-                # Get list of available courses from class
-                available_courses = []
-                if not df_class.empty and "Course Code" in df_class.columns:
-                    available_courses = df_class["Course Code"].unique().tolist()
-                
-                course_units_input = st.text_area(
-                    "Course Units (one per line)",
-                    placeholder="Thermodynamics\nMathematics\nPhysics",
-                    height=100,
-                    help="List the course units you want to create groups for"
+                # Export to CSV
+                csv = df_show.to_csv(index=False)
+                st.download_button(
+                    "Export Class List to CSV",
+                    data=csv,
+                    file_name=f"{r_dept}_{r_year.replace(' ','_')}_students.csv",
+                    mime="text/csv",
+                    use_container_width=True
                 )
-                
-                ai_instruction = st.text_area(
-                    "AI Grouping Instruction",
-                    placeholder="Create 3-4 student groups for each course. Mix by performance levels. Keep lab partners together.",
-                    height=100,
-                    help="Tell the AI how to organize the groups"
+
+                st.markdown("####  Delete Student")
+                del_name = st.selectbox(
+                    "Select student",
+                    ["— Select —"] + list(df_class["Student Name"].values),
+                    key="del_student_sel"
                 )
-                
-                if st.button("Generate Course Unit Groups with AI", use_container_width=True):
-                    if course_units_input.strip() and ai_instruction.strip():
-                        with st.spinner("Creating groups with AI..."):
-                            course_units = [c.strip() for c in course_units_input.split("\n") if c.strip()]
-                            student_names = df_class["Student Name"].tolist() if not df_class.empty else []
-                            
-                            result = ai_rep.create_course_unit_groups(
-                                instruction=ai_instruction,
-                                course_units=course_units,
-                                student_list=student_names
-                            )
-                            
-                            if result.get("status") == "success":
-                                st.session_state["pending_course_groups"] = result.get("groups", {})
-                                st.success("Course unit groups created! Preview below:")
-                            else:
-                                st.error(f"Could not create groups: {result.get('message', 'Unknown error')}")
-                    else:
-                        st.warning("Please provide both course units and grouping instructions.")
-                
-                # Preview and save pending groups
-                if "pending_course_groups" in st.session_state:
-                    course_groups = st.session_state["pending_course_groups"]
-                    st.markdown("**Preview:**")
-                    for course, groups in course_groups.items():
-                        with st.expander(f"{course}"):
-                            for group_name, students in groups.items():
-                                st.write(f"**{group_name}:** {', '.join(students[:10])}" + 
-                                        (f" ... (+{len(students)-10})" if len(students) > 10 else ""))
-                    
-                    if st.button("Save Course Unit Groups", use_container_width=True, type="primary"):
-                        with st.spinner("Saving course unit groups..."):
-                            # Convert format from course_groups to per-student format
-                            student_groups = {}
-                            for course, groups in course_groups.items():
-                                for group_name, students in groups.items():
-                                    for student in students:
-                                        if student not in student_groups:
-                                            student_groups[student] = {}
-                                        student_groups[student][course] = group_name
-                            
-                            res = db.save_course_unit_groups(r_dept, r_year, student_groups)
-                            if res.get("status") == "success":
-                                del st.session_state["pending_course_groups"]
-                                st.success("Course unit groups saved!")
-                                st.rerun()
-                            else:
-                                st.error("Failed to save groups.")
-
-    # 
-    # NOTICES
-    # 
-    with tabs[2]:
-        st.markdown("### Announcements")
-        st.info(f"Visible only to **{d_name} — {r_year}** students.")
-
-        with st.form("post_ann_form", clear_on_submit=True):
-            ann_text = st.text_area("Announcement text", height=120)
-            priority = st.selectbox("Priority", ["Normal", "Urgent"])
-            notify_wa = st.checkbox(
-                " Send WhatsApp notification to class",
-                value=True,
-                help="Urgent announcements always notify. For Normal, tick this to also send WhatsApp."
-            )
-            c1, c2 = st.columns(2)
-            with c1:
-                post_btn = st.form_submit_button("Post", use_container_width=True)
-            with c2:
-                draft_btn = st.form_submit_button(" Draft with AI", use_container_width=True)
-
-            if draft_btn and ann_text.strip():
-                with st.spinner("Drafting..."):
-                    st.session_state.rep_ai_draft = ai_rep.draft_announcement(ann_text, priority)
-            if post_btn:
-                if ann_text.strip():
-                    if db.post_announcement(
-                        ann_text, priority, dept=r_dept, year=r_year,
-                        notify_whatsapp=notify_wa
-                    ):
-                        st.success("Posted!" + (" WhatsApp notification sent." if notify_wa else ""))
-                        st.rerun()
-                    else:
-                        st.error(" Failed.")
-                else:
-                    st.warning("Please enter text.")
-
-        if st.session_state.rep_ai_draft:
-            st.markdown("**AI Draft — edit before posting:**")
-            edited = st.text_area("", value=st.session_state.rep_ai_draft, height=150, key="draft_edit")
-            pri2 = st.selectbox("Priority", ["Normal", "Urgent"], key="draft_pri")
-            if st.button("Post this Draft"):
-                if db.post_announcement(edited, pri2, dept=r_dept, year=r_year):
-                    st.session_state.rep_ai_draft = ""
-                    st.success("Draft posted!")
-                    st.rerun()
-
-        st.markdown("---")
-        st.markdown("####  Posted Announcements")
-        if announcements:
-            for aidx, ann in enumerate(announcements):
-                ann_text_val = ann.get("text", "") if isinstance(ann, dict) else str(ann)
-                priority_val = ann.get("priority", "Normal") if isinstance(ann, dict) else "Normal"
-                ts_val = ann.get("timestamp", "") if isinstance(ann, dict) else ""
-                is_urgent = priority_val.lower() == "urgent"
-                left_col = "#ef4444" if is_urgent else primary
-
-                st.markdown(f"""
-                <div style="background:white;border-radius:12px;padding:14px 18px;
-                    margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {left_col};">
-                    <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:4px;"> {ts_val}</div>
-                    <span style="background:{'#fee2e2' if is_urgent else light};
-                        color:{left_col};font-size:0.68rem;font-weight:700;
-                        padding:2px 8px;border-radius:10px;margin-right:8px;">
-                        {priority_val.upper()}
-                    </span>
-                    <span style="font-size:0.9rem;">{ann_text_val}</span>
-                </div>
-                """, unsafe_allow_html=True)
-                if st.button(" Delete", key=f"del_ann_{aidx}"):
-                    if db.delete_announcement(ann_text_val):
-                        st.rerun()
-        else:
-            st.info("No announcements posted yet.")
-
-    # 
-    # MATERIALS
-    # 
-    with tabs[3]:
-        st.markdown("### Course Materials")
-        st.info(f"Visible only to **{d_name} — {r_year}** students.")
-
-        uploaded = st.file_uploader(
-            "Upload a file", type=["pdf", "docx", "pptx", "xlsx", "txt"]
-        )
-        notify_mat_wa = st.checkbox(
-            " Notify class on WhatsApp when uploaded",
-            value=True,
-            help="Sends a WhatsApp message to all opted-in students when the file is uploaded."
-        )
-        if uploaded and st.button(" Upload", use_container_width=True):
-            with st.spinner("Uploading to Google Drive..."):
-                ok = db.upload_material(
-                    uploaded.read(), uploaded.name, uploaded.type,
-                    dept=r_dept, year=r_year,
-                    notify_whatsapp=notify_mat_wa
-                )
-            if ok:
-                st.success(f"'{uploaded.name}' uploaded!" + (
-                    " WhatsApp notification sent to class." if notify_mat_wa else ""
-                ))
-                st.rerun()
-            else:
-                st.error(" Upload failed.")
-
-        st.markdown("---")
-        if materials:
-            for midx, mat in enumerate(materials):
-                m_name = mat.get("name", "Unnamed") if isinstance(mat, dict) else str(mat)
-                ext = m_name.split(".")[-1].upper() if "." in m_name else "FILE"
-                c1, c2 = st.columns([5, 1])
-                with c1:
-                    st.markdown(f"""
-                    <div style="background:white;border-radius:10px;padding:12px 16px;
-                        border:1px solid #e2e8f7;">
-                        <span style="background:{light};color:{primary};font-size:0.7rem;
-                            font-weight:800;padding:3px 8px;border-radius:6px;margin-right:10px;">
-                            {ext}
-                        </span>{m_name}
-                    </div>
-                    """, unsafe_allow_html=True)
-                with c2:
-                    if st.button("🗑️ Delete", key=f"del_mat_{midx}", help="Delete this material",
-                                  use_container_width=True):
-                        if db.delete_material(m_name):
-                            st.success(f"Deleted '{m_name}'.")
+                if del_name != "— Select —":
+                    if st.button(f" Delete {del_name}", type="secondary"):
+                        result = db.delete_student(del_name)
+                        if result.get("status") == "success":
+                            st.success(f"{del_name} deleted.")
                             st.rerun()
                         else:
-                            st.error("Delete failed. Please try again.")
-        else:
-            st.info("No materials uploaded yet.")
+                            st.error(f"{result.get('message', 'Error')}")
 
-    # 
-    #  TIMETABLE
-    # 
-    with tabs[4]:
+                st.markdown("---")
+                st.markdown("#### Reset Student PIN")
+                st.caption("Use this if a student is locked out and cannot reset their PIN themselves.")
+                reset_sel = st.selectbox(
+                    "Select student to reset PIN",
+                    ["— Select —"] + list(df_class["Student Name"].values),
+                    key="reset_pin_sel"
+                )
+                if reset_sel != "— Select —":
+                    new_pin_rep = st.text_input(
+                        "New PIN for student", type="password",
+                        max_chars=6, key="rep_reset_pin_input",
+                        placeholder="4-digit PIN"
+                    )
+                    if st.button("Reset PIN", key="rep_reset_pin_btn"):
+                        if not new_pin_rep or not new_pin_rep.isdigit() or len(new_pin_rep) < 4:
+                            st.error("PIN must be at least 4 digits.")
+                        else:
+                            reg_row = df_class[df_class["Student Name"] == reset_sel]
+                            if not reg_row.empty:
+                                reg = reg_row.iloc[0]["Reg Number"]
+                                with st.spinner("Resetting..."):
+                                    ok = db.set_pin(reg, new_pin_rep)
+                                if ok:
+                                    st.success(f"PIN reset for {reset_sel}. Share the new PIN with them securely.")
+                                else:
+                                    st.error("Reset failed.")
+
+        # 
+        #  GROUPS
+        # 
+
+        with sub_groups:
+            st.markdown("###  Group Allocation")
+            if df_class.empty:
+                st.warning("No students to allocate.")
+            else:
+                st.markdown("####  AI Auto-Allocation")
+                team_size = st.slider("Students per group", 2, 10, 4)
+                instructions = st.text_area(
+                    "Custom instructions (optional)",
+                    placeholder="e.g., Mix course codes, keep students with same contact apart..."
+                )
+                if st.button("Auto-Allocate with AI", use_container_width=True):
+                    with st.spinner("Generating groups..."):
+                        result = ai.generate_teams(df_class, team_size, instructions)
+                    if "error" in result:
+                        st.error(f"{result['error']}")
+                    else:
+                        st.session_state["pending_allocations"] = result
+                        st.success(f"{len(set(result.values()))} groups for {len(result)} students.")
+
+                if "pending_allocations" in st.session_state:
+                    alloc = st.session_state["pending_allocations"]
+                    preview = {}
+                    for reg, grp in alloc.items():
+                        preview.setdefault(grp, []).append(reg)
+                    st.markdown("**Preview:**")
+                    for grp, members in preview.items():
+                        st.markdown(f"**{grp}** — {', '.join(members)}")
+                    if st.button("Save Groups", use_container_width=True, type="primary"):
+                        with st.spinner("Saving..."):
+                            res = db.save_group_allocations(alloc)
+                        if res.get("status") == "success":
+                            del st.session_state["pending_allocations"]
+                            st.success("Groups saved!")
+                            st.rerun()
+                        else:
+                            st.error("Failed to save.")
+
+                st.markdown("---")
+                st.markdown("####  Manual Assignment")
+                with st.form("manual_group_form"):
+                    student_sel = st.selectbox("Student", df_class["Student Name"].values)
+                    group_name = st.text_input("Group Name", placeholder="e.g., Team Alpha")
+                    if st.form_submit_button("Assign"):
+                        reg = df_class[df_class["Student Name"] == student_sel]["Reg Number"].values
+                        if len(reg):
+                            res = db.save_group_allocations({reg[0]: group_name})
+                            if res.get("status") == "success":
+                                st.success(f"{student_sel} → {group_name}")
+                                st.rerun()
+
+                st.markdown("---")
+                st.markdown("####  Course Unit Groups (with AI)")
+                st.info("Create groups for different course units (e.g., Thermodynamics, Mathematics, Physics). Each student will have a group for each course.")
+
+                with st.expander("Create Course Unit Groups", expanded=False):
+                    # Get list of available courses from class
+                    available_courses = []
+                    if not df_class.empty and "Course Code" in df_class.columns:
+                        available_courses = df_class["Course Code"].unique().tolist()
+
+                    course_units_input = st.text_area(
+                        "Course Units (one per line)",
+                        placeholder="Thermodynamics\nMathematics\nPhysics",
+                        height=100,
+                        help="List the course units you want to create groups for"
+                    )
+
+                    ai_instruction = st.text_area(
+                        "AI Grouping Instruction",
+                        placeholder="Create 3-4 student groups for each course. Mix by performance levels. Keep lab partners together.",
+                        height=100,
+                        help="Tell the AI how to organize the groups"
+                    )
+
+                    if st.button("Generate Course Unit Groups with AI", use_container_width=True):
+                        if course_units_input.strip() and ai_instruction.strip():
+                            with st.spinner("Creating groups with AI..."):
+                                course_units = [c.strip() for c in course_units_input.split("\n") if c.strip()]
+                                student_names = df_class["Student Name"].tolist() if not df_class.empty else []
+
+                                result = ai_rep.create_course_unit_groups(
+                                    instruction=ai_instruction,
+                                    course_units=course_units,
+                                    student_list=student_names
+                                )
+
+                                if result.get("status") == "success":
+                                    st.session_state["pending_course_groups"] = result.get("groups", {})
+                                    st.success("Course unit groups created! Preview below:")
+                                else:
+                                    st.error(f"Could not create groups: {result.get('message', 'Unknown error')}")
+                        else:
+                            st.warning("Please provide both course units and grouping instructions.")
+
+                    # Preview and save pending groups
+                    if "pending_course_groups" in st.session_state:
+                        course_groups = st.session_state["pending_course_groups"]
+                        st.markdown("**Preview:**")
+                        for course, groups in course_groups.items():
+                            with st.expander(f"{course}"):
+                                for group_name, students in groups.items():
+                                    st.write(f"**{group_name}:** {', '.join(students[:10])}" + 
+                                            (f" ... (+{len(students)-10})" if len(students) > 10 else ""))
+
+                        if st.button("Save Course Unit Groups", use_container_width=True, type="primary"):
+                            with st.spinner("Saving course unit groups..."):
+                                # Convert format from course_groups to per-student format
+                                student_groups = {}
+                                for course, groups in course_groups.items():
+                                    for group_name, students in groups.items():
+                                        for student in students:
+                                            if student not in student_groups:
+                                                student_groups[student] = {}
+                                            student_groups[student][course] = group_name
+
+                                res = db.save_course_unit_groups(r_dept, r_year, student_groups)
+                                if res.get("status") == "success":
+                                    del st.session_state["pending_course_groups"]
+                                    st.success("Course unit groups saved!")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to save groups.")
+
+        # 
+        # NOTICES
+        # 
+
+
+    # 2. NOTICES & MATERIALS
+    with tab_notices:
+        sub_ann, sub_mat = st.tabs([
+            "📢 Announcements",
+            "📁 Course Materials"
+        ])
+        with sub_ann:
+            st.markdown("### Announcements")
+            st.info(f"Visible only to **{d_name} — {r_year}** students.")
+
+            with st.form("post_ann_form", clear_on_submit=True):
+                ann_text = st.text_area("Announcement text", height=120)
+                priority = st.selectbox("Priority", ["Normal", "Urgent"])
+                notify_wa = st.checkbox(
+                    " Send WhatsApp notification to class",
+                    value=True,
+                    help="Urgent announcements always notify. For Normal, tick this to also send WhatsApp."
+                )
+                c1, c2 = st.columns(2)
+                with c1:
+                    post_btn = st.form_submit_button("Post", use_container_width=True)
+                with c2:
+                    draft_btn = st.form_submit_button(" Draft with AI", use_container_width=True)
+
+                if draft_btn and ann_text.strip():
+                    with st.spinner("Drafting..."):
+                        st.session_state.rep_ai_draft = ai_rep.draft_announcement(ann_text, priority)
+                if post_btn:
+                    if ann_text.strip():
+                        if db.post_announcement(
+                            ann_text, priority, dept=r_dept, year=r_year,
+                            notify_whatsapp=notify_wa
+                        ):
+                            st.success("Posted!" + (" WhatsApp notification sent." if notify_wa else ""))
+                            st.rerun()
+                        else:
+                            st.error(" Failed.")
+                    else:
+                        st.warning("Please enter text.")
+
+            if st.session_state.rep_ai_draft:
+                st.markdown("**AI Draft — edit before posting:**")
+                edited = st.text_area("", value=st.session_state.rep_ai_draft, height=150, key="draft_edit")
+                pri2 = st.selectbox("Priority", ["Normal", "Urgent"], key="draft_pri")
+                if st.button("Post this Draft"):
+                    if db.post_announcement(edited, pri2, dept=r_dept, year=r_year):
+                        st.session_state.rep_ai_draft = ""
+                        st.success("Draft posted!")
+                        st.rerun()
+
+            st.markdown("---")
+            st.markdown("####  Posted Announcements")
+            if announcements:
+                for aidx, ann in enumerate(announcements):
+                    ann_text_val = ann.get("text", "") if isinstance(ann, dict) else str(ann)
+                    priority_val = ann.get("priority", "Normal") if isinstance(ann, dict) else "Normal"
+                    ts_val = ann.get("timestamp", "") if isinstance(ann, dict) else ""
+                    is_urgent = priority_val.lower() == "urgent"
+                    left_col = "#ef4444" if is_urgent else primary
+
+                    st.markdown(f"""
+                    <div style="background:white;border-radius:12px;padding:14px 18px;
+                        margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {left_col};">
+                        <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:4px;"> {ts_val}</div>
+                        <span style="background:{'#fee2e2' if is_urgent else light};
+                            color:{left_col};font-size:0.68rem;font-weight:700;
+                            padding:2px 8px;border-radius:10px;margin-right:8px;">
+                            {priority_val.upper()}
+                        </span>
+                        <span style="font-size:0.9rem;">{ann_text_val}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    if st.button(" Delete", key=f"del_ann_{aidx}"):
+                        if db.delete_announcement(ann_text_val):
+                            st.rerun()
+            else:
+                st.info("No announcements posted yet.")
+
+        # 
+        # MATERIALS
+        # 
+
+        with sub_mat:
+            st.markdown("### Course Materials")
+            st.info(f"Visible only to **{d_name} — {r_year}** students.")
+
+            uploaded = st.file_uploader(
+                "Upload a file", type=["pdf", "docx", "pptx", "xlsx", "txt"]
+            )
+            notify_mat_wa = st.checkbox(
+                " Notify class on WhatsApp when uploaded",
+                value=True,
+                help="Sends a WhatsApp message to all opted-in students when the file is uploaded."
+            )
+            if uploaded and st.button(" Upload", use_container_width=True):
+                with st.spinner("Uploading to Google Drive..."):
+                    ok = db.upload_material(
+                        uploaded.read(), uploaded.name, uploaded.type,
+                        dept=r_dept, year=r_year,
+                        notify_whatsapp=notify_mat_wa
+                    )
+                if ok:
+                    st.success(f"'{uploaded.name}' uploaded!" + (
+                        " WhatsApp notification sent to class." if notify_mat_wa else ""
+                    ))
+                    st.rerun()
+                else:
+                    st.error(" Upload failed.")
+
+            st.markdown("---")
+            if materials:
+                for midx, mat in enumerate(materials):
+                    m_name = mat.get("name", "Unnamed") if isinstance(mat, dict) else str(mat)
+                    ext = m_name.split(".")[-1].upper() if "." in m_name else "FILE"
+                    c1, c2 = st.columns([5, 1])
+                    with c1:
+                        st.markdown(f"""
+                        <div style="background:white;border-radius:10px;padding:12px 16px;
+                            border:1px solid #e2e8f7;">
+                            <span style="background:{light};color:{primary};font-size:0.7rem;
+                                font-weight:800;padding:3px 8px;border-radius:6px;margin-right:10px;">
+                                {ext}
+                            </span>{m_name}
+                        </div>
+                        """, unsafe_allow_html=True)
+                    with c2:
+                        if st.button("🗑️ Delete", key=f"del_mat_{midx}", help="Delete this material",
+                                      use_container_width=True):
+                            if db.delete_material(m_name):
+                                st.success(f"Deleted '{m_name}'.")
+                                st.rerun()
+                            else:
+                                st.error("Delete failed. Please try again.")
+            else:
+                st.info("No materials uploaded yet.")
+
+        # 
+        #  TIMETABLE
+        # 
+
+
+    # 3. TIMETABLE
+    with tab_tt:
         st.markdown("###  Class Timetable")
         st.info(f"Timetable for **{d_name} — {r_year}**. Students see this in their portal.")
 
@@ -1027,589 +1047,609 @@ def render_class_rep_interface(
     # 
     #  FEEDBACK — FIXED WITH HTML CLEANING
     # 
-    with tabs[5]:
-        st.markdown("###  Student Feedback Inbox")
-        if not feedback_list:
-            st.info("No feedback messages yet.")
-        else:
-            pending = [f for f in feedback_list
-                       if isinstance(f, list) and len(f) >= 4
-                       and str(f[3]).lower() == "pending"]
-            reviewed = [f for f in feedback_list if f not in pending]
-            st.caption(f"{len(pending)} pending · {len(reviewed)} reviewed")
 
-            if st.button(" Summarize All with AI"):
-                with st.spinner("Analysing..."):
-                    summary = ai_rep.summarize_feedback(feedback_list)
-                st.markdown(summary)
-                st.markdown("---")
 
-            for fidx, fb in enumerate(feedback_list):
-                if not (isinstance(fb, list) and len(fb) >= 5):
-                    continue
-                ts, reg, name, status, msg = (
-                    str(fb[0]), str(fb[1]), str(fb[2]), str(fb[3]), str(fb[4])
-                )
-                is_rev = status.lower() == "reviewed"
-                sc = "#16a34a" if is_rev else "#d4820a"
-                card_cls = "fb-card reviewed" if is_rev else "fb-card"
-
-                st.markdown(f"""
-                <div class="{card_cls}">
-                    <div style="font-size:0.78rem;color:#94a3b8;">
-                         <strong>{name}</strong> · {reg} ·  {ts}
-                        &nbsp;<span style="color:{sc};font-weight:600;">{status}</span>
-                    </div>
-                    <div style="margin-top:6px;font-size:0.9rem;">{msg}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    if not is_rev and st.button(" Mark Reviewed", key=f"rev_{fidx}"):
-                        if db.update_feedback_status(ts, reg):
-                            st.rerun()
-                with c2:
-                    if st.button(" AI Suggest Reply", key=f"ai_rep_{fidx}"):
-                        with st.spinner("Drafting..."):
-                            st.session_state.rep_ai_reply = ai_rep.suggest_reply(name, msg)
-                            st.session_state[f"reply_target_{fidx}"] = {
-                                "reg": reg, "name": name, "ts": ts
-                            }
-                with c3:
-                    if st.button(" Delete", key=f"del_fb_{fidx}"):
-                        if db.delete_feedback(ts, reg):
-                            st.rerun()
-
-                #  SEND REPLY — FIXED HTML CLEANING 
-                if st.session_state.get(f"reply_target_{fidx}"):
-                    reply_text = st.text_area(
-                        "Reply:", value=st.session_state.rep_ai_reply,
-                        key=f"reply_ta_{fidx}", height=100
-                    )
-                    notify_reply_wa = st.checkbox(
-                        " Notify student on WhatsApp",
-                        value=True, key=f"notify_reply_wa_{fidx}",
-                        help="Sends student a WhatsApp ping so they know you replied."
-                    )
-                    if st.button(" Send Reply", key=f"send_rep_{fidx}"):
-                        target = st.session_state[f"reply_target_{fidx}"]
-
-                        #  REMOVE HTML TAGS FROM REPLY 
-                        reply_clean = re.sub(r'<[^>]+>', '', reply_text)
-                        reply_clean = reply_clean.replace('&nbsp;', ' ')
-                        reply_clean = reply_clean.replace('**', '')
-                        reply_clean = reply_clean.strip()
-
-                        ok = db.post_rep_reply(
-                            reg_number=target["reg"],
-                            student_name=target["name"],
-                            message=reply_clean,
-                            rep_name=r_name,
-                            dept=r_dept,
-                            year=r_year
-                        )
-                        if ok:
-                            db.update_feedback_status(target["ts"], target["reg"])
-                            # Notify student on WhatsApp if opted in
-                            if notify_reply_wa:
-                                db.notify_student_whatsapp(
-                                    reg_number=target["reg"],
-                                    message=(
-                                        f" Your Class Rep replied to your message!\n\n"
-                                        f"Rep: {r_name}\n\n"
-                                        f"Reply: {reply_clean[:200]}\n\n"
-                                        f"Open the Smart University App to view the full reply."
-                                    )
-                                )
-                            st.session_state[f"reply_target_{fidx}"] = None
-                            st.session_state.rep_ai_reply = ""
-                            st.success(" Reply sent!" + (
-                                " Student notified on WhatsApp." if notify_reply_wa else ""
-                            ))
-                            st.rerun()
-
-    # 
-    #  REPLIES
-    # 
-    with tabs[6]:
-        st.markdown("###  Sent Replies Overview")
-        if not rep_replies:
-            st.info("No replies sent yet.")
-        else:
-            for reply in rep_replies:
-                r_time = reply.get("timestamp", "")
-                r_student = reply.get("student_name", "")
-                r_msg = reply.get("message", "")
-                r_status = reply.get("read_status", "Unread")
-                is_read = r_status.lower() == "read"
-                sc = "#16a34a" if is_read else primary
-
-                st.markdown(f"""
-                <div style="background:white;border-radius:12px;padding:14px 18px;
-                    margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {sc};">
-                    <div style="font-size:0.75rem;color:#94a3b8;">
-                        To: <strong>{r_student}</strong> · {r_time}
-                        &nbsp;<span style="color:{sc};font-weight:600;">
-                            {' Read' if is_read else ' Unread'}
-                        </span>
-                    </div>
-                    <div style="margin-top:6px;font-size:0.9rem;">{r_msg}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-    # 
-    #  AI CLASS MANAGER
-    # 
-    with tabs[7]:
-        st.markdown("###  AI Class Manager")
-        st.markdown(f'<div class="scope-badge"> Powered by AI · {d_name} — {r_year}</div>', unsafe_allow_html=True)
-
-        ai_tabs = st.tabs([
-            " Inbox Analysis",
-            " Announcements",
-            "⏰ Reminders",
-            " Groups",
-            " Generate TT",
-            " Format TT",
-            " Conflicts",
-            " TT Q&A",
+    # 4. FEEDBACK & REPLIES
+    with tab_feedback:
+        sub_fb, sub_rep = st.tabs([
+            f"📥 Student Feedback ({pending_feedback})" if pending_feedback else "📥 Student Feedback",
+            f"💬 Sent Replies ({unread_replies})" if unread_replies else "💬 Sent Replies"
         ])
+        with sub_fb:
+            st.markdown("###  Student Feedback Inbox")
+            if not feedback_list:
+                st.info("No feedback messages yet.")
+            else:
+                pending = [f for f in feedback_list
+                           if isinstance(f, list) and len(f) >= 4
+                           and str(f[3]).lower() == "pending"]
+                reviewed = [f for f in feedback_list if f not in pending]
+                st.caption(f"{len(pending)} pending · {len(reviewed)} reviewed")
 
-        # 
-        #  FULL INBOX ANALYSIS
-        # 
-        with ai_tabs[0]:
-            st.markdown("####  Full Class Inbox Analysis")
-            st.info("AI reads all feedback, announcements and timetable — then gives you a complete class intelligence report.")
+                if st.button(" Summarize All with AI"):
+                    with st.spinner("Analysing..."):
+                        summary = ai_rep.summarize_feedback(feedback_list)
+                    st.markdown(summary)
+                    st.markdown("---")
 
-            if st.button(" Run Full Analysis", use_container_width=True, type="primary"):
-                with st.spinner(" Analyzing your entire class inbox..."):
-                    timetable_data = db.fetch_timetable(dept=r_dept, year=r_year)
-                    analysis = ai_rep.analyze_feedback_inbox(
-                        feedback_list, announcements, timetable_data
+                for fidx, fb in enumerate(feedback_list):
+                    if not (isinstance(fb, list) and len(fb) >= 5):
+                        continue
+                    ts, reg, name, status, msg = (
+                        str(fb[0]), str(fb[1]), str(fb[2]), str(fb[3]), str(fb[4])
                     )
+                    is_rev = status.lower() == "reviewed"
+                    sc = "#16a34a" if is_rev else "#d4820a"
+                    card_cls = "fb-card reviewed" if is_rev else "fb-card"
 
-                if "error" in analysis:
-                    st.error(f" {analysis['error']}")
-                else:
-                    sentiment = analysis.get("sentiment", "Neutral")
-                    s_color = {"Positive": "#16a34a", "Neutral": "#0284c7",
-                               "Stressed": "#ea580c", "Concerned": "#dc2626"}.get(sentiment, primary)
                     st.markdown(f"""
-                    <div style="background:white;border-radius:14px;padding:20px 24px;
-                        border:1px solid #e2e8f7;margin-bottom:16px;border-left:5px solid {s_color};">
-                        <div style="font-size:0.75rem;color:#94a3b8;font-weight:700;
-                            text-transform:uppercase;margin-bottom:6px;"> Class Summary</div>
-                        <div style="font-size:1rem;font-weight:700;color:{s_color};margin-bottom:6px;">
-                            {sentiment} Class Sentiment
+                    <div class="{card_cls}">
+                        <div style="font-size:0.78rem;color:#94a3b8;">
+                             <strong>{name}</strong> · {reg} ·  {ts}
+                            &nbsp;<span style="color:{sc};font-weight:600;">{status}</span>
                         </div>
-                        <div style="font-size:0.9rem;color:#475569;">{analysis.get("summary", "")}</div>
-                        <div style="font-size:0.82rem;color:#94a3b8;margin-top:6px;font-style:italic;">
-                            {analysis.get("sentiment_reason", "")}
-                        </div>
+                        <div style="margin-top:6px;font-size:0.9rem;">{msg}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
-                    cats = analysis.get("categories", {})
-                    if any(cats.values()):
-                        st.markdown("####  Message Categories")
-                        cat_cols = st.columns(4)
-                        cat_data = [
-                            (" Questions", cats.get("questions", []), "#0284c7"),
-                            (" Urgent", cats.get("urgent", []), "#dc2626"),
-                            (" Complaints", cats.get("complaints", []), "#ea580c"),
-                            (" Requests", cats.get("requests", []), "#7c3aed"),
-                        ]
-                        for col, (label, items, color) in zip(cat_cols, cat_data):
-                            with col:
-                                st.markdown(f"""
-                                <div style="background:white;border-radius:10px;padding:12px;
-                                    border:1px solid #e2e8f7;border-top:3px solid {color};text-align:center;">
-                                    <div style="font-size:1.4rem;font-weight:800;color:{color};">{len(items)}</div>
-                                    <div style="font-size:0.72rem;color:#94a3b8;font-weight:600;">{label}</div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                        if cats.get("urgent"):
-                            st.markdown("** Urgent Matters:**")
-                            for u in cats["urgent"]:
-                                st.error(f" {u}")
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        if not is_rev and st.button(" Mark Reviewed", key=f"rev_{fidx}"):
+                            if db.update_feedback_status(ts, reg):
+                                st.rerun()
+                    with c2:
+                        if st.button(" AI Suggest Reply", key=f"ai_rep_{fidx}"):
+                            with st.spinner("Drafting..."):
+                                st.session_state.rep_ai_reply = ai_rep.suggest_reply(name, msg)
+                                st.session_state[f"reply_target_{fidx}"] = {
+                                    "reg": reg, "name": name, "ts": ts
+                                }
+                    with c3:
+                        if st.button(" Delete", key=f"del_fb_{fidx}"):
+                            if db.delete_feedback(ts, reg):
+                                st.rerun()
 
-                    auto_replies = analysis.get("auto_replies", [])
-                    if auto_replies:
-                        st.markdown("####  AI Activity Log — Suggested Replies")
-                        st.caption("Review each reply below. Approve to send, or edit first.")
-                        for idx, ar in enumerate(auto_replies):
-                            conf = ar.get("confidence", "Medium")
-                            conf_color = {"High": "#16a34a", "Medium": "#d4820a", "Low": "#dc2626"}.get(conf, "#64748b")
-                            with st.expander(f" {ar.get('student_name', '')} — {ar.get('original_message', '')[:60]}..."):
-                                st.markdown(f"""
-                                <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;
-                                    margin-bottom:8px;font-size:0.88rem;color:#475569;">
-                                    <strong>Student said:</strong> {ar.get('original_message', '')}
-                                </div>
-                                <div style="font-size:0.75rem;color:{conf_color};font-weight:700;margin-bottom:6px;">
-                                     AI Confidence: {conf}
-                                </div>
-                                """, unsafe_allow_html=True)
-                                edited_reply = st.text_area(
-                                    "AI Suggested Reply (edit if needed):",
-                                    value=ar.get("suggested_reply", ""),
-                                    key=f"ai_auto_reply_{idx}",
-                                    height=80
-                                )
-                                reg_match = ""
-                                name_match = ar.get("student_name", "")
-                                for fb in feedback_list:
-                                    if isinstance(fb, list) and len(fb) >= 5:
-                                        if str(fb[2]).strip().lower() == name_match.strip().lower():
-                                            reg_match = str(fb[1])
-                                            break
-                                ca, cb = st.columns(2)
-                                with ca:
-                                    if st.button(" Send This Reply", key=f"send_auto_{idx}", use_container_width=True):
-                                        if reg_match and edited_reply.strip():
-                                            #  CLEAN HTML 
-                                            reply_clean = re.sub(r'<[^>]+>', '', edited_reply)
-                                            reply_clean = reply_clean.replace('&nbsp;', ' ')
-                                            reply_clean = reply_clean.replace('**', '')
-                                            reply_clean = reply_clean.strip()
-                                            ok = db.post_rep_reply(
-                                                reg_number=reg_match,
-                                                student_name=name_match,
-                                                message=reply_clean,
-                                                rep_name=r_name,
-                                                dept=r_dept, year=r_year
-                                            )
-                                            if ok:
-                                                st.success(" Reply sent!")
+                    #  SEND REPLY — FIXED HTML CLEANING 
+                    if st.session_state.get(f"reply_target_{fidx}"):
+                        reply_text = st.text_area(
+                            "Reply:", value=st.session_state.rep_ai_reply,
+                            key=f"reply_ta_{fidx}", height=100
+                        )
+                        notify_reply_wa = st.checkbox(
+                            " Notify student on WhatsApp",
+                            value=True, key=f"notify_reply_wa_{fidx}",
+                            help="Sends student a WhatsApp ping so they know you replied."
+                        )
+                        if st.button(" Send Reply", key=f"send_rep_{fidx}"):
+                            target = st.session_state[f"reply_target_{fidx}"]
+
+                            #  REMOVE HTML TAGS FROM REPLY 
+                            reply_clean = re.sub(r'<[^>]+>', '', reply_text)
+                            reply_clean = reply_clean.replace('&nbsp;', ' ')
+                            reply_clean = reply_clean.replace('**', '')
+                            reply_clean = reply_clean.strip()
+
+                            ok = db.post_rep_reply(
+                                reg_number=target["reg"],
+                                student_name=target["name"],
+                                message=reply_clean,
+                                rep_name=r_name,
+                                dept=r_dept,
+                                year=r_year
+                            )
+                            if ok:
+                                db.update_feedback_status(target["ts"], target["reg"])
+                                # Notify student on WhatsApp if opted in
+                                if notify_reply_wa:
+                                    db.notify_student_whatsapp(
+                                        reg_number=target["reg"],
+                                        message=(
+                                            f" Your Class Rep replied to your message!\n\n"
+                                            f"Rep: {r_name}\n\n"
+                                            f"Reply: {reply_clean[:200]}\n\n"
+                                            f"Open the Smart University App to view the full reply."
+                                        )
+                                    )
+                                st.session_state[f"reply_target_{fidx}"] = None
+                                st.session_state.rep_ai_reply = ""
+                                st.success(" Reply sent!" + (
+                                    " Student notified on WhatsApp." if notify_reply_wa else ""
+                                ))
+                                st.rerun()
+
+        # 
+        #  REPLIES
+        # 
+
+        with sub_rep:
+            st.markdown("###  Sent Replies Overview")
+            if not rep_replies:
+                st.info("No replies sent yet.")
+            else:
+                for reply in rep_replies:
+                    r_time = reply.get("timestamp", "")
+                    r_student = reply.get("student_name", "")
+                    r_msg = reply.get("message", "")
+                    r_status = reply.get("read_status", "Unread")
+                    is_read = r_status.lower() == "read"
+                    sc = "#16a34a" if is_read else primary
+
+                    st.markdown(f"""
+                    <div style="background:white;border-radius:12px;padding:14px 18px;
+                        margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {sc};">
+                        <div style="font-size:0.75rem;color:#94a3b8;">
+                            To: <strong>{r_student}</strong> · {r_time}
+                            &nbsp;<span style="color:{sc};font-weight:600;">
+                                {' Read' if is_read else ' Unread'}
+                            </span>
+                        </div>
+                        <div style="margin-top:6px;font-size:0.9rem;">{r_msg}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # 
+        #  AI CLASS MANAGER
+        # 
+
+
+    # 5. AI TOOLS & SETTINGS
+    with tab_ai_settings:
+        sub_ai, sub_settings, sub_features = st.tabs([
+            "🤖 Rep AI Assistant",
+            "👤 Rep Profile & Security",
+            "🧩 Slot Features"
+        ])
+        with sub_ai:
+            st.markdown("###  AI Class Manager")
+            st.markdown(f'<div class="scope-badge"> Powered by AI · {d_name} — {r_year}</div>', unsafe_allow_html=True)
+
+            ai_tabs = st.tabs([
+                " Inbox Analysis",
+                " Announcements",
+                "⏰ Reminders",
+                " Groups",
+                " Generate TT",
+                " Format TT",
+                " Conflicts",
+                " TT Q&A",
+            ])
+
+            # 
+            #  FULL INBOX ANALYSIS
+            # 
+            with ai_tabs[0]:
+                st.markdown("####  Full Class Inbox Analysis")
+                st.info("AI reads all feedback, announcements and timetable — then gives you a complete class intelligence report.")
+
+                if st.button(" Run Full Analysis", use_container_width=True, type="primary"):
+                    with st.spinner(" Analyzing your entire class inbox..."):
+                        timetable_data = db.fetch_timetable(dept=r_dept, year=r_year)
+                        analysis = ai_rep.analyze_feedback_inbox(
+                            feedback_list, announcements, timetable_data
+                        )
+
+                    if "error" in analysis:
+                        st.error(f" {analysis['error']}")
+                    else:
+                        sentiment = analysis.get("sentiment", "Neutral")
+                        s_color = {"Positive": "#16a34a", "Neutral": "#0284c7",
+                                   "Stressed": "#ea580c", "Concerned": "#dc2626"}.get(sentiment, primary)
+                        st.markdown(f"""
+                        <div style="background:white;border-radius:14px;padding:20px 24px;
+                            border:1px solid #e2e8f7;margin-bottom:16px;border-left:5px solid {s_color};">
+                            <div style="font-size:0.75rem;color:#94a3b8;font-weight:700;
+                                text-transform:uppercase;margin-bottom:6px;"> Class Summary</div>
+                            <div style="font-size:1rem;font-weight:700;color:{s_color};margin-bottom:6px;">
+                                {sentiment} Class Sentiment
+                            </div>
+                            <div style="font-size:0.9rem;color:#475569;">{analysis.get("summary", "")}</div>
+                            <div style="font-size:0.82rem;color:#94a3b8;margin-top:6px;font-style:italic;">
+                                {analysis.get("sentiment_reason", "")}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        cats = analysis.get("categories", {})
+                        if any(cats.values()):
+                            st.markdown("####  Message Categories")
+                            cat_cols = st.columns(4)
+                            cat_data = [
+                                (" Questions", cats.get("questions", []), "#0284c7"),
+                                (" Urgent", cats.get("urgent", []), "#dc2626"),
+                                (" Complaints", cats.get("complaints", []), "#ea580c"),
+                                (" Requests", cats.get("requests", []), "#7c3aed"),
+                            ]
+                            for col, (label, items, color) in zip(cat_cols, cat_data):
+                                with col:
+                                    st.markdown(f"""
+                                    <div style="background:white;border-radius:10px;padding:12px;
+                                        border:1px solid #e2e8f7;border-top:3px solid {color};text-align:center;">
+                                        <div style="font-size:1.4rem;font-weight:800;color:{color};">{len(items)}</div>
+                                        <div style="font-size:0.72rem;color:#94a3b8;font-weight:600;">{label}</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                            if cats.get("urgent"):
+                                st.markdown("** Urgent Matters:**")
+                                for u in cats["urgent"]:
+                                    st.error(f" {u}")
+
+                        auto_replies = analysis.get("auto_replies", [])
+                        if auto_replies:
+                            st.markdown("####  AI Activity Log — Suggested Replies")
+                            st.caption("Review each reply below. Approve to send, or edit first.")
+                            for idx, ar in enumerate(auto_replies):
+                                conf = ar.get("confidence", "Medium")
+                                conf_color = {"High": "#16a34a", "Medium": "#d4820a", "Low": "#dc2626"}.get(conf, "#64748b")
+                                with st.expander(f" {ar.get('student_name', '')} — {ar.get('original_message', '')[:60]}..."):
+                                    st.markdown(f"""
+                                    <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;
+                                        margin-bottom:8px;font-size:0.88rem;color:#475569;">
+                                        <strong>Student said:</strong> {ar.get('original_message', '')}
+                                    </div>
+                                    <div style="font-size:0.75rem;color:{conf_color};font-weight:700;margin-bottom:6px;">
+                                         AI Confidence: {conf}
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                    edited_reply = st.text_area(
+                                        "AI Suggested Reply (edit if needed):",
+                                        value=ar.get("suggested_reply", ""),
+                                        key=f"ai_auto_reply_{idx}",
+                                        height=80
+                                    )
+                                    reg_match = ""
+                                    name_match = ar.get("student_name", "")
+                                    for fb in feedback_list:
+                                        if isinstance(fb, list) and len(fb) >= 5:
+                                            if str(fb[2]).strip().lower() == name_match.strip().lower():
+                                                reg_match = str(fb[1])
+                                                break
+                                    ca, cb = st.columns(2)
+                                    with ca:
+                                        if st.button(" Send This Reply", key=f"send_auto_{idx}", use_container_width=True):
+                                            if reg_match and edited_reply.strip():
+                                                #  CLEAN HTML 
+                                                reply_clean = re.sub(r'<[^>]+>', '', edited_reply)
+                                                reply_clean = reply_clean.replace('&nbsp;', ' ')
+                                                reply_clean = reply_clean.replace('**', '')
+                                                reply_clean = reply_clean.strip()
+                                                ok = db.post_rep_reply(
+                                                    reg_number=reg_match,
+                                                    student_name=name_match,
+                                                    message=reply_clean,
+                                                    rep_name=r_name,
+                                                    dept=r_dept, year=r_year
+                                                )
+                                                if ok:
+                                                    st.success(" Reply sent!")
+                                                else:
+                                                    st.error(" Failed to send.")
                                             else:
-                                                st.error(" Failed to send.")
+                                                st.warning("Could not match student. Send manually from Feedback tab.")
+                                    with cb:
+                                        if st.button("⏭ Skip", key=f"skip_auto_{idx}", use_container_width=True):
+                                            st.info("Skipped.")
+
+                        sugg_anns = analysis.get("suggested_announcements", [])
+                        if sugg_anns:
+                            st.markdown("####  AI Suggested Announcements")
+                            for sidx, sa in enumerate(sugg_anns):
+                                with st.expander(f" {sa.get('text', '')[:60]}..."):
+                                    st.info(f" Reason: {sa.get('reason', '')}")
+                                    edited_ann = st.text_area(
+                                        "Edit before posting:",
+                                        value=sa.get("text", ""),
+                                        key=f"sugg_ann_{sidx}",
+                                        height=80
+                                    )
+                                    pri = st.selectbox(
+                                        "Priority:", ["Normal", "Urgent"],
+                                        index=1 if sa.get("priority", "").lower() == "urgent" else 0,
+                                        key=f"sugg_ann_pri_{sidx}"
+                                    )
+                                    if st.button(" Post This Announcement", key=f"post_sugg_{sidx}", use_container_width=True):
+                                        if db.post_announcement(edited_ann, pri, dept=r_dept, year=r_year):
+                                            from cache import cached_fetch_announcements
+                                            cached_fetch_announcements.clear()
+                                            st.success(" Posted!")
                                         else:
-                                            st.warning("Could not match student. Send manually from Feedback tab.")
-                                with cb:
-                                    if st.button("⏭ Skip", key=f"skip_auto_{idx}", use_container_width=True):
-                                        st.info("Skipped.")
+                                            st.error(" Failed.")
 
-                    sugg_anns = analysis.get("suggested_announcements", [])
-                    if sugg_anns:
-                        st.markdown("####  AI Suggested Announcements")
-                        for sidx, sa in enumerate(sugg_anns):
-                            with st.expander(f" {sa.get('text', '')[:60]}..."):
-                                st.info(f" Reason: {sa.get('reason', '')}")
-                                edited_ann = st.text_area(
-                                    "Edit before posting:",
-                                    value=sa.get("text", ""),
-                                    key=f"sugg_ann_{sidx}",
-                                    height=80
-                                )
-                                pri = st.selectbox(
-                                    "Priority:", ["Normal", "Urgent"],
-                                    index=1 if sa.get("priority", "").lower() == "urgent" else 0,
-                                    key=f"sugg_ann_pri_{sidx}"
-                                )
-                                if st.button(" Post This Announcement", key=f"post_sugg_{sidx}", use_container_width=True):
-                                    if db.post_announcement(edited_ann, pri, dept=r_dept, year=r_year):
-                                        from cache import cached_fetch_announcements
-                                        cached_fetch_announcements.clear()
-                                        st.success(" Posted!")
-                                    else:
-                                        st.error(" Failed.")
+                        deadlines = analysis.get("deadlines_detected", [])
+                        if deadlines:
+                            st.markdown("#### ⏰ Deadlines Detected")
+                            for dl in deadlines:
+                                with st.expander(f"⏰ {dl.get('item', '')} — {dl.get('date', '')}"):
+                                    st.markdown(f"**Reminder draft:**")
+                                    reminder = st.text_area(
+                                        "", value=dl.get("reminder_draft", ""),
+                                        key=f"dl_remind_{dl.get('item', '')}",
+                                        height=80
+                                    )
+                                    if st.button(" Post Reminder", key=f"post_dl_{dl.get('item', '')}", use_container_width=True):
+                                        if db.post_announcement(reminder, "Urgent", dept=r_dept, year=r_year):
+                                            st.success(" Reminder posted!")
 
-                    deadlines = analysis.get("deadlines_detected", [])
-                    if deadlines:
-                        st.markdown("#### ⏰ Deadlines Detected")
-                        for dl in deadlines:
-                            with st.expander(f"⏰ {dl.get('item', '')} — {dl.get('date', '')}"):
-                                st.markdown(f"**Reminder draft:**")
-                                reminder = st.text_area(
-                                    "", value=dl.get("reminder_draft", ""),
-                                    key=f"dl_remind_{dl.get('item', '')}",
-                                    height=80
-                                )
-                                if st.button(" Post Reminder", key=f"post_dl_{dl.get('item', '')}", use_container_width=True):
-                                    if db.post_announcement(reminder, "Urgent", dept=r_dept, year=r_year):
-                                        st.success(" Reminder posted!")
+                        action_items = analysis.get("rep_action_items", [])
+                        if action_items:
+                            st.markdown("####  Your Action Items")
+                            st.caption("These need your personal attention — AI cannot handle them.")
+                            for item in action_items:
+                                st.markdown(f"-  {item}")
 
-                    action_items = analysis.get("rep_action_items", [])
-                    if action_items:
-                        st.markdown("####  Your Action Items")
-                        st.caption("These need your personal attention — AI cannot handle them.")
-                        for item in action_items:
-                            st.markdown(f"-  {item}")
+                        grp_sugg = analysis.get("group_suggestion", "")
+                        if grp_sugg:
+                            st.markdown("####  Group Allocation Note")
+                            st.info(f" {grp_sugg}")
 
-                    grp_sugg = analysis.get("group_suggestion", "")
-                    if grp_sugg:
-                        st.markdown("####  Group Allocation Note")
-                        st.info(f" {grp_sugg}")
+            # 
+            #  SUGGEST ANNOUNCEMENTS
+            # 
+            with ai_tabs[1]:
+                st.markdown("####  AI Announcement Suggestions")
+                rough = st.text_area(
+                    "What do you want to announce? (rough idea is fine)",
+                    placeholder="e.g. remind students about the test next week, inform about lab cancellation...",
+                    height=100
+                )
+                priority = st.selectbox("Priority", ["Normal", "Urgent"], key="sugg_ann_pri")
+                if st.button(" Draft with AI", use_container_width=True, type="primary") and rough.strip():
+                    with st.spinner("Drafting..."):
+                        draft = ai_rep.draft_announcement(rough, priority)
+                    st.session_state.rep_ai_draft = draft
 
-        # 
-        #  SUGGEST ANNOUNCEMENTS
-        # 
-        with ai_tabs[1]:
-            st.markdown("####  AI Announcement Suggestions")
-            rough = st.text_area(
-                "What do you want to announce? (rough idea is fine)",
-                placeholder="e.g. remind students about the test next week, inform about lab cancellation...",
-                height=100
-            )
-            priority = st.selectbox("Priority", ["Normal", "Urgent"], key="sugg_ann_pri")
-            if st.button(" Draft with AI", use_container_width=True, type="primary") and rough.strip():
-                with st.spinner("Drafting..."):
-                    draft = ai_rep.draft_announcement(rough, priority)
-                st.session_state.rep_ai_draft = draft
+                if st.session_state.get("rep_ai_draft"):
+                    st.markdown("**AI Draft — edit before posting:**")
+                    edited = st.text_area("", value=st.session_state.rep_ai_draft, height=150, key="manager_draft_edit")
+                    pri2 = st.selectbox("Priority", ["Normal", "Urgent"], key="manager_draft_pri")
+                    if st.button(" Post This", use_container_width=True, type="primary"):
+                        if db.post_announcement(edited, pri2, dept=r_dept, year=r_year):
+                            from cache import cached_fetch_announcements
+                            cached_fetch_announcements.clear()
+                            st.session_state.rep_ai_draft = ""
+                            st.success(" Posted!")
+                            st.rerun()
 
-            if st.session_state.get("rep_ai_draft"):
-                st.markdown("**AI Draft — edit before posting:**")
-                edited = st.text_area("", value=st.session_state.rep_ai_draft, height=150, key="manager_draft_edit")
-                pri2 = st.selectbox("Priority", ["Normal", "Urgent"], key="manager_draft_pri")
-                if st.button(" Post This", use_container_width=True, type="primary"):
-                    if db.post_announcement(edited, pri2, dept=r_dept, year=r_year):
-                        from cache import cached_fetch_announcements
-                        cached_fetch_announcements.clear()
-                        st.session_state.rep_ai_draft = ""
-                        st.success(" Posted!")
-                        st.rerun()
+            # 
+            # ⏰ DEADLINE REMINDERS
+            # 
+            with ai_tabs[2]:
+                st.markdown("#### ⏰ Deadline Detection & Reminders")
+                st.info("AI scans your announcements for deadlines and drafts reminder messages.")
+                if st.button(" Scan for Deadlines", use_container_width=True, type="primary"):
+                    with st.spinner("Scanning announcements..."):
+                        result = ai_rep.suggest_deadline_reminders(announcements)
+                    st.markdown(result)
 
-        # 
-        # ⏰ DEADLINE REMINDERS
-        # 
-        with ai_tabs[2]:
-            st.markdown("#### ⏰ Deadline Detection & Reminders")
-            st.info("AI scans your announcements for deadlines and drafts reminder messages.")
-            if st.button(" Scan for Deadlines", use_container_width=True, type="primary"):
-                with st.spinner("Scanning announcements..."):
-                    result = ai_rep.suggest_deadline_reminders(announcements)
-                st.markdown(result)
+            # 
+            #  GROUP ALLOCATION ADVICE
+            # 
+            with ai_tabs[3]:
+                st.markdown("####  AI Group Allocation Advice")
+                st.info("AI analyzes your class roster and recommends the best grouping strategy.")
+                constraints = st.text_area(
+                    "Any special constraints? (optional)",
+                    placeholder="e.g. mix course codes, keep final year students separate...",
+                    height=80
+                )
+                if st.button(" Get Recommendations", use_container_width=True, type="primary"):
+                    with st.spinner("Analyzing class..."):
+                        result = ai_rep.suggest_group_allocation(df_class, constraints)
+                    st.markdown(result)
 
-        # 
-        #  GROUP ALLOCATION ADVICE
-        # 
-        with ai_tabs[3]:
-            st.markdown("####  AI Group Allocation Advice")
-            st.info("AI analyzes your class roster and recommends the best grouping strategy.")
-            constraints = st.text_area(
-                "Any special constraints? (optional)",
-                placeholder="e.g. mix course codes, keep final year students separate...",
-                height=80
-            )
-            if st.button(" Get Recommendations", use_container_width=True, type="primary"):
-                with st.spinner("Analyzing class..."):
-                    result = ai_rep.suggest_group_allocation(df_class, constraints)
-                st.markdown(result)
+            # 
+            #  GENERATE TIMETABLE
+            # 
+            with ai_tabs[4]:
+                st.markdown("####  AI Timetable Generator")
+                st.info("Enter your courses and AI will suggest a balanced weekly timetable.")
+                courses_input = st.text_area(
+                    "Enter courses (one per line):",
+                    placeholder="e.g.\nThermodynamics\nEngineering Mathematics\nFluid Mechanics\nMaterial Science",
+                    height=150
+                )
+                constraints_tt = st.text_area(
+                    "Constraints (optional):",
+                    placeholder="e.g. No classes before 9am, Wednesday afternoons free...",
+                    height=80
+                )
+                if st.button(" Generate Timetable", use_container_width=True, type="primary") and courses_input.strip():
+                    courses_list = [c.strip() for c in courses_input.strip().split("\n") if c.strip()]
+                    with st.spinner("Generating timetable..."):
+                        result = ai_rep.generate_timetable_suggestion(courses_list, constraints_tt)
+                    st.markdown(result)
+                    if st.button(" Post as Announcement", key="post_tt_gen"):
+                        if db.post_announcement(result, "Normal", dept=r_dept, year=r_year):
+                            st.success(" Posted!")
 
-        # 
-        #  GENERATE TIMETABLE
-        # 
-        with ai_tabs[4]:
-            st.markdown("####  AI Timetable Generator")
-            st.info("Enter your courses and AI will suggest a balanced weekly timetable.")
-            courses_input = st.text_area(
-                "Enter courses (one per line):",
-                placeholder="e.g.\nThermodynamics\nEngineering Mathematics\nFluid Mechanics\nMaterial Science",
-                height=150
-            )
-            constraints_tt = st.text_area(
-                "Constraints (optional):",
-                placeholder="e.g. No classes before 9am, Wednesday afternoons free...",
-                height=80
-            )
-            if st.button(" Generate Timetable", use_container_width=True, type="primary") and courses_input.strip():
-                courses_list = [c.strip() for c in courses_input.strip().split("\n") if c.strip()]
-                with st.spinner("Generating timetable..."):
-                    result = ai_rep.generate_timetable_suggestion(courses_list, constraints_tt)
-                st.markdown(result)
-                if st.button(" Post as Announcement", key="post_tt_gen"):
-                    if db.post_announcement(result, "Normal", dept=r_dept, year=r_year):
-                        st.success(" Posted!")
+            # 
+            #  FORMAT TIMETABLE
+            # 
+            with ai_tabs[5]:
+                st.markdown("####  Format Raw Timetable")
+                raw = st.text_area("Paste raw timetable:", height=200)
+                if st.button(" Format with AI", use_container_width=True) and raw.strip():
+                    with st.spinner("Formatting..."):
+                        result = ai_rep.format_timetable(raw)
+                    st.markdown(result)
+                    if st.button(" Post as Announcement", key="post_fmt_tt"):
+                        if db.post_announcement(result, "Normal", dept=r_dept, year=r_year):
+                            st.success(" Posted!")
 
-        # 
-        #  FORMAT TIMETABLE
-        # 
-        with ai_tabs[5]:
-            st.markdown("####  Format Raw Timetable")
-            raw = st.text_area("Paste raw timetable:", height=200)
-            if st.button(" Format with AI", use_container_width=True) and raw.strip():
-                with st.spinner("Formatting..."):
-                    result = ai_rep.format_timetable(raw)
-                st.markdown(result)
-                if st.button(" Post as Announcement", key="post_fmt_tt"):
-                    if db.post_announcement(result, "Normal", dept=r_dept, year=r_year):
-                        st.success(" Posted!")
+            # 
+            #  CHECK CONFLICTS
+            # 
+            with ai_tabs[6]:
+                st.markdown("####  Timetable Conflict Checker")
+                raw = st.text_area("Paste timetable to check:", height=200)
+                if st.button(" Check for Conflicts", use_container_width=True) and raw.strip():
+                    with st.spinner("Checking..."):
+                        result = ai_rep.check_timetable_conflicts(raw)
+                    st.markdown(result)
+
+            # 
+            #  TIMETABLE Q&A
+            # 
+            with ai_tabs[7]:
+                st.markdown("####  Ask About the Timetable")
+                timetable_qa = st.text_area("Paste timetable:", height=150)
+                question_qa = st.text_input("Your question:", placeholder="When is the Engineering Maths lecture?")
+                if st.button("Ask AI", use_container_width=True) and question_qa.strip() and timetable_qa.strip():
+                    with st.spinner("Answering..."):
+                        result = ai_rep.answer_timetable_question(question_qa, timetable_qa)
+                    st.info(result)
 
         # 
-        #  CHECK CONFLICTS
+        #  SETTINGS
         # 
-        with ai_tabs[6]:
-            st.markdown("####  Timetable Conflict Checker")
-            raw = st.text_area("Paste timetable to check:", height=200)
-            if st.button(" Check for Conflicts", use_container_width=True) and raw.strip():
-                with st.spinner("Checking..."):
-                    result = ai_rep.check_timetable_conflicts(raw)
-                st.markdown(result)
 
-        # 
-        #  TIMETABLE Q&A
-        # 
-        with ai_tabs[7]:
-            st.markdown("####  Ask About the Timetable")
-            timetable_qa = st.text_area("Paste timetable:", height=150)
-            question_qa = st.text_input("Your question:", placeholder="When is the Engineering Maths lecture?")
-            if st.button("Ask AI", use_container_width=True) and question_qa.strip() and timetable_qa.strip():
-                with st.spinner("Answering..."):
-                    result = ai_rep.answer_timetable_question(question_qa, timetable_qa)
-                st.info(result)
-
-    # 
-    #  SETTINGS
-    # 
-    with tabs[8]:
-        st.markdown("###  Account Settings")
-        rep_prof_av = render_avatar_html(r_avatar, r_name, size=72, color=primary, light=light)
-        st.markdown(f"""
-        <div style="background:white;border-radius:14px;padding:20px 24px;
-            border:1px solid #e2e8f7;margin-bottom:20px;">
-            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
-                {rep_prof_av}
-                <div>
-                    <div style="font-size:1.15rem;font-weight:800;color:#1e293b;">{r_name}</div>
-                    <div style="font-size:0.82rem;color:#94a3b8;">Class Representative · {r_year}</div>
+        with sub_settings:
+            st.markdown("###  Account Settings")
+            rep_prof_av = render_avatar_html(r_avatar, r_name, size=72, color=primary, light=light)
+            st.markdown(f"""
+            <div style="background:white;border-radius:14px;padding:20px 24px;
+                border:1px solid #e2e8f7;margin-bottom:20px;">
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                    {rep_prof_av}
+                    <div>
+                        <div style="font-size:1.15rem;font-weight:800;color:#1e293b;">{r_name}</div>
+                        <div style="font-size:0.82rem;color:#94a3b8;">Class Representative · {r_year}</div>
+                    </div>
+                </div>
+                <div style="font-size:0.95rem;font-weight:800;color:#1e293b;margin-bottom:12px;">
+                     Rep Profile Details
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;
+                    border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
+                    <span style="color:#94a3b8;">Name</span>
+                    <span style="font-weight:700;">{r_name}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;
+                    border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
+                    <span style="color:#94a3b8;">Reg Number</span>
+                    <span style="font-weight:700;">{r_reg}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;
+                    border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
+                    <span style="color:#94a3b8;">Department</span>
+                    <span style="font-weight:700;">{d_name}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.9rem;">
+                    <span style="color:#94a3b8;">Year</span>
+                    <span style="font-weight:700;">{r_year}</span>
                 </div>
             </div>
-            <div style="font-size:0.95rem;font-weight:800;color:#1e293b;margin-bottom:12px;">
-                 Rep Profile Details
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;
-                border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
-                <span style="color:#94a3b8;">Name</span>
-                <span style="font-weight:700;">{r_name}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;
-                border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
-                <span style="color:#94a3b8;">Reg Number</span>
-                <span style="font-weight:700;">{r_reg}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;
-                border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
-                <span style="color:#94a3b8;">Department</span>
-                <span style="font-weight:700;">{d_name}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.9rem;">
-                <span style="color:#94a3b8;">Year</span>
-                <span style="font-weight:700;">{r_year}</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-        st.markdown("#### 📸 Profile Photo")
-        with st.expander("Update Rep Photo", expanded=bool(not r_avatar)):
-            new_rep_pic = st.file_uploader("Upload photo (JPG/PNG)", type=["png", "jpg", "jpeg", "webp"], key="rep_av_up")
-            col_rp1, col_rp2 = st.columns(2)
-            with col_rp1:
-                if st.button("💾 Save Photo", key="save_rep_pic_btn", use_container_width=True, type="primary"):
-                    if new_rep_pic:
-                        with st.spinner("Uploading photo..."):
-                            url = db.upload_rep_avatar(r_dept, r_year, new_rep_pic.getvalue(), new_rep_pic.type or "image/jpeg")
-                        if url:
-                            st.session_state.rep_avatar = url
-                            st.success("✅ Profile photo updated!")
-                            st.rerun()
+            st.markdown("#### 📸 Profile Photo")
+            with st.expander("Update Rep Photo", expanded=bool(not r_avatar)):
+                new_rep_pic = st.file_uploader("Upload photo (JPG/PNG)", type=["png", "jpg", "jpeg", "webp"], key="rep_av_up")
+                col_rp1, col_rp2 = st.columns(2)
+                with col_rp1:
+                    if st.button("💾 Save Photo", key="save_rep_pic_btn", use_container_width=True, type="primary"):
+                        if new_rep_pic:
+                            with st.spinner("Uploading photo..."):
+                                url = db.upload_rep_avatar(r_dept, r_year, new_rep_pic.getvalue(), new_rep_pic.type or "image/jpeg")
+                            if url:
+                                st.session_state.rep_avatar = url
+                                st.success("✅ Profile photo updated!")
+                                st.rerun()
+                            else:
+                                st.error("Failed to upload photo.")
                         else:
-                            st.error("Failed to upload photo.")
-                    else:
-                        st.warning("Please select an image first.")
-            with col_rp2:
-                if r_avatar and st.button("🗑️ Remove Photo", key="del_rep_pic_btn", use_container_width=True):
-                    with st.spinner("Removing..."):
-                        db.delete_rep_avatar(r_dept, r_year)
-                    st.session_state.rep_avatar = ""
-                    st.success("Profile photo removed.")
+                            st.warning("Please select an image first.")
+                with col_rp2:
+                    if r_avatar and st.button("🗑️ Remove Photo", key="del_rep_pic_btn", use_container_width=True):
+                        with st.spinner("Removing..."):
+                            db.delete_rep_avatar(r_dept, r_year)
+                        st.session_state.rep_avatar = ""
+                        st.success("Profile photo removed.")
+                        st.rerun()
+
+            st.markdown("####  Change Password")
+            if not st.session_state.rep_show_change_pw:
+                if st.button(" Change My Password"):
+                    st.session_state.rep_show_change_pw = True
                     st.rerun()
+            else:
+                with st.form("change_pw_form", clear_on_submit=True):
+                    old_pw = st.text_input("Current Password", type="password")
+                    new_pw = st.text_input("New Password", type="password")
+                    new_pw2 = st.text_input("Confirm New Password", type="password")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        save_btn = st.form_submit_button(" Save", use_container_width=True)
+                    with c2:
+                        cancel_btn = st.form_submit_button(" Cancel", use_container_width=True)
 
-        st.markdown("####  Change Password")
-        if not st.session_state.rep_show_change_pw:
-            if st.button(" Change My Password"):
-                st.session_state.rep_show_change_pw = True
-                st.rerun()
-        else:
-            with st.form("change_pw_form", clear_on_submit=True):
-                old_pw = st.text_input("Current Password", type="password")
-                new_pw = st.text_input("New Password", type="password")
-                new_pw2 = st.text_input("Confirm New Password", type="password")
-                c1, c2 = st.columns(2)
-                with c1:
-                    save_btn = st.form_submit_button(" Save", use_container_width=True)
-                with c2:
-                    cancel_btn = st.form_submit_button(" Cancel", use_container_width=True)
+                    if cancel_btn:
+                        st.session_state.rep_show_change_pw = False
+                        st.rerun()
 
-                if cancel_btn:
-                    st.session_state.rep_show_change_pw = False
-                    st.rerun()
-
-                if save_btn:
-                    if not old_pw or not new_pw:
-                        st.warning("Please fill in all fields.")
-                    elif new_pw != new_pw2:
-                        st.error(" New passwords do not match.")
-                    elif len(new_pw) < 6:
-                        st.error(" New password must be at least 6 characters.")
-                    else:
-                        with st.spinner("Updating..."):
-                            result = db.change_rep_password(r_dept, r_year, old_pw, new_pw)
-                        if result.get("status") == "success":
-                            st.success(" Password changed successfully!")
-                            st.session_state.rep_show_change_pw = False
-                            st.rerun()
+                    if save_btn:
+                        if not old_pw or not new_pw:
+                            st.warning("Please fill in all fields.")
+                        elif new_pw != new_pw2:
+                            st.error(" New passwords do not match.")
+                        elif len(new_pw) < 6:
+                            st.error(" New password must be at least 6 characters.")
                         else:
-                            st.error(f" {result.get('message', 'Failed')}")
+                            with st.spinner("Updating..."):
+                                result = db.change_rep_password(r_dept, r_year, old_pw, new_pw)
+                            if result.get("status") == "success":
+                                st.success(" Password changed successfully!")
+                                st.session_state.rep_show_change_pw = False
+                                st.rerun()
+                            else:
+                                st.error(f" {result.get('message', 'Failed')}")
 
-        #  WhatsApp Broadcast 
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-        with st.expander(" Send WhatsApp Broadcast to Entire Class", expanded=False):
-            st.info(
-                f"Sends a direct WhatsApp message to all **{total_students}** opted-in students "
-                f"in **{d_name} — {r_year}**. Use for urgent one-off messages only."
-            )
-            with st.form("broadcast_wa_form", clear_on_submit=True):
-                bc_msg = st.text_area(
-                    "Message to send",
-                    height=100,
-                    placeholder="e.g. Everyone report to Block B Lab at 3PM today."
+            #  WhatsApp Broadcast 
+            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+            with st.expander(" Send WhatsApp Broadcast to Entire Class", expanded=False):
+                st.info(
+                    f"Sends a direct WhatsApp message to all **{total_students}** opted-in students "
+                    f"in **{d_name} — {r_year}**. Use for urgent one-off messages only."
                 )
-                bc_btn = st.form_submit_button(" Send Broadcast", use_container_width=True, type="primary")
+                with st.form("broadcast_wa_form", clear_on_submit=True):
+                    bc_msg = st.text_area(
+                        "Message to send",
+                        height=100,
+                        placeholder="e.g. Everyone report to Block B Lab at 3PM today."
+                    )
+                    bc_btn = st.form_submit_button(" Send Broadcast", use_container_width=True, type="primary")
 
-                if bc_btn:
-                    if not bc_msg.strip():
-                        st.warning("Please enter a message.")
-                    else:
-                        full_msg = (
-                            f" Message from your Class Rep ({r_name})\n\n"
-                            f"{d_name} — {r_year}\n\n"
-                            f"{bc_msg.strip()}\n\n"
-                            f"Open the Smart University App for more details."
-                        )
-                        with st.spinner("Sending to class..."):
-                            sent = db.broadcast_whatsapp(r_dept, r_year, full_msg)
-                        if sent > 0:
-                            st.success(f" Broadcast sent to {sent} student(s)!")
+                    if bc_btn:
+                        if not bc_msg.strip():
+                            st.warning("Please enter a message.")
                         else:
-                            st.warning(
-                                " No students with WhatsApp set up in your class yet. "
-                                "Ask students to add their number in Profile → WhatsApp Notifications."
+                            full_msg = (
+                                f" Message from your Class Rep ({r_name})\n\n"
+                                f"{d_name} — {r_year}\n\n"
+                                f"{bc_msg.strip()}\n\n"
+                                f"Open the Smart University App for more details."
                             )
+                            with st.spinner("Sending to class..."):
+                                sent = db.broadcast_whatsapp(r_dept, r_year, full_msg)
+                            if sent > 0:
+                                st.success(f" Broadcast sent to {sent} student(s)!")
+                            else:
+                                st.warning(
+                                    " No students with WhatsApp set up in your class yet. "
+                                    "Ask students to add their number in Profile → WhatsApp Notifications."
+                                )
 
-    # 
-    #  FEATURES (Dynamic Slots)
-    # 
-    with tabs[9]:
-        render_rep_slots(db, r_reg, r_name, r_dept, r_year, primary, light, df_class)
+        # 
+        #  FEATURES (Dynamic Slots)
+        # 
 
-    #  Logout 
-    st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-    if st.button(" Log Out"):
-        for k in ["rep_logged_in", "rep_dept", "rep_year", "rep_name",
-                  "rep_reg", "rep_ai_draft", "rep_ai_reply",
-                  "pending_allocations", "rep_show_change_pw"]:
-            if k in st.session_state:
-                del st.session_state[k]
-        st.rerun()
+        with sub_features:
+            render_rep_slots(db, r_reg, r_name, r_dept, r_year, primary, light, df_class)
+
+        #  Logout 
+        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+        if st.button(" Log Out"):
+            for k in ["rep_logged_in", "rep_dept", "rep_year", "rep_name",
+                      "rep_reg", "rep_ai_draft", "rep_ai_reply",
+                      "pending_allocations", "rep_show_change_pw"]:
+                if k in st.session_state:
+                    del st.session_state[k]
+            st.rerun()
