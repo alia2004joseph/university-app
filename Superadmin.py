@@ -584,6 +584,8 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
 
             rep_name  = st.text_input("Rep Full Name",    placeholder="e.g., Alice Nakamura")
             rep_reg   = st.text_input("Rep Reg Number",   placeholder="e.g., 25/U/0001/PS")
+            rep_email = st.text_input("Rep Email Address", placeholder="e.g., alice@gmail.com",
+                                       help="Used to email the rep whenever a student sends new feedback. Optional but recommended.")
             rep_pw    = st.text_input(
                 "Set Password",
                 type="password",
@@ -601,9 +603,11 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                     st.error(" Passwords do not match.")
                 elif len(rep_pw) < 6:
                     st.error(" Password must be at least 6 characters.")
+                elif rep_email and "@" not in rep_email:
+                    st.error(" Please enter a valid email address, or leave it blank.")
                 else:
                     with st.spinner("Saving..."):
-                        ok = db.assign_rep(sel_dept, sel_year, rep_name, rep_reg, rep_pw)
+                        ok = db.assign_rep(sel_dept, sel_year, rep_name, rep_reg, rep_pw, email=rep_email)
                     if ok:
                         st.success(
                             f" Rep account saved: **{rep_name}** → "
@@ -611,7 +615,7 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                         )
                         st.rerun()
                     else:
-                        st.error(" Failed to save. Check your GAS deployment.")
+                        st.error(" Failed to save. Please check the email format and try again.")
 
         st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
 

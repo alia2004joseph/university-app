@@ -170,8 +170,14 @@ class SupabaseDatabaseManager:
     def verify_rep(self, dept: str, year: str, password: str) -> Dict:
         return _reps.verify_rep(dept, year, password)
 
-    def assign_rep(self, dept: str, year: str, rep_name: str, rep_reg: str, password: str) -> bool:
-        return _reps.assign_rep(dept, year, rep_name, rep_reg, password)
+    def assign_rep(self, dept: str, year: str, rep_name: str, rep_reg: str, password: str, email: str = "") -> bool:
+        return _reps.assign_rep(dept, year, rep_name, rep_reg, password, email)
+
+    def update_rep_email(self, dept: str, year: str, new_email: str) -> Dict:
+        return _reps.update_rep_email(dept, year, new_email)
+
+    def get_rep_email(self, dept: str, year: str):
+        return _reps.get_rep_email(dept, year)
 
     def delete_rep(self, dept: str, year: str) -> bool:
         return _reps.delete_rep(dept, year)

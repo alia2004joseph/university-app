@@ -154,6 +154,16 @@ def fetch_roster(dept: str = "ALL", year: str = "ALL") -> list:
 
 def send_whatsapp(phone: str, apikey: str, message: str) -> bool:
     """
+    WhatsApp sending is DISABLED (by request). This immediately returns
+    False without making any network call, so this standalone reminder
+    script is safe to run (or accidentally leave running) without
+    sending anything.
+    """
+    return False
+
+
+def _send_whatsapp_DISABLED_ORIGINAL(phone: str, apikey: str, message: str) -> bool:
+    """
     Send a single WhatsApp message via CallMeBot.
     phone must be in +256XXXXXXXXX format.
     Returns True if request was accepted (200 OK).

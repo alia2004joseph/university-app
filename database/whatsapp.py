@@ -17,8 +17,20 @@ from .supabase_client import get_client, safe_call, none_if_all
 
 CALLMEBOT_URL = "https://api.callmebot.com/whatsapp.php"
 
+# ─────────────────────────────────────────────────────────────
+# WHATSAPP DISABLED (by request) — this now always short-circuits
+# before making any network call. Every UI element that calls into
+# this module (registration, class broadcasts, admin alerts, etc.)
+# is unaffected and still runs — it just always behaves as if no
+# student has WhatsApp set up. No message can be sent from anywhere
+# in the app while this flag is False.
+# ─────────────────────────────────────────────────────────────
+WHATSAPP_ENABLED = False
+
 
 def _send_callmebot(phone: str, apikey: str, message: str) -> bool:
+    if not WHATSAPP_ENABLED:
+        return False
     if not phone or not apikey:
         return False
     try:
