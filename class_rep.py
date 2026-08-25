@@ -6,6 +6,7 @@ import re
 import json as _json
 import pandas as pd
 from database import SheetDatabaseManager
+from database.avatars import render_avatar_html
 from ai_engine import AISortingEngine, AIRepAssistant
 from config import get_departments, YEARS, dept_color, dept_light, dept_name, dept_courses
 from utils.mobile import is_mobile, get_view_mode_toggle
@@ -99,11 +100,15 @@ def render_rep_roster_mobile(df, total_students):
         wa_phone = row.get("WhatsApp Phone", "")
         wa_key = row.get("CallMeBot Key", "")
         has_wa = bool(wa_phone and wa_key)
+        avatar_url = row.get("Avatar", row.get("avatar_url", ""))
+        av_html = render_avatar_html(avatar_url, name, size=38, color="#1a56db", light="#dbeafe")
         st.markdown(f"""
         <div style="background:white;border-radius:10px;padding:12px 14px;margin-bottom:8px;
-            border:1px solid #e2e8f7;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-weight:700;font-size:0.95rem;">{name}</span>
+            border:1px solid #e2e8f7;display:flex;align-items:center;gap:12px;">
+            {av_html}
+            <div style="flex:1;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-weight:700;font-size:0.95rem;">{name}</span>
                 <span style="font-size:0.6rem;background:{'#dcfce7' if has_wa else '#fee2e2'};
                     color:{'#16a34a' if has_wa else '#dc2626'};padding:1px 8px;border-radius:8px;">
                     {'' if has_wa else ''}
@@ -112,6 +117,7 @@ def render_rep_roster_mobile(df, total_students):
             <div style="font-size:0.75rem;color:#94a3b8;">{reg} · {course}</div>
             <div style="font-size:0.7rem;color:#64748b;margin-top:4px;">
                 <span style="background:#f1f5f9;padding:1px 8px;border-radius:8px;">Group: {group}</span>
+            </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -352,11 +358,26 @@ def render_class_rep_interface(
     st.markdown(f'<div class="scope-badge">{d_name} &nbsp;·&nbsp; {r_year} &nbsp;·&nbsp; {r_name}</div>', unsafe_allow_html=True)
 
     #  Fetch scoped data 
-    df_class = db.fetch_roster(dept=r_dept, year=r_year)
+    raw_roster = db.fetch_roster(dept=r_dept, year=r_year)
+    df_class = pd.DataFrame(raw_roster) if isinstance(raw_roster, list) else raw_roster
     announcements = db.fetch_announcements(dept=r_dept, year=r_year)
     materials = db.fetch_materials(dept=r_dept, year=r_year)
     feedback_list = db.fetch_feedback(dept=r_dept, year=r_year)
     rep_replies = db.fetch_rep_replies(dept=r_dept, year=r_year)
+
+    r_avatar = st.session_state.get("rep_avatar", "")
+    if not r_avatar:
+        try:
+            reps_data = db.fetch_reps()
+            for rp in reps_data:
+                if rp.get("dept") == r_dept and rp.get("year") == r_year:
+                    r_avatar = rp.get("avatar_url", "") or ""
+                    st.session_state.rep_avatar = r_avatar
+                    break
+        except Exception:
+            pass
+
+    rep_avatar_html = render_avatar_html(r_avatar, r_name, size=56, color="white", light="rgba(255,255,255,0.25)")
 
     total_students = len(df_class) if not df_class.empty else 0
     pending_feedback = sum(1 for f in feedback_list
@@ -368,11 +389,16 @@ def render_class_rep_interface(
     #  Banner 
     st.markdown(f"""
     <div class="rep-banner">
-        <h2>{r_name}'s Dashboard</h2>
-        <p style="opacity:0.75;margin:0 0 12px 0;">{d_name} — {r_year}</p>
-        <span class="rep-badge">{total_students} Students</span>
-        <span class="rep-badge">{pending_feedback} Pending</span>
-        <span class="rep-badge">{unread_replies} Unread Replies</span>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;">
+            {rep_avatar_html}
+            <div>
+                <h2 style="margin:0;font-size:1.6rem;font-weight:800;color:white;">{r_name}'s Dashboard</h2>
+                <p style="opacity:0.85;margin:2px 0 0 0;font-size:0.92rem;">{d_name} — {r_year}</p>
+            </div>
+        </div>
+        <span class="rep-badge">👥 {total_students} Students</span>
+        <span class="rep-badge">⏳ {pending_feedback} Pending</span>
+        <span class="rep-badge">💬 {unread_replies} Unread Replies</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1361,11 +1387,19 @@ def render_class_rep_interface(
     # 
     with tabs[8]:
         st.markdown("###  Account Settings")
+        rep_prof_av = render_avatar_html(r_avatar, r_name, size=72, color=primary, light=light)
         st.markdown(f"""
         <div style="background:white;border-radius:14px;padding:20px 24px;
             border:1px solid #e2e8f7;margin-bottom:20px;">
-            <div style="font-size:1rem;font-weight:800;color:#1e293b;margin-bottom:12px;">
-                 Rep Profile
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                {rep_prof_av}
+                <div>
+                    <div style="font-size:1.15rem;font-weight:800;color:#1e293b;">{r_name}</div>
+                    <div style="font-size:0.82rem;color:#94a3b8;">Class Representative · {r_year}</div>
+                </div>
+            </div>
+            <div style="font-size:0.95rem;font-weight:800;color:#1e293b;margin-bottom:12px;">
+                 Rep Profile Details
             </div>
             <div style="display:flex;justify-content:space-between;padding:8px 0;
                 border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
@@ -1388,6 +1422,31 @@ def render_class_rep_interface(
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+        st.markdown("#### 📸 Profile Photo")
+        with st.expander("Update Rep Photo", expanded=bool(not r_avatar)):
+            new_rep_pic = st.file_uploader("Upload photo (JPG/PNG)", type=["png", "jpg", "jpeg", "webp"], key="rep_av_up")
+            col_rp1, col_rp2 = st.columns(2)
+            with col_rp1:
+                if st.button("💾 Save Photo", key="save_rep_pic_btn", use_container_width=True, type="primary"):
+                    if new_rep_pic:
+                        with st.spinner("Uploading photo..."):
+                            url = db.upload_rep_avatar(r_dept, r_year, new_rep_pic.getvalue(), new_rep_pic.type or "image/jpeg")
+                        if url:
+                            st.session_state.rep_avatar = url
+                            st.success("✅ Profile photo updated!")
+                            st.rerun()
+                        else:
+                            st.error("Failed to upload photo.")
+                    else:
+                        st.warning("Please select an image first.")
+            with col_rp2:
+                if r_avatar and st.button("🗑️ Remove Photo", key="del_rep_pic_btn", use_container_width=True):
+                    with st.spinner("Removing..."):
+                        db.delete_rep_avatar(r_dept, r_year)
+                    st.session_state.rep_avatar = ""
+                    st.success("Profile photo removed.")
+                    st.rerun()
 
         st.markdown("####  Change Password")
         if not st.session_state.rep_show_change_pw:

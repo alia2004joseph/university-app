@@ -1,10 +1,6 @@
 """
-student.py — Student Portal UI.
+student.py — Student Portal UI with Profile Picture Attachments & Robust PDF Generation.
 Read receipts removed. Dept+year scoped. Coloured themes per department.
-
-PATCH NOTES:
-- Fixed PDF generator crash ('Not enough horizontal space to render a single character')
-- Cleaned up duplicate/redundant Quick Actions cards and truncated buttons in AI Assistant
 """
 import json as _json
 import re as _re
@@ -12,6 +8,7 @@ from datetime import datetime
 import streamlit as st
 import pandas as pd
 from database import SheetDatabaseManager
+from database.avatars import render_avatar_html
 from cache import (
     cached_fetch_roster, cached_fetch_announcements, cached_fetch_materials,
     cached_fetch_feedback, cached_fetch_rep_replies, cached_fetch_timetable
@@ -42,20 +39,20 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     .welcome-banner {{
         background: linear-gradient(135deg, {primary} 0%, {primary}cc 100%);
         border-radius: 18px;
-        padding: 28px 32px;
-        margin-bottom: 24px;
+        padding: 24px 28px;
+        margin-bottom: 20px;
         color: white;
     }}
     .welcome-banner h2 {{
-        font-size: 1.7rem;
+        font-size: 1.6rem;
         font-weight: 800;
         margin: 0 0 6px 0;
         color: white;
     }}
     .welcome-banner p {{
         font-size: 0.88rem;
-        opacity: 0.75;
-        margin: 0 0 14px 0;
+        opacity: 0.85;
+        margin: 0 0 12px 0;
     }}
 
     /*  Pills  */
@@ -66,8 +63,8 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         margin-top: 4px;
     }}
     .pill {{
-        background: rgba(255,255,255,0.15);
-        border: 1px solid rgba(255,255,255,0.25);
+        background: rgba(255,255,255,0.18);
+        border: 1px solid rgba(255,255,255,0.28);
         border-radius: 20px;
         padding: 4px 14px;
         font-size: 0.75rem;
@@ -164,7 +161,7 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     .member-card {{
         background: white;
         border-radius: 12px;
-        padding: 14px 18px;
+        padding: 12px 16px;
         margin-bottom: 8px;
         border: 1px solid #e2e8f7;
         display: flex;
@@ -172,8 +169,8 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         gap: 14px;
     }}
     .avatar {{
-        width: 42px;
-        height: 42px;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
         background: {light};
         color: {primary};
@@ -188,7 +185,7 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     .group-banner {{
         background: linear-gradient(135deg, {primary}, {primary}cc);
         border-radius: 14px;
-        padding: 22px 24px;
+        padding: 20px 22px;
         margin-bottom: 16px;
         color: white;
     }}
@@ -197,22 +194,15 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     .profile-card {{
         background: white;
         border-radius: 16px;
-        padding: 28px;
+        padding: 24px;
         border: 1px solid #e2e8f7;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
     }}
-    .profile-avatar {{
-        width: 72px;
-        height: 72px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, {primary}, {primary}cc);
-        color: white;
+    .profile-avatar-wrap {{
         display: flex;
         align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        font-weight: 900;
-        margin-bottom: 16px;
+        gap: 18px;
+        margin-bottom: 18px;
     }}
 
     /*  Misc  */
@@ -228,13 +218,13 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     .pro-divider {{
         height: 1px;
         background: #e2e8f7;
-        margin: 22px 0;
+        margin: 20px 0;
     }}
     .activity-strip {{
         background: white;
         border-radius: 12px;
         padding: 14px 18px;
-        margin-bottom: 20px;
+        margin-bottom: 18px;
         border-left: 4px solid {primary};
     }}
 
@@ -356,7 +346,7 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         }}
 
         .member-card {{
-            padding: 12px 14px !important;
+            padding: 10px 12px !important;
             gap: 10px !important;
         }}
 
@@ -384,7 +374,7 @@ def metric_card(title, value, icon, color="#1a56db"):
 
 
 def render_student_roster_mobile(df, total_students):
-    """Render student roster as cards instead of table on mobile."""
+    """Render student roster as cards with avatars on mobile."""
     st.caption(f"Showing {len(df)} of {total_students} students (mobile view)")
     if df.empty:
         st.info("No students found.")
@@ -394,16 +384,22 @@ def render_student_roster_mobile(df, total_students):
         reg = row.get("Reg Number", "")
         course = row.get("Course Code", "")
         group = row.get("Assigned Group", "")
+        avatar_url = row.get("Avatar", row.get("avatar_url", ""))
         dept = row.get("Department", row.get("department", row.get("dept", "")))
         color = dept_color(dept) if dept else "#6d28d9"
+        avatar_html = render_avatar_html(avatar_url, name, size=40, color=color, light=dept_light(dept))
+
         st.markdown(f"""
         <div style="background:white;border-radius:10px;padding:12px 14px;margin-bottom:8px;
-            border:1px solid #e2e8f7;border-left:3px solid {color};">
-            <div style="font-weight:700;font-size:0.95rem;">{name}</div>
-            <div style="font-size:0.75rem;color:#94a3b8;">{reg} · {course}</div>
-            <div style="font-size:0.7rem;color:#64748b;margin-top:4px;">
-                <span style="background:#f1f5f9;padding:1px 8px;border-radius:8px;">{dept}</span>
-                <span style="background:#f1f5f9;padding:1px 8px;border-radius:8px;margin-left:4px;">{group}</span>
+            border:1px solid #e2e8f7;border-left:3px solid {color};display:flex;align-items:center;gap:12px;">
+            {avatar_html}
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:0.95rem;">{name}</div>
+                <div style="font-size:0.75rem;color:#94a3b8;">{reg} · {course}</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:4px;">
+                    <span style="background:#f1f5f9;padding:1px 8px;border-radius:8px;">{dept}</span>
+                    <span style="background:#f1f5f9;padding:1px 8px;border-radius:8px;margin-left:4px;">{group}</span>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -498,7 +494,6 @@ def render_student_slots(db, s_reg, s_name, s_dept, s_year, primary, light):
                     fname = field.get("name", "")
                     flabel = field.get("label", fname)
                     ftype = field.get("type", "text")
-                    freq = field.get("required", False)
                     fopts = field.get("options", "").split(",") if field.get("options") else []
                     if ftype == "text":
                         val = st.text_input(flabel, key=f"sf_{sid}_{fname}")
@@ -565,6 +560,7 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
         "show_change_pin": False,
         "show_update_contact": False,
         "show_ai_history": False,
+        "show_upload_avatar": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -744,11 +740,13 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                                      help="Add to receive class announcements directly on WhatsApp.")
             email    = st.text_input("Email Address", placeholder="e.g., obema.kelly@gmail.com",
                                      help="Required for notice alerts.")
+            reg_photo = st.file_uploader("Profile Photo (optional)", type=["png", "jpg", "jpeg", "webp"],
+                                        help="Attach a clear passport or portrait photo")
             pin1     = st.text_input("Set a PIN (4 digits)", type="password", max_chars=6,
                                      placeholder="e.g. 1234")
             pin2     = st.text_input("Confirm PIN",           type="password", max_chars=6)
-            st.caption("ℹ️ After registering, you can configure CallMeBot WhatsApp notifications in your Profile tab.")
-            submit   = st.form_submit_button("Register")
+            st.caption("ℹ️ You can change your profile picture anytime in your Profile tab.")
+            submit   = st.form_submit_button("Register", use_container_width=True, type="primary")
 
             if submit:
                 def normalize_ug_phone(raw: str) -> str:
@@ -794,6 +792,8 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                 else:
                     try:
                         with st.spinner("Registering..."):
+                            avatar_bytes = reg_photo.getvalue() if reg_photo else None
+                            avatar_mime = reg_photo.type if reg_photo else "image/jpeg"
                             result = db.register_student(
                                 name=name,
                                 reg=reg,
@@ -802,11 +802,14 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                                 dept=selected_dept,
                                 year=year,
                                 whatsapp_phone=wa_clean,
-                                email=email.strip()
+                                email=email.strip(),
+                                avatar_bytes=avatar_bytes,
+                                avatar_mime=avatar_mime
                             )
 
                             if isinstance(result, dict) and result.get("status") == "success":
                                 db.set_pin(reg, pin1)
+                                cached_fetch_roster.clear()
                                 st.session_state.show_reg_form = False
                                 st.session_state.reg_success_msg = "✅ Account created! Please log in."
                                 st.success(st.session_state.reg_success_msg)
@@ -828,7 +831,8 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
         return
 
     if df_profiles.empty or st.session_state.student_logged_in not in df_profiles["Reg Number"].values:
-        st.error("⚠️ Could not load your profile. Please try again.")
+        cached_fetch_roster.clear()
+        st.error("⚠️ Could not load your profile. Please refresh or try logging in again.")
         st.stop()
 
     student_data = df_profiles[df_profiles["Reg Number"] == st.session_state.student_logged_in].iloc[0]
@@ -837,6 +841,7 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
     s_reg    = st.session_state.student_logged_in
     s_course = student_data.get("Course Code", "N/A")
     s_group  = student_data.get("Assigned Group", "Not Assigned")
+    s_avatar = str(student_data.get("Avatar", student_data.get("avatar_url", "")))
 
     s_dept = str(next((student_data.get(c) for c in ["Department", "department", "dept"] if student_data.get(c)), "MEC"))
     s_year = str(next((student_data.get(c) for c in ["Year", "year"] if student_data.get(c)), "Year 1"))
@@ -862,14 +867,19 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                 urgent_unread.append(ann)
     unread_count = len(unread)
 
-    # Welcome Banner
+    # Welcome Banner with Profile Photo
+    banner_avatar_html = render_avatar_html(s_avatar, s_name, size=52, color="white", light="rgba(255,255,255,0.25)")
     st.markdown(f"""
     <div class="welcome-banner">
-        <div style="font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;
-            opacity:0.7;margin-bottom:6px;">{s_dept_name} · {s_year}</div>
-        <h2>👋 Welcome back, {s_name}!</h2>
-        <p>Stay updated with notices, materials and class activities.</p>
-        <div class="pill-strip">
+        <div style="display:flex;align-items:center;gap:16px;">
+            {banner_avatar_html}
+            <div style="flex:1;">
+                <div style="font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;
+                    opacity:0.85;margin-bottom:2px;">{s_dept_name} · {s_year}</div>
+                <h2 style="margin:0;">👋 Welcome, {s_name}!</h2>
+            </div>
+        </div>
+        <div class="pill-strip" style="margin-top:12px;">
             <span class="pill">🆔 {s_reg}</span>
             <span class="pill">📚 {s_course}</span>
             <span class="pill">👥 {s_group}</span>
@@ -1143,16 +1153,27 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
             df_class = df_profiles[(df_profiles[dept_col] == s_dept) & (df_profiles[year_col] == s_year)] if (dept_col and year_col) else df_profiles
             group_members = df_class[df_class["Assigned Group"] == s_group]
 
-            st.markdown(f'<div class="group-banner"><div style="font-size:0.7rem;opacity:0.7;text-transform:uppercase;letter-spacing:2px;">General Project Group</div><div style="font-size:1.5rem;font-weight:900;">{s_group}</div><div style="font-size:0.82rem;opacity:0.65;">{len(group_members)} member(s)</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="group-banner"><div style="font-size:0.7rem;opacity:0.7;text-transform:uppercase;letter-spacing:2px;">General Project Group</div><div style="font-size:1.5rem;font-weight:900;">{s_group}</div><div style="font-size:0.82rem;opacity:0.85;">{len(group_members)} member(s)</div></div>', unsafe_allow_html=True)
 
             for _, member in group_members.iterrows():
                 m_name   = member["Student Name"]
                 m_reg    = member["Reg Number"]
                 m_course = member.get("Course Code", "")
+                m_avatar = str(member.get("Avatar", member.get("avatar_url", "")))
                 is_you   = (m_reg == s_reg)
                 you_html = '<span style="background:#dbeafe;color:#1a56db;font-size:0.65rem;font-weight:700;padding:1px 8px;border-radius:10px;margin-left:6px;">You</span>' if is_you else ""
-                av_cls   = "avatar you" if is_you else "avatar"
-                st.markdown(f'<div class="member-card"><div class="{av_cls}">{m_name[0].upper()}</div><div><div style="font-weight:700;">{m_name}{you_html}</div><div style="font-size:0.75rem;color:#94a3b8;">{m_course} · {m_reg}</div></div></div>', unsafe_allow_html=True)
+                
+                m_avatar_html = render_avatar_html(m_avatar, m_name, size=42, color=primary, light=light)
+
+                st.markdown(f"""
+                <div class="member-card">
+                    {m_avatar_html}
+                    <div>
+                        <div style="font-weight:700;">{m_name}{you_html}</div>
+                        <div style="font-size:0.75rem;color:#94a3b8;">{m_course} · {m_reg}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
     # -------------------------------------------------------------
     # TAB 5: MESSAGE
@@ -1288,26 +1309,65 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                         st.markdown(f'<div style="background:white;border-radius:10px;padding:12px 18px;margin-bottom:6px;border:1px solid #e2e8f7;border-left:4px solid {e_color};"><span style="font-weight:800;color:{e_color};min-width:90px;">{entry.get("time","")}</span> <span style="color:#1e293b;font-weight:600;">{entry.get("course","")}</span>{lect_part}</div>', unsafe_allow_html=True)
 
     # -------------------------------------------------------------
-    # TAB 8: PROFILE
+    # TAB 8: PROFILE & ATTACH PHOTO
     # -------------------------------------------------------------
     with tab_profile:
         st.markdown("### 👤 Student Profile")
-        initial = s_name[0].upper() if s_name else "?"
         s_contact = str(student_data.get("Contact", student_data.get("contact", "")))
+        profile_avatar_html = render_avatar_html(s_avatar, s_name, size=76, color=primary, light=light)
 
         st.markdown(f"""
         <div class="profile-card">
-            <div class="profile-avatar">{initial}</div>
-            <div style="font-size:1.3rem;font-weight:800;color:#1e293b;">{s_name}</div>
-            <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:16px;">{s_reg}</div>
+            <div class="profile-avatar-wrap">
+                {profile_avatar_html}
+                <div>
+                    <div style="font-size:1.3rem;font-weight:800;color:#1e293b;">{s_name}</div>
+                    <div style="font-size:0.82rem;color:#94a3b8;">{s_reg}</div>
+                    <div style="font-size:0.75rem;color:#16a34a;font-weight:700;margin-top:2px;">● Active Student</div>
+                </div>
+            </div>
             <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Department</span><span style="font-weight:700;">{s_dept_name}</span></div>
             <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Year</span><span style="font-weight:700;">{s_year}</span></div>
             <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Course Code</span><span style="font-weight:700;">{s_course}</span></div>
             <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Assigned Group</span><span style="font-weight:700;">{s_group}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Contact</span><span style="font-weight:700;">{s_contact if s_contact else "Not set"}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:0.88rem;"><span style="color:#94a3b8;">Status</span><span style="font-weight:700;color:#16a34a;">● Active</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:0.88rem;"><span style="color:#94a3b8;">Contact</span><span style="font-weight:700;">{s_contact if s_contact else "Not set"}</span></div>
         </div>
         """, unsafe_allow_html=True)
+
+        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+        st.markdown("#### 📸 Profile Picture")
+        with st.expander("Update Profile Photo", expanded=bool(not s_avatar)):
+            new_avatar = st.file_uploader(
+                "Upload a portrait or selfie",
+                type=["png", "jpg", "jpeg", "webp"],
+                key="student_avatar_uploader",
+                help="Recommended: Square photo, JPG or PNG format"
+            )
+            col_av1, col_av2 = st.columns(2)
+            with col_av1:
+                if st.button("Save Profile Picture", use_container_width=True, type="primary"):
+                    if new_avatar:
+                        with st.spinner("Uploading and updating photo..."):
+                            url = db.upload_student_avatar(
+                                s_reg,
+                                new_avatar.getvalue(),
+                                new_avatar.type or "image/jpeg"
+                            )
+                        if url:
+                            cached_fetch_roster.clear()
+                            st.success("✅ Profile picture updated successfully!")
+                            st.rerun()
+                        else:
+                            st.error("⚠️ Failed to upload image. Please try another file.")
+                    else:
+                        st.warning("Please choose an image file first.")
+            with col_av2:
+                if s_avatar and st.button("🗑️ Remove Photo", use_container_width=True):
+                    with st.spinner("Removing photo..."):
+                        db.delete_student_avatar(s_reg)
+                    cached_fetch_roster.clear()
+                    st.success("Profile photo removed.")
+                    st.rerun()
 
         st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
         st.markdown("#### 🔒 Change PIN")
@@ -1458,7 +1518,7 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
 {mat_lines if mat_lines else "  No materials uploaded yet."}
 """
 
-        # AI Welcome Screen (FIXED: Redundant duplicated card divs removed)
+        # AI Welcome Screen
         if not st.session_state.show_ai_tab:
             st.markdown(f"""
             <div class="welcome-banner" style="text-align:center;">

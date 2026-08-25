@@ -1,70 +1,66 @@
 """
-database/__init__.py — Supabase-backed database facade.
-
-This package replaces the old single `database.py` (Google Sheets +
-Apps Script webhooks). `SupabaseDatabaseManager` below exposes the exact
-same public methods/signatures the rest of the app (app.py, student.py,
-class_rep.py, Superadmin.py, ai_engine.py) already calls through `db.*`,
-so none of those files need to know the backend changed.
-
-`SheetDatabaseManager` is kept as an alias purely so old imports/
-references to that name keep working without edits.
-
-Actual logic lives in focused sibling modules:
-    supabase_client.py  — connection, hashing, error-safety helpers
-    departments.py       announcements.py     materials.py
-    students.py          feedback.py          rep_replies.py
-    reps.py               timetable.py         notifications.py
-    whatsapp.py           chat.py              ai_memory.py
-    config_store.py       slots.py             admin_tools.py
+database/__init__.py — Unified Database Manager interface.
+Dispatches to modular Supabase services under database/*.
 """
-
 from typing import Dict, List, Optional, Union
-
-import pandas as pd
-
-from .supabase_client import get_client, is_configured, SupabaseUnavailableError  # noqa: F401
-from . import departments as _departments
 from . import students as _students
+from . import reps as _reps
 from . import announcements as _announcements
 from . import materials as _materials
 from . import feedback as _feedback
 from . import rep_replies as _rep_replies
-from . import reps as _reps
 from . import timetable as _timetable
-from . import notifications as _notifications
 from . import whatsapp as _whatsapp
 from . import chat as _chat
+from . import departments as _departments
+from . import admin_tools as _admin_tools
+from . import slots as _slots
 from . import ai_memory as _ai_memory
 from . import config_store as _config_store
-from . import slots as _slots
-from . import admin_tools as _admin_tools
-
-ROSTER_COLUMNS = _students.ROSTER_COLUMNS
+from . import notifications as _notifications
+from . import avatars as _avatars
 
 
 class SupabaseDatabaseManager:
-    """Database manager for the Supabase-backed application."""
+    """Single entry point mirroring SheetDatabaseManager's public API."""
 
-    def __init__(self):
-        # Touching get_client() here would raise before the UI can show a
-        # friendly banner, so connectivity is only checked lazily per call
-        # (see supabase_client.safe_call).
-        pass
+    # ── AVATARS / PROFILE PHOTOS ────────────────────────────────
+    def upload_student_avatar(self, reg_number: str, file_bytes: bytes, mime_type: str = "image/jpeg") -> Optional[str]:
+        return _avatars.upload_student_avatar(reg_number, file_bytes, mime_type)
 
-    def is_connected(self) -> bool:
-        return is_configured()
+    def delete_student_avatar(self, reg_number: str) -> bool:
+        return _avatars.delete_student_avatar(reg_number)
 
-    # ── ROSTER / STUDENTS ───────────────────────────────────────
-    def fetch_roster(self, dept: str = "ALL", year: str = "ALL") -> pd.DataFrame:
-        rows = _students.fetch_roster_rows(dept=dept, year=year)
-        return pd.DataFrame(rows) if rows else pd.DataFrame(columns=ROSTER_COLUMNS)
+    def upload_rep_avatar(self, dept: str, year: str, file_bytes: bytes, mime_type: str = "image/jpeg") -> Optional[str]:
+        return _avatars.upload_rep_avatar(dept, year, file_bytes, mime_type)
 
-    def fetch_all_roster(self) -> pd.DataFrame:
-        return self.fetch_roster(dept="ALL", year="ALL")
+    def delete_rep_avatar(self, dept: str, year: str) -> bool:
+        return _avatars.delete_rep_avatar(dept, year)
 
-    def register_student(self, name, reg, code, contact, dept, year, pin=None, whatsapp_phone="", email="") -> Dict:
-        return _students.register_student(name, reg, code, contact, dept, year, pin, whatsapp_phone, email)
+    def upload_admin_avatar(self, file_bytes: bytes, mime_type: str = "image/jpeg", admin_id: str = "superadmin") -> Optional[str]:
+        return _avatars.upload_admin_avatar(file_bytes, mime_type, admin_id)
+
+    def get_admin_avatar(self, admin_id: str = "superadmin") -> str:
+        return _avatars.get_admin_avatar(admin_id)
+
+    def delete_admin_avatar(self, admin_id: str = "superadmin") -> bool:
+        return _avatars.delete_admin_avatar(admin_id)
+
+    def render_avatar_html(self, avatar_url: Optional[str], name: str, size: int = 42, color: str = "#1a56db", light: str = "#dbeafe", extra_css: str = "") -> str:
+        return _avatars.render_avatar_html(avatar_url, name, size, color, light, extra_css)
+
+    # ── STUDENTS / ROSTER ───────────────────────────────────────
+    def fetch_roster(self, dept: str = "ALL", year: str = "ALL") -> List[Dict]:
+        return _students.fetch_roster_rows(dept, year)
+
+    def register_student(
+        self, name: str, reg: str, code: str, contact: str, dept: str, year: str,
+        pin: Optional[str] = None, whatsapp_phone: str = "", email: str = "",
+        avatar_bytes: Optional[bytes] = None, avatar_mime: str = "image/jpeg"
+    ) -> Dict:
+        return _students.register_student(
+            name, reg, code, contact, dept, year, pin, whatsapp_phone, email, avatar_bytes, avatar_mime
+        )
 
     def delete_student(self, name: str) -> Dict:
         return _students.delete_student(name)
@@ -74,15 +70,6 @@ class SupabaseDatabaseManager:
 
     def assign_group(self, reg_number_or_name: str, group_name: str) -> bool:
         return _students.assign_group(reg_number_or_name, group_name)
-
-    def save_course_unit_groups(self, dept: str, year: str, course_groups: Dict) -> Dict:
-        return _students.save_course_unit_groups(dept, year, course_groups)
-
-    def fetch_course_unit_groups(self, student_name: str, dept: str = "ALL", year: str = "ALL") -> Dict:
-        return _students.fetch_course_unit_groups(student_name, dept, year)
-
-    def update_student_course_groups(self, student_reg: str, course_groups: Dict, dept: str = "", year: str = "") -> Dict:
-        return _students.update_student_course_groups(student_reg, course_groups, dept, year)
 
     def update_contact(self, reg_number: str, new_contact: str) -> bool:
         return _students.update_contact(reg_number, new_contact)
@@ -102,46 +89,51 @@ class SupabaseDatabaseManager:
     def reset_pin(self, reg_number: str, contact: str, new_pin: str) -> Dict:
         return _students.reset_pin(reg_number, contact, new_pin)
 
+    def update_student_course_groups(self, student_reg: str, course_groups: Dict, dept: str = "", year: str = "") -> Dict:
+        return _students.update_student_course_groups(student_reg, course_groups, dept, year)
+
+    def save_course_unit_groups(self, dept: str, year: str, course_groups: Dict) -> Dict:
+        return _students.save_course_unit_groups(dept, year, course_groups)
+
+    def fetch_course_unit_groups(self, student_name: str, dept: str = "ALL", year: str = "ALL") -> Dict:
+        return _students.fetch_course_unit_groups(student_name, dept, year)
+
     # ── ANNOUNCEMENTS ───────────────────────────────────────────
     def fetch_announcements(self, dept: str = "ALL", year: str = "ALL") -> List:
         return _announcements.fetch_announcements(dept, year)
 
-    def fetch_all_announcements(self) -> List:
-        return _announcements.fetch_announcements("ALL", "ALL")
+    def post_announcement(self, text: str, dept: str = "ALL", year: str = "ALL",
+                           priority: str = "Normal", pinned: bool = False,
+                           posted_by: str = "Class Rep") -> bool:
+        return _announcements.post_announcement(text, dept, year, priority, pinned, posted_by)
 
-    def post_announcement(self, text: str, priority: str = "Normal", dept: str = "ALL",
-                           year: str = "ALL", notify_whatsapp: bool = False) -> bool:
-        return _announcements.post_announcement(text, priority, dept, year, notify_whatsapp)
+    def delete_announcement(self, ann_id: str) -> bool:
+        return _announcements.delete_announcement(ann_id)
 
-    def delete_announcement(self, text: str) -> bool:
-        return _announcements.delete_announcement(text)
-
-    def broadcast_announcement(self, text: str, priority: str = "Normal") -> bool:
-        return self.post_announcement(text, priority, dept="ALL", year="ALL")
-
-    # ── MATERIALS ────────────────────────────────────────────────
+    # ── MATERIALS ───────────────────────────────────────────────
     def fetch_materials(self, dept: str = "ALL", year: str = "ALL") -> List:
         return _materials.fetch_materials(dept, year)
 
-    def fetch_file_bytes(self, url: str) -> bytes:
-        return _materials.fetch_file_bytes(url)
-
-    def upload_material(self, file_bytes, file_name: str, mime_type: str, dept: str = "ALL",
-                         year: str = "ALL", notify_whatsapp: bool = False) -> bool:
-        return _materials.upload_material(file_bytes, file_name, mime_type, dept, year, notify_whatsapp)
+    def upload_material(self, file_bytes, file_name: str, mime_type: str,
+                        dept: str = "ALL", year: str = "ALL",
+                        notify_whatsapp: bool = False, title: str = "",
+                        uploaded_by: str = "Class Rep") -> bool:
+        return _materials.upload_material(file_bytes, file_name, mime_type, dept, year,
+                                          notify_whatsapp, title, uploaded_by)
 
     def delete_material(self, file_name: str) -> bool:
         return _materials.delete_material(file_name)
 
-    # ── FEEDBACK ─────────────────────────────────────────────────
+    def fetch_file_bytes(self, url: str) -> bytes:
+        return _materials.fetch_file_bytes(url)
+
+    # ── FEEDBACK / MESSAGES ─────────────────────────────────────
     def fetch_feedback(self, dept: str = "ALL", year: str = "ALL") -> List:
         return _feedback.fetch_feedback(dept, year)
 
-    def fetch_all_feedback(self) -> List:
-        return _feedback.fetch_feedback("ALL", "ALL")
-
-    def submit_feedback(self, reg_num: str, name: str, message: str, dept: str = "ALL", year: str = "ALL") -> bool:
-        return _feedback.submit_feedback(reg_num, name, message, dept, year)
+    def submit_feedback(self, reg_number: str, student_name: str, message: str,
+                        dept: str = "ALL", year: str = "ALL") -> bool:
+        return _feedback.submit_feedback(reg_number, student_name, message, dept, year)
 
     def delete_feedback(self, timestamp: str, reg_number: str) -> bool:
         return _feedback.delete_feedback(timestamp, reg_number)
@@ -149,29 +141,30 @@ class SupabaseDatabaseManager:
     def delete_all_feedback(self, reg_number: str) -> bool:
         return _feedback.delete_all_feedback(reg_number)
 
-    def update_feedback_status(self, timestamp: str, reg_number: str, status: str = "Reviewed") -> bool:
-        return _feedback.update_feedback_status(timestamp, reg_number, status)
+    def update_feedback_status(self, timestamp: str, reg_number: str, new_status: str) -> bool:
+        return _feedback.update_feedback_status(timestamp, reg_number, new_status)
 
     # ── REP REPLIES ─────────────────────────────────────────────
-    def fetch_rep_replies(self, reg_number: Optional[str] = None, dept: str = "ALL", year: str = "ALL") -> List:
+    def fetch_rep_replies(self, reg_number: str = "ALL", dept: str = "ALL", year: str = "ALL") -> List:
         return _rep_replies.fetch_rep_replies(reg_number, dept, year)
 
-    def post_rep_reply(self, reg_number: str, student_name: str, message: str, rep_name: str,
-                        dept: str = "ALL", year: str = "ALL") -> bool:
-        return _rep_replies.post_rep_reply(reg_number, student_name, message, rep_name, dept, year)
+    def send_rep_reply(self, reg_number: str, message: str, rep_name: str = "Class Rep",
+                       dept: str = "ALL", year: str = "ALL") -> bool:
+        return _rep_replies.send_rep_reply(reg_number, message, rep_name, dept, year)
 
     def mark_rep_reply_read(self, timestamp: str, reg_number: str) -> bool:
         return _rep_replies.mark_rep_reply_read(timestamp, reg_number)
 
-    # ── REP ACCOUNTS ────────────────────────────────────────────
+    # ── REPS ────────────────────────────────────────────────────
     def fetch_reps(self) -> List:
         return _reps.fetch_reps()
 
     def verify_rep(self, dept: str, year: str, password: str) -> Dict:
         return _reps.verify_rep(dept, year, password)
 
-    def assign_rep(self, dept: str, year: str, rep_name: str, rep_reg: str, password: str, email: str = "") -> bool:
-        return _reps.assign_rep(dept, year, rep_name, rep_reg, password, email)
+    def assign_rep(self, dept: str, year: str, rep_name: str, rep_reg: str, password: str, email: str = "",
+                   avatar_bytes: Optional[bytes] = None, avatar_mime: str = "image/jpeg") -> bool:
+        return _reps.assign_rep(dept, year, rep_name, rep_reg, password, email, avatar_bytes, avatar_mime)
 
     def update_rep_email(self, dept: str, year: str, new_email: str) -> Dict:
         return _reps.update_rep_email(dept, year, new_email)
@@ -190,7 +183,7 @@ class SupabaseDatabaseManager:
         return _timetable.fetch_timetable(dept, year)
 
     def add_timetable_entry(self, dept: str, year: str, day: str, time: str, course: str,
-                             lecturer: str = "", color: str = "", entry_type: str = "Weekly") -> bool:
+                            lecturer: str = "", color: str = "", entry_type: str = "Weekly") -> bool:
         return _timetable.add_timetable_entry(dept, year, day, time, course, lecturer, color, entry_type)
 
     def delete_timetable_entry(self, dept: str, year: str, day: str, time: str) -> bool:
@@ -319,7 +312,7 @@ class SupabaseDatabaseManager:
     def clear_master_ai_memory(self, mem_type: str) -> bool:
         return _ai_memory.clear_master_ai_memory(mem_type)
 
-    # ── NOTIFICATIONS (new — see database/notifications.py) ─────
+    # ── NOTIFICATIONS ───────────────────────────────────────────
     def fetch_notifications(self, reg_number: str, limit: int = 30) -> List:
         return _notifications.fetch_notifications(reg_number, limit)
 
@@ -333,5 +326,4 @@ class SupabaseDatabaseManager:
         return _notifications.mark_all_notifications_read(reg_number)
 
 
-# Backward-compatible alias — old code imports `SheetDatabaseManager`.
 SheetDatabaseManager = SupabaseDatabaseManager

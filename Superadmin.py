@@ -8,6 +8,7 @@ import pandas as pd
 import json
 
 from database import SheetDatabaseManager
+from database.avatars import render_avatar_html
 
 from ai_engine import AIAdminAssistant, MasterSuperAdminAI,MasterAIMemorySystem,MasterAIMonitor
 from config import get_departments, YEARS, get_dept_codes, dept_color, dept_light, dept_name, COLOUR_PALETTE, load_departments
@@ -322,16 +323,28 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
     total_depts    = len(get_departments())
 
     #  Banner 
+    admin_avatar = ""
+    try:
+        admin_avatar = db.get_admin_avatar()
+    except Exception:
+        pass
+    admin_avatar_html = render_avatar_html(admin_avatar, "Super Admin", size=56, color="white", light="rgba(255,255,255,0.25)")
+
     st.markdown(f"""
     <div class="admin-banner">
-        <h2> Super Admin — University Overview</h2>
-        <p style="opacity:0.75;margin:0 0 12px 0;">
-            Manage all departments, year groups and class rep accounts.
-        </p>
-        <span class="admin-pill"> {total_depts} Departments</span>
-        <span class="admin-pill"> {total_students} Students</span>
-        <span class="admin-pill"> {total_feedback} Feedback Messages</span>
-        <span class="admin-pill"> {len(reps_list)} Rep Accounts</span>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;">
+            {admin_avatar_html}
+            <div>
+                <h2 style="margin:0;font-size:1.6rem;font-weight:800;color:white;">🏛️ Super Admin — University Overview</h2>
+                <p style="opacity:0.85;margin:2px 0 0 0;font-size:0.92rem;">
+                    Manage all departments, year groups and class rep accounts.
+                </p>
+            </div>
+        </div>
+        <span class="admin-pill">🏛️ {total_depts} Departments</span>
+        <span class="admin-pill">🎓 {total_students} Students</span>
+        <span class="admin-pill">💬 {total_feedback} Feedback Messages</span>
+        <span class="admin-pill">👤 {len(reps_list)} Rep Accounts</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -407,6 +420,30 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                     "Status":     "" if rep else ""
                 })
         st.dataframe(pd.DataFrame(coverage_rows), use_container_width=True)
+
+        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+        st.markdown("### 📸 Super Admin Profile Photo")
+        with st.expander("Update Admin Photo", expanded=bool(not admin_avatar)):
+            new_admin_av = st.file_uploader("Upload Admin Profile Photo (JPG/PNG)", type=["png", "jpg", "jpeg", "webp"], key="sa_av_uploader")
+            sa_col1, sa_col2 = st.columns(2)
+            with sa_col1:
+                if st.button("💾 Save Admin Photo", key="save_sa_photo_btn", use_container_width=True, type="primary"):
+                    if new_admin_av:
+                        with st.spinner("Uploading admin avatar..."):
+                            url = db.upload_admin_avatar(new_admin_av.getvalue(), new_admin_av.type or "image/jpeg")
+                        if url:
+                            st.success("✅ Super Admin photo updated!")
+                            st.rerun()
+                        else:
+                            st.error("Failed to upload image.")
+                    else:
+                        st.warning("Please select an image file.")
+            with sa_col2:
+                if admin_avatar and st.button("🗑️ Remove Photo", key="del_sa_photo_btn", use_container_width=True):
+                    with st.spinner("Removing..."):
+                        db.delete_admin_avatar()
+                    st.success("Admin photo removed.")
+                    st.rerun()
 
 
     # 
@@ -634,8 +671,11 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
 
                 col1, col2 = st.columns([4, 1])
                 with col1:
+                    rep_av_url = rep.get("avatar_url", "") or ""
+                    rep_card_av = render_avatar_html(rep_av_url, r_name, size=42, color=color, light=dept_light(r_dept_code) if r_dept_code in get_departments() else ADMIN_LIGHT)
                     st.markdown(f"""
-                    <div class="rep-row" style="border-left-color:{color};">
+                    <div class="rep-row" style="border-left-color:{color};display:flex;align-items:center;gap:14px;">
+                        {rep_card_av}
                         <div>
                             <div class="rr-info">
                                  {r_name}
