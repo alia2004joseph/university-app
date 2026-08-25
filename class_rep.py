@@ -14,44 +14,123 @@ from utils.mobile import is_mobile, get_view_mode_toggle
 
 def inject_rep_css(primary: str, light: str):
     is_mob = is_mobile()
-    css =""
     css = f"""
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    html,body,[class*="css"]{{font-family:'Plus Jakarta Sans',sans-serif;}}
-    #MainMenu,footer{{visibility:hidden;}}
-    .stApp{{background:#F0F4FF;}}
-    .rep-banner{{
-        background:linear-gradient(135deg,{primary} 0%,{primary}cc 100%);
-        border-radius:18px;padding:28px 32px;margin-bottom:24px;color:white;
+    
+    html, body, [class*="css"] {{
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     }}
-    .rep-banner h2{{font-size:1.6rem;font-weight:800;margin:0 0 6px 0;color:white;}}
-    .rep-badge{{
-        display:inline-block;background:rgba(255,255,255,0.15);
-        border:1px solid rgba(255,255,255,0.25);border-radius:20px;
-        padding:4px 14px;font-size:0.75rem;font-weight:600;color:white;margin-right:6px;
+    
+    #MainMenu, footer {{ visibility: hidden !important; }}
+    .stApp {{ background-color: #f8fafc !important; }}
+    
+    /*  Rep Banner  */
+    .rep-banner {{
+        background: linear-gradient(135deg, {primary} 0%, {primary}dd 100%);
+        border-radius: 16px;
+        padding: 24px 28px;
+        margin-bottom: 20px;
+        color: white;
+        box-shadow: 0 4px 18px -2px rgba(0,0,0,0.12);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        position: relative;
+        overflow: hidden;
     }}
-    .fb-card{{
-        background:white;border-radius:12px;padding:16px 18px;margin-bottom:10px;
-        border:1px solid #e2e8f7;border-left:4px solid {primary};
+    .rep-banner h2 {{
+        font-size: 1.55rem;
+        font-weight: 800;
+        margin: 0 0 4px 0;
+        color: white;
+        letter-spacing: -0.3px;
     }}
-    .fb-card.reviewed{{border-left-color:#16a34a;opacity:0.85;}}
-    .pro-divider{{height:1px;background:#e2e8f7;margin:22px 0;}}
-    .scope-badge{{
-        background:{light};color:{primary};border:1px solid {primary}44;
-        border-radius:8px;padding:8px 16px;font-weight:700;font-size:0.85rem;
-        display:inline-block;margin-bottom:16px;
+    
+    /*  Badges & Chips  */
+    .rep-badge {{
+        display: inline-flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.14);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 20px;
+        padding: 4px 13px;
+        font-size: 0.74rem;
+        font-weight: 600;
+        color: white;
+        margin-right: 6px;
+        margin-top: 6px;
     }}
-    .stTabs [data-baseweb="tab-list"]{{
-        gap:4px;background:white;border-radius:12px;padding:4px;
-        border:1px solid #e2e8f7;flex-wrap:wrap;
+    
+    .scope-badge {{
+        background: {light};
+        color: {primary};
+        border: 1px solid {primary}33;
+        border-radius: 10px;
+        padding: 8px 16px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }}
-    .stTabs [data-baseweb="tab"]{{
-        border-radius:8px;padding:8px 16px;font-weight:600;
-        font-size:0.82rem;color:#64748b;background:transparent;border:none;
+    
+    /*  Feedback Cards  */
+    .fb-card {{
+        background: white;
+        border-radius: 14px;
+        padding: 16px 20px;
+        margin-bottom: 10px;
+        border: 1px solid #e2e8f0;
+        border-left: 4px solid {primary};
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: all 0.2s ease;
     }}
-    .stTabs [aria-selected="true"]{{background:{primary} !important;color:white !important;}}
+    .fb-card:hover {{
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }}
+    .fb-card.reviewed {{
+        border-left-color: #16a34a;
+        background: #fcfdfc;
+    }}
+    
+    .pro-divider {{
+        height: 1px;
+        background: #e2e8f0;
+        margin: 20px 0;
+    }}
+    
+    /*  Segmented Pill Tabs  */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 4px;
+        background: white;
+        border-radius: 12px;
+        padding: 4px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        flex-wrap: wrap;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 600;
+        font-size: 0.84rem;
+        color: #64748b;
+        background: transparent;
+        border: none;
+        transition: all 0.15s ease;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{
+        color: #1e293b;
+        background: #f8fafc;
+    }}
+    .stTabs [aria-selected="true"] {{
+        background: {primary} !important;
+        color: white !important;
+        font-weight: 700 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }}
     .stTabs [data-baseweb="tab-highlight"],
-    .stTabs [data-baseweb="tab-border"]{{display:none;}}
+    .stTabs [data-baseweb="tab-border"] {{ display: none; }}
     """
     if is_mob:
         css += f"""
@@ -63,18 +142,18 @@ def inject_rep_css(primary: str, light: str):
             font-size: 1.2rem !important;
         }}
         .rep-badge {{
-            font-size: 0.65rem !important;
-            padding: 2px 10px !important;
+            font-size: 0.68rem !important;
+            padding: 3px 10px !important;
         }}
         .stButton button {{
             width: 100% !important;
-            font-size: 0.95rem !important;
+            font-size: 0.92rem !important;
             padding: 10px !important;
             min-height: 44px !important;
         }}
         .stTabs [role="tab"] {{
-            font-size: 0.65rem !important;
-            padding: 4px 8px !important;
+            font-size: 0.7rem !important;
+            padding: 6px 10px !important;
         }}
         .fb-card {{
             padding: 12px 14px !important;
@@ -84,8 +163,7 @@ def inject_rep_css(primary: str, light: str):
             padding: 6px 12px !important;
         }}
         """
-    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
-
+    st.markdown(f"<style>{{css}}</style>", unsafe_allow_html=True)
 def render_rep_roster_mobile(df, total_students):
     """Render class roster as cards for mobile."""
     st.caption(f" Showing {len(df)} of {total_students} students (mobile view)")

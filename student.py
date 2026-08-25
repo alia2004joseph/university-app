@@ -26,177 +26,195 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     is_mob = is_mobile()
     css = f"""
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
+    
     html, body, [class*="css"] {{
-        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     }}
-
-    #MainMenu, footer {{ visibility: hidden; }}
-
-    .stApp {{ background: #F0F4FF; }}
-
+    
+    #MainMenu, footer {{ visibility: hidden !important; }}
+    .stApp {{ background-color: #f8fafc !important; }}
+    
     /*  Welcome Banner  */
     .welcome-banner {{
-        background: linear-gradient(135deg, {primary} 0%, {primary}cc 100%);
-        border-radius: 18px;
+        background: linear-gradient(135deg, {primary} 0%, {primary}dd 100%);
+        border-radius: 16px;
         padding: 24px 28px;
         margin-bottom: 20px;
         color: white;
+        box-shadow: 0 4px 18px -2px rgba(0,0,0,0.12);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        position: relative;
+        overflow: hidden;
     }}
     .welcome-banner h2 {{
-        font-size: 1.6rem;
+        font-size: 1.55rem;
         font-weight: 800;
-        margin: 0 0 6px 0;
+        margin: 0 0 4px 0;
         color: white;
+        letter-spacing: -0.3px;
     }}
     .welcome-banner p {{
         font-size: 0.88rem;
-        opacity: 0.85;
+        opacity: 0.9;
         margin: 0 0 12px 0;
     }}
-
-    /*  Pills  */
+    
+    /*  Pill Chips  */
     .pill-strip {{
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        margin-top: 4px;
+        margin-top: 6px;
     }}
     .pill {{
-        background: rgba(255,255,255,0.18);
-        border: 1px solid rgba(255,255,255,0.28);
+        background: rgba(255, 255, 255, 0.14);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
         border-radius: 20px;
-        padding: 4px 14px;
-        font-size: 0.75rem;
+        padding: 4px 13px;
+        font-size: 0.74rem;
         font-weight: 600;
         color: white;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
     }}
-
-    /*  Cards  */
+    
+    /*  Cards & Containers  */
     .stat-card {{
         background: white;
         border-radius: 14px;
         padding: 18px 14px;
         text-align: center;
-        border: 1px solid #e2e8f7;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }}
+    .stat-card:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.06);
     }}
     .stat-card .s-val {{
-        font-size: 1.45rem;
+        font-size: 1.5rem;
         font-weight: 800;
         color: {primary};
     }}
     .stat-card .s-label {{
-        font-size: 0.7rem;
-        color: #94a3b8;
+        font-size: 0.72rem;
+        color: #64748b;
         text-transform: uppercase;
-        font-weight: 600;
+        font-weight: 700;
+        letter-spacing: 0.5px;
     }}
+    
     .metric-card {{
         background: white;
         border-radius: 14px;
         padding: 18px 14px;
         text-align: center;
-        border: 1px solid #e2e8f7;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         margin-bottom: 10px;
+        transition: transform 0.2s ease;
     }}
-
+    .metric-card:hover {{
+        transform: translateY(-2px);
+    }}
+    
     /*  Announcements  */
     .ann-card {{
         background: white;
-        border-radius: 12px;
-        padding: 16px 18px;
-        margin-bottom: 10px;
-        border: 1px solid #e2e8f7;
+        border-radius: 14px;
+        padding: 18px 20px;
+        margin-bottom: 12px;
+        border: 1px solid #e2e8f0;
         border-left: 4px solid {primary};
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: all 0.2s ease;
+    }}
+    .ann-card:hover {{
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
     }}
     .ann-card.urgent {{
         border-left-color: #ef4444;
-        background: #fff8f8;
+        background: #fffafa;
     }}
     .ann-card.read {{
         border-left-color: #cbd5e1;
-        opacity: 0.7;
+        opacity: 0.75;
     }}
     .ann-badge {{
-        display: inline-block;
-        padding: 2px 10px;
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
         border-radius: 20px;
-        font-size: 0.68rem;
+        font-size: 0.7rem;
         font-weight: 700;
         margin-bottom: 8px;
     }}
     .badge-normal {{ background: {light}; color: {primary}; }}
-    .badge-urgent {{ background: #fee2e2; color: #ef4444; }}
-    .badge-read   {{ background: #f1f5f9; color: #94a3b8; }}
-
+    .badge-urgent {{ background: #fee2e2; color: #dc2626; }}
+    .badge-read   {{ background: #f1f5f9; color: #64748b; }}
+    
     /*  Materials  */
     .mat-row {{
         background: white;
-        border-radius: 12px;
-        padding: 14px 18px;
+        border-radius: 14px;
+        padding: 16px 20px;
         margin-bottom: 10px;
-        border: 1px solid #e2e8f7;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 16px;
+        transition: all 0.2s ease;
+    }}
+    .mat-row:hover {{
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }}
     .mat-icon {{
-        width: 44px;
-        height: 44px;
-        border-radius: 10px;
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
         background: {light};
         color: {primary};
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.72rem;
+        font-size: 0.75rem;
         font-weight: 800;
         flex-shrink: 0;
     }}
-    .mat-icon.pdf {{ background: #fee2e2; color: #ef4444; }}
-
+    .mat-icon.pdf {{ background: #fee2e2; color: #dc2626; }}
+    
     /*  Group / Members  */
     .member-card {{
         background: white;
         border-radius: 12px;
-        padding: 12px 16px;
+        padding: 14px 18px;
         margin-bottom: 8px;
-        border: 1px solid #e2e8f7;
+        border: 1px solid #e2e8f0;
         display: flex;
         align-items: center;
         gap: 14px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }}
-    .avatar {{
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        background: {light};
-        color: {primary};
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
-        font-weight: 800;
-        flex-shrink: 0;
-    }}
-    .avatar.you {{ background: {primary}; color: white; }}
     .group-banner {{
-        background: linear-gradient(135deg, {primary}, {primary}cc);
+        background: linear-gradient(135deg, {primary}, {primary}dd);
         border-radius: 14px;
-        padding: 20px 22px;
+        padding: 20px 24px;
         margin-bottom: 16px;
         color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }}
-
+    
     /*  Profile  */
     .profile-card {{
         background: white;
         border-radius: 16px;
-        padding: 24px;
-        border: 1px solid #e2e8f7;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        padding: 26px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }}
     .profile-avatar-wrap {{
         display: flex;
@@ -204,11 +222,11 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         gap: 18px;
         margin-bottom: 18px;
     }}
-
+    
     /*  Misc  */
     .msg-info-card {{
         background: {light};
-        border: 1px solid {primary}44;
+        border: 1px solid {primary}33;
         border-radius: 12px;
         padding: 14px 18px;
         margin-bottom: 16px;
@@ -217,7 +235,7 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     }}
     .pro-divider {{
         height: 1px;
-        background: #e2e8f7;
+        background: #e2e8f0;
         margin: 20px 0;
     }}
     .activity-strip {{
@@ -226,33 +244,45 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         padding: 14px 18px;
         margin-bottom: 18px;
         border-left: 4px solid {primary};
+        border-top: 1px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }}
-
-    /*  Tabs  */
+    
+    /*  Segmented Pill Tabs  */
     .stTabs [data-baseweb="tab-list"] {{
         gap: 4px;
         background: white;
         border-radius: 12px;
         padding: 4px;
-        border: 1px solid #e2e8f7;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         flex-wrap: wrap;
     }}
     .stTabs [data-baseweb="tab"] {{
         border-radius: 8px;
         padding: 8px 16px;
         font-weight: 600;
-        font-size: 0.82rem;
+        font-size: 0.84rem;
         color: #64748b;
         background: transparent;
         border: none;
+        transition: all 0.15s ease;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{
+        color: #1e293b;
+        background: #f8fafc;
     }}
     .stTabs [aria-selected="true"] {{
         background: {primary} !important;
         color: white !important;
+        font-weight: 700 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     }}
     .stTabs [data-baseweb="tab-highlight"],
     .stTabs [data-baseweb="tab-border"] {{ display: none; }}
-
+    
     /*  Buttons (desktop)  */
     .stButton > button {{
         border-radius: 10px;
@@ -261,14 +291,12 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         transition: all 0.2s ease;
     }}
     """
-
     if is_mob:
         css += f"""
         /* MOBILE OVERRIDES */
         html, body, [class*="css"] {{
             font-size: 15px !important;
         }}
-
         .stApp {{
             padding: 0 !important;
         }}
@@ -276,11 +304,9 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
             padding: 12px 12px 40px 12px !important;
             max-width: 100% !important;
         }}
-
-        h1 {{ font-size: 1.4rem !important; margin-bottom: 8px !important; }}
-        h2 {{ font-size: 1.2rem !important; }}
-        h3 {{ font-size: 1.05rem !important; }}
-
+        h1 {{ font-size: 1.35rem !important; margin-bottom: 8px !important; }}
+        h2 {{ font-size: 1.15rem !important; }}
+        h3 {{ font-size: 1.0rem !important; }}
         .welcome-banner {{
             padding: 18px 16px !important;
             border-radius: 14px !important;
@@ -289,7 +315,6 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         .welcome-banner h2 {{ font-size: 1.25rem !important; margin-bottom: 4px !important; }}
         .welcome-banner p {{ font-size: 0.8rem !important; margin-bottom: 10px !important; }}
         .pill {{ font-size: 0.68rem !important; padding: 3px 10px !important; }}
-
         .stButton > button {{
             width: 100% !important;
             min-height: 48px !important;
@@ -298,7 +323,6 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
             border-radius: 10px !important;
             margin-bottom: 6px !important;
         }}
-
         .stTextInput input,
         .stTextArea textarea,
         .stSelectbox select {{
@@ -307,7 +331,6 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
             border-radius: 10px !important;
             padding: 10px 14px !important;
         }}
-
         .stTabs [data-baseweb="tab-list"] {{
             flex-wrap: nowrap !important;
             overflow-x: auto !important;
@@ -318,51 +341,34 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
             gap: 4px !important;
             border-radius: 10px !important;
         }}
-        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{ display: none !important; }}
-        .stTabs [data-baseweb="tab"] {{
-            font-size: 0.72rem !important;
-            padding: 8px 12px !important;
-            white-space: nowrap !important;
-            min-height: 36px !important;
-            flex-shrink: 0 !important;
-        }}
-
         .metric-card {{
             padding: 14px 10px !important;
             border-radius: 12px !important;
             margin-bottom: 8px !important;
         }}
-
         .ann-card {{
             padding: 14px 14px !important;
             border-radius: 10px !important;
             margin-bottom: 8px !important;
         }}
-
         .mat-row {{
             padding: 12px 14px !important;
             flex-wrap: nowrap !important;
             gap: 10px !important;
         }}
-
         .member-card {{
             padding: 10px 12px !important;
             gap: 10px !important;
         }}
-
         .profile-card {{
             padding: 18px 16px !important;
             border-radius: 14px !important;
         }}
-
         .pro-divider {{
             margin: 14px 0 !important;
         }}
         """
-
-    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
-
-
+    st.markdown(f"<style>{{css}}</style>", unsafe_allow_html=True)
 def metric_card(title, value, icon, color="#1a56db"):
     st.markdown(f"""
     <div class="metric-card">

@@ -23,48 +23,134 @@ def inject_admin_css():
     st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    html,body,[class*="css"]{{font-family:'Plus Jakarta Sans',sans-serif;}}
-    #MainMenu,footer{{visibility:hidden;}}
-    .stApp{{background:#F0F4FF;}}
-    .admin-banner{{
-        background:linear-gradient(135deg,{ADMIN_PRIMARY} 0%,{ADMIN_ACCENT} 100%);
-        border-radius:18px;padding:28px 32px;margin-bottom:24px;color:white;
+    
+    html, body, [class*="css"] {{
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     }}
-    .admin-banner h2{{font-size:1.7rem;font-weight:800;margin:0 0 6px 0;color:white;}}
-    .dept-card{{
-        background:white;border-radius:14px;padding:20px;
-        border:1px solid #e2e8f7;border-top:4px solid var(--dc);
-        box-shadow:0 2px 8px rgba(0,0,0,0.05);margin-bottom:8px;
+    
+    #MainMenu, footer {{ visibility: hidden !important; }}
+    .stApp {{ background-color: #f8fafc !important; }}
+    
+    /*  Admin Banner  */
+    .admin-banner {{
+        background: linear-gradient(135deg, {ADMIN_PRIMARY} 0%, #1e1b4b 50%, {ADMIN_ACCENT} 100%);
+        border-radius: 16px;
+        padding: 26px 32px;
+        margin-bottom: 24px;
+        color: white;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        position: relative;
+        overflow: hidden;
     }}
-    .admin-pill{{
-        display:inline-block;background:rgba(255,255,255,0.15);
-        border:1px solid rgba(255,255,255,0.25);border-radius:20px;
-        padding:4px 14px;font-size:0.75rem;font-weight:600;color:white;margin-right:6px;
+    .admin-banner h2 {{
+        font-size: 1.65rem;
+        font-weight: 800;
+        margin: 0 0 4px 0;
+        color: white;
+        letter-spacing: -0.4px;
     }}
-    .rep-row{{
-        background:white;border-radius:12px;padding:14px 18px;margin-bottom:8px;
-        border:1px solid #e2e8f7;border-left:4px solid {ADMIN_ACCENT};
-        display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+    
+    /*  Cards  */
+    .dept-card {{
+        background: white;
+        border-radius: 14px;
+        padding: 20px;
+        border: 1px solid #e2e8f0;
+        border-top: 4px solid var(--dc);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        margin-bottom: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }}
-    .rep-row .rr-info{{font-size:0.9rem;color:#1e293b;font-weight:600;}}
-    .rep-row .rr-meta{{font-size:0.78rem;color:#94a3b8;margin-top:2px;}}
-    .pro-divider{{height:1px;background:#e2e8f7;margin:22px 0;}}
-    /* Pill-style tabs */
-    .stTabs [data-baseweb="tab-list"]{{
-        gap:4px;background:white;border-radius:12px;padding:4px;
-        border:1px solid #e2e8f7;flex-wrap:wrap;
+    .dept-card:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
     }}
-    .stTabs [data-baseweb="tab"]{{
-        border-radius:8px;padding:8px 16px;font-weight:600;
-        font-size:0.82rem;color:#64748b;background:transparent;border:none;
+    
+    .admin-pill {{
+        display: inline-flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.14);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 20px;
+        padding: 4px 13px;
+        font-size: 0.74rem;
+        font-weight: 600;
+        color: white;
+        margin-right: 6px;
+        margin-top: 6px;
     }}
-    .stTabs [aria-selected="true"]{{background:{ADMIN_ACCENT} !important;color:white !important;}}
+    
+    .rep-row {{
+        background: white;
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 8px;
+        border: 1px solid #e2e8f0;
+        border-left: 4px solid {ADMIN_ACCENT};
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        transition: all 0.2s ease;
+    }}
+    .rep-row:hover {{
+        box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+    }}
+    .rep-row .rr-info {{
+        font-size: 0.92rem;
+        color: #0f172a;
+        font-weight: 700;
+    }}
+    .rep-row .rr-meta {{
+        font-size: 0.78rem;
+        color: #64748b;
+        margin-top: 2px;
+    }}
+    
+    .pro-divider {{
+        height: 1px;
+        background: #e2e8f0;
+        margin: 22px 0;
+    }}
+    
+    /*  Segmented Pill Tabs  */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 4px;
+        background: white;
+        border-radius: 12px;
+        padding: 4px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        flex-wrap: wrap;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 600;
+        font-size: 0.84rem;
+        color: #64748b;
+        background: transparent;
+        border: none;
+        transition: all 0.15s ease;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{
+        color: #1e293b;
+        background: #f8fafc;
+    }}
+    .stTabs [aria-selected="true"] {{
+        background: {ADMIN_ACCENT} !important;
+        color: white !important;
+        font-weight: 700 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }}
     .stTabs [data-baseweb="tab-highlight"],
-    .stTabs [data-baseweb="tab-border"]{{display:none;}}
+    .stTabs [data-baseweb="tab-border"] {{ display: none; }}
     </style>
     """, unsafe_allow_html=True)
-
-
 def render_slot_configurator(db):
     """Render the Slot Configurator for dynamic features."""
     st.markdown("####  Slot Configurator")
