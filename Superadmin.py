@@ -149,12 +149,14 @@ def inject_admin_css():
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         flex-wrap: wrap;
     }}
-    .stTabs [data-baseweb="tab"] {{
+        .stTabs [data-baseweb="tab"] {{
         border-radius: 8px;
         padding: 8px 16px;
         font-weight: 600;
         font-size: 0.84rem;
-        color: #64748b;
+        color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
+        opacity: 1 !important;
         background: transparent;
         border: none;
         transition: all 0.15s ease;
@@ -163,9 +165,11 @@ def inject_admin_css():
         color: #1e293b;
         background: #f8fafc;
     }}
-    .stTabs [aria-selected="true"] {{
+        .stTabs [aria-selected="true"] {{
         background: {ADMIN_ACCENT} !important;
         color: white !important;
+        -webkit-text-fill-color: white !important;
+        opacity: 1 !important;
         font-weight: 700 !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }}
