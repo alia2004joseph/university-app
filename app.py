@@ -56,6 +56,11 @@ color:var(--primary-dark) !important;
 background-color:#ffffff !important;
 -webkit-text-fill-color: var(--primary-dark) !important;
 }
+label, div[data-testid= "stwidgetlabel"] p, div[data-testid= "stwidgetlabel"] label {
+color:var(--primary-dark) !important;
+-webkit-text-fill-color: var(--primary-dark) !important;
+opacity: 1 !important;
+}
 
 #MainMenu, footer { 
     visibility: hidden !important; 
