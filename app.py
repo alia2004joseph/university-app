@@ -278,7 +278,28 @@ header[data-testid="stHeader"] {
     border-radius: 14px;
     padding: 14px;
     margin-bottom: 14px;
+
 }
+div[data-testid="stAlert"] p, div[data-testid="stAlert"] div{
+color: var(--primary-dark) !important;
+-webkit-text-fill-color: var(--primary-dark) !important;
+opacity: 1 !important;
+
+div[data-basweb="tab"]{
+overflow-x: auto !important;
+-webkit-overflow-scrolling: touch ;
+scrollbar-width: thin;}
+
+div[data-basweb="tab"]{
+font-size: 0.85rem !important;
+padding: 8px 10px !important;
+white-space: nowrap !important;
+}
+
+
+
+
+
 </style>
 """, unsafe_allow_html=True)
 
