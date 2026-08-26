@@ -27,6 +27,7 @@ from urllib.parse import quote
 from PIL import Image, ImageDraw
 from google import genai
 from google.genai import types
+from datetime import datetime  # <--- added
 
 # ── IMPORT IMAGE GENERATOR ──
 from image_generator import generate_image  # ✅ This is the ONLY source of generate_image
@@ -257,6 +258,8 @@ _key_manager = KeyRotationManager()
 # ─────────────────────────────────────────────
 def try_gemini(model, contents, config):
     client = _key_manager.get_client()
+    if client is None:
+        raise Exception("No Gemini client available")
     return client.models.generate_content(model=model, contents=contents, config=config).text
 
 
@@ -732,8 +735,8 @@ class AIStudyAssistant:
                     continue
             _key_manager.rotate()
 
-                if last_error and ("API_KEY_INVALID" in last_error or "API key not valid" in last_error):
-            return "⚠️ Your Gemini API key is invalid or has been revoked.\n\n💡 Tip: Generate a new key at https://aistudio.google.com/apikey and update GEMINI_API_KEY in secrets.toml or your environment variables, then restart the app."
+            if last_error and ("API_KEY_INVALID" in last_error or "API key not valid" in last_error):
+                       return "⚠️ Your Gemini API key is invalid or has been revoked.\n\n💡 Tip: Generate a new key at https://aistudio.google.com/apikey and update GEMINI_API_KEY in secrets.toml or your environment variables, then restart the app."
         return f"⚠️ Image analysis error: {last_error or 'Could not generate vision response'}\n\n💡 Tip: Verify your GEMINI_API_KEY in secrets.toml or environment variables."
 
     def answer_group_query(self, student_name: str, query: str, course_groups: dict) -> str:
@@ -1474,7 +1477,6 @@ class MasterAIMonitor:
             df_all, reps_list, all_feedback, all_anns
         )
 
-        from datetime import datetime
         today = datetime.now().strftime("%A, %d %B %Y")
 
         report = (
@@ -1813,11 +1815,11 @@ class MasterSuperAdminAI:
             new_code = new_code[:-3]
         new_code = new_code.strip()
 
-        # Basic validation
-        issues = []
-        orig_funcs = set(__import__('re').findall(r'function\s+(\w+)', original_code))
-        new_funcs  = set(__import__('re').findall(r'function\s+(\w+)', new_code))
+        # Basic validation using re
+        orig_funcs = set(re.findall(r'function\s+(\w+)', original_code))
+        new_funcs  = set(re.findall(r'function\s+(\w+)', new_code))
         missing    = orig_funcs - new_funcs
+        issues = []
         if missing:
             issues.append(f"❌ Missing GAS functions: {', '.join(missing)}")
 
