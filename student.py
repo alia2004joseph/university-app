@@ -34,11 +34,21 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         overflow-wrap: anywhere;
     }}
     
-    #MainMenu, footer, header[data-testid="stHeader"], [data-testid="stHeader"] {{ 
+      #MainMenu, footer {{ 
         visibility: hidden !important; 
         height: 0 !important;
         padding: 0 !important;
         margin: 0 !important;
+    }}
+    header[data-testid="stHeader"] {{
+        background: transparent !important;
+        height: 2.5rem !important;
+    }}
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] {{
+        visibility: visible !important;
+        display: flex !important;
+        opacity: 1 !important;
     }}
     .stApp {{ background-color: #f8fafc !important; }}
     .block-container {{
