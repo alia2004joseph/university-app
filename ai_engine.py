@@ -1278,7 +1278,7 @@ class MasterAIMonitor:
     """
     Background monitor for the Smart University Portal.
     Watches portal health, student activity, and AI engine status.
-    Sends proactive WhatsApp/Telegram alerts to Alia.
+    Sends proactive Telegram/System alerts to Alia.
     """
 
     def __init__(self, db=None):
@@ -1286,23 +1286,7 @@ class MasterAIMonitor:
         self.model = "models/gemini-2.5-flash"
 
     def _send_whatsapp(self, message: str) -> dict:
-        """Send WhatsApp notification to Alia via CallMeBot."""
-        try:
-            phone = st.secrets.get("ADMIN_WHATSAPP_PHONE", "")
-            key   = st.secrets.get("ADMIN_WHATSAPP_KEY",   "")
-            if not phone or not key:
-                return {"error": "❌ ADMIN_WHATSAPP_PHONE or ADMIN_WHATSAPP_KEY not set"}
-            from urllib.parse import quote
-            url = (
-                f"https://api.callmebot.com/whatsapp.php?"
-                f"phone={phone}&text={quote(message)}&apikey={key}"
-            )
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                return {"status": "success", "channel": "whatsapp"}
-            return {"error": f"WhatsApp API error: {resp.status_code}"}
-        except Exception as e:
-            return {"error": str(e)}
+        return {"status": "disabled", "message": "WhatsApp notifications disabled"}
 
     def _send_telegram(self, message: str) -> dict:
         """Send Telegram notification to Alia."""
@@ -1995,7 +1979,7 @@ class MasterSuperAdminAI:
             "reply": "tab_replies",
             "timetable": "tab_timetable",
             "profile": "tab_profile",
-            "whatsapp": "WhatsApp Notifications",
+            "notifications": "Class Notifications",
             "contact": "update_contact",
             "ai": "tab_ai",
             "chat": "ai_chat_form",
@@ -2640,8 +2624,8 @@ class MasterSuperAdminAI:
             return "delete_timetable"
 
         if any(w in message_lower for w in [
-            "notify class", "send whatsapp", "send notification",
-            "whatsapp class", "message class", "notify students"
+            "notify class", "send notification",
+            "message class", "notify students"
         ]):
             return "notify_class"
         if any(w in message_lower for w in [

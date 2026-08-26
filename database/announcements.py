@@ -50,8 +50,7 @@ def post_announcement(
             "priority": priority,
             "department_code": none_if_all(dept),
             "year": none_if_all(year),
-            "notify_whatsapp": notify_whatsapp,
-            "created_by": created_by,
+                        "created_by": created_by,
         }).execute()
         if row.data:
             ann = row.data[0]

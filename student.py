@@ -744,8 +744,6 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
             reg      = st.text_input("Registration Number", placeholder="25/U/0000/PS").strip().upper()
             contact  = st.text_input("Contact Info", placeholder="e.g., 0744215379 or +256744215379",
                                      help="Used to verify your identity if you forget your PIN.")
-            wa_phone = st.text_input("WhatsApp Number (optional)", placeholder="+256XXXXXXXXX",
-                                     help="Add to receive class announcements directly on WhatsApp.")
             email    = st.text_input("Email Address", placeholder="e.g., obema.kelly@gmail.com",
                                      help="Required for notice alerts.")
             reg_photo = st.file_uploader("Profile Photo (optional)", type=["png", "jpg", "jpeg", "webp"],
@@ -771,10 +769,8 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                     return raw
 
                 contact_clean = normalize_ug_phone(contact)
-                wa_clean = normalize_ug_phone(wa_phone) if wa_phone.strip() else ""
 
                 contact_invalid = not contact_clean.startswith("+256") or len(contact_clean) != 13
-                wa_invalid = wa_clean and (not wa_clean.startswith("+256") or len(wa_clean) != 13)
 
                 errors = []
                 if not name or not reg:
@@ -785,8 +781,6 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                     errors.append("Please enter a valid email address.")
                 if contact_invalid:
                     errors.append("Contact number must be a valid Ugandan number (e.g. 0744215379 or +256744215379).")
-                if wa_invalid:
-                    errors.append("WhatsApp number must be a valid Ugandan number (e.g. +256744215379).")
                 if not pin1:
                     errors.append("Please set a PIN.")
                 if pin1 and (not pin1.isdigit() or len(pin1) < 4):
@@ -809,7 +803,6 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                                 contact=contact_clean,
                                 dept=selected_dept,
                                 year=year,
-                                whatsapp_phone=wa_clean,
                                 email=email.strip(),
                                 avatar_bytes=avatar_bytes,
                                 avatar_mime=avatar_mime

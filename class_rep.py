@@ -178,9 +178,6 @@ def render_rep_roster_mobile(df, total_students):
         reg = row.get("Reg Number", "")
         course = row.get("Course Code", "")
         group = row.get("Assigned Group", "")
-        wa_phone = row.get("WhatsApp Phone", "")
-        wa_key = row.get("CallMeBot Key", "")
-        has_wa = bool(wa_phone and wa_key)
         avatar_url = row.get("Avatar", row.get("avatar_url", ""))
         av_html = render_avatar_html(avatar_url, name, size=38, color="#1a56db", light="#dbeafe")
         st.markdown(f"""
@@ -190,15 +187,10 @@ def render_rep_roster_mobile(df, total_students):
             <div style="flex:1;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <span style="font-weight:700;font-size:0.95rem;">{name}</span>
-                <span style="font-size:0.6rem;background:{'#dcfce7' if has_wa else '#fee2e2'};
-                    color:{'#16a34a' if has_wa else '#dc2626'};padding:1px 8px;border-radius:8px;">
-                    {'' if has_wa else ''}
-                </span>
-            </div>
-            <div style="font-size:0.75rem;color:#94a3b8;">{reg} · {course}</div>
-            <div style="font-size:0.7rem;color:#64748b;margin-top:4px;">
-                <span style="background:#f1f5f9;padding:1px 8px;border-radius:8px;">Group: {group}</span>
-            </div>
+                </div>
+                <div style="font-size:0.78rem;color:#64748b;margin-top:2px;">
+                    {reg} · {course} · Group: {group or 'Unassigned'}
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -710,27 +702,6 @@ def render_class_rep_interface(
                     st.dataframe(df_show, use_container_width=True)
                     st.caption(f"Showing {len(df_show)} of {total_students} students")
 
-                # WhatsApp coverage stats
-                wa_col = "WhatsApp Phone"
-                key_col = "CallMeBot Key"
-                if wa_col in df_class.columns and key_col in df_class.columns:
-                    wa_ready = df_class[
-                        df_class[wa_col].astype(str).str.strip().ne("") &
-                        df_class[key_col].astype(str).str.strip().ne("")
-                    ]
-                    wa_count = len(wa_ready)
-                    no_wa = total_students - wa_count
-                    pct = int(wa_count / total_students * 100) if total_students else 0
-                    wc1, wc2, wc3 = st.columns(3)
-                    wc1.metric(" WhatsApp Ready", wa_count)
-                    wc2.metric(" Not Set Up", no_wa)
-                    wc3.metric(" Coverage", f"{pct}%")
-                    if no_wa > 0:
-                        st.caption(
-                            f" {no_wa} student(s) won't receive WhatsApp notifications. "
-                            "Ask them to set up CallMeBot in their Profile tab."
-                        )
-
                 # Export to CSV
                 csv = df_show.to_csv(index=False)
                 st.download_button(
@@ -933,11 +904,7 @@ def render_class_rep_interface(
             with st.form("post_ann_form", clear_on_submit=True):
                 ann_text = st.text_area("Announcement text", height=120)
                 priority = st.selectbox("Priority", ["Normal", "Urgent"])
-                notify_wa = st.checkbox(
-                    " Send WhatsApp notification to class",
-                    value=True,
-                    help="Urgent announcements always notify. For Normal, tick this to also send WhatsApp."
-                )
+                
                 c1, c2 = st.columns(2)
                 with c1:
                     post_btn = st.form_submit_button("Post", use_container_width=True)
@@ -951,9 +918,9 @@ def render_class_rep_interface(
                     if ann_text.strip():
                         if db.post_announcement(
                             ann_text, priority, dept=r_dept, year=r_year,
-                            notify_whatsapp=notify_wa
+                            
                         ):
-                            st.success("Posted!" + (" WhatsApp notification sent." if notify_wa else ""))
+                            st.success("Announcement posted successfully!")
                             st.rerun()
                         else:
                             st.error(" Failed.")
@@ -1009,21 +976,17 @@ def render_class_rep_interface(
             uploaded = st.file_uploader(
                 "Upload a file", type=["pdf", "docx", "pptx", "xlsx", "txt"]
             )
-            notify_mat_wa = st.checkbox(
-                " Notify class on WhatsApp when uploaded",
-                value=True,
-                help="Sends a WhatsApp message to all opted-in students when the file is uploaded."
-            )
+            
             if uploaded and st.button(" Upload", use_container_width=True):
                 with st.spinner("Uploading to Google Drive..."):
                     ok = db.upload_material(
                         uploaded.read(), uploaded.name, uploaded.type,
                         dept=r_dept, year=r_year,
-                        notify_whatsapp=notify_mat_wa
+                        
                     )
                 if ok:
                     st.success(f"'{uploaded.name}' uploaded!" + (
-                        " WhatsApp notification sent to class." if notify_mat_wa else ""
+                        ""
                     ))
                     st.rerun()
                 else:
@@ -1317,11 +1280,7 @@ def render_class_rep_interface(
                             "Reply:", value=st.session_state.rep_ai_reply,
                             key=f"reply_ta_{fidx}", height=100
                         )
-                        notify_reply_wa = st.checkbox(
-                            " Notify student on WhatsApp",
-                            value=True, key=f"notify_reply_wa_{fidx}",
-                            help="Sends student a WhatsApp ping so they know you replied."
-                        )
+                        
                         if st.button(" Send Reply", key=f"send_rep_{fidx}"):
                             target = st.session_state[f"reply_target_{fidx}"]
 
@@ -1341,22 +1300,9 @@ def render_class_rep_interface(
                             )
                             if ok:
                                 db.update_feedback_status(target["ts"], target["reg"])
-                                # Notify student on WhatsApp if opted in
-                                if notify_reply_wa:
-                                    db.notify_student_whatsapp(
-                                        reg_number=target["reg"],
-                                        message=(
-                                            f" Your Class Rep replied to your message!\n\n"
-                                            f"Rep: {r_name}\n\n"
-                                            f"Reply: {reply_clean[:200]}\n\n"
-                                            f"Open the Smart University App to view the full reply."
-                                        )
-                                    )
                                 st.session_state[f"reply_target_{fidx}"] = None
                                 st.session_state.rep_ai_reply = ""
-                                st.success(" Reply sent!" + (
-                                    " Student notified on WhatsApp." if notify_reply_wa else ""
-                                ))
+                                st.success("Reply sent successfully!")
                                 st.rerun()
 
         # 
@@ -1804,42 +1750,6 @@ def render_class_rep_interface(
                         else:
                             st.error(f" {result.get('message', 'Failed')}")
 
-        #  WhatsApp Broadcast 
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-        with st.expander(" Send WhatsApp Broadcast to Entire Class", expanded=False):
-            st.info(
-                f"Sends a direct WhatsApp message to all **{total_students}** opted-in students "
-                f"in **{d_name} — {r_year}**. Use for urgent one-off messages only."
-            )
-            with st.form("broadcast_wa_form", clear_on_submit=True):
-                bc_msg = st.text_area(
-                    "Message to send",
-                    height=100,
-                    placeholder="e.g. Everyone report to Block B Lab at 3PM today."
-                )
-                bc_btn = st.form_submit_button(" Send Broadcast", use_container_width=True, type="primary")
-
-                if bc_btn:
-                    if not bc_msg.strip():
-                        st.warning("Please enter a message.")
-                    else:
-                        full_msg = (
-                            f" Message from your Class Rep ({r_name})\n\n"
-                            f"{d_name} — {r_year}\n\n"
-                            f"{bc_msg.strip()}\n\n"
-                            f"Open the Smart University App for more details."
-                        )
-                        with st.spinner("Sending to class..."):
-                            sent = db.broadcast_whatsapp(r_dept, r_year, full_msg)
-                        if sent > 0:
-                            st.success(f" Broadcast sent to {sent} student(s)!")
-                        else:
-                            st.warning(
-                                " No students with WhatsApp set up in your class yet. "
-                                "Ask students to add their number in Profile → WhatsApp Notifications."
-                            )
-
-    # 
     #  FEATURES (Dynamic Slots)
     # 
 

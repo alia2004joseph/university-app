@@ -6,7 +6,7 @@ from .avatars import upload_student_avatar, delete_student_avatar
 
 ROSTER_COLUMNS = [
     "Timestamp", "Student Name", "Reg Number", "Course Code", "Contact",
-    "Assigned Group", "Department", "Year", "Pin", "WhatsApp Phone", "CallMeBot Key", "Email", "Avatar"
+    "Assigned Group", "Department", "Year", "Pin", "Email", "Avatar"
 ]
 
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
@@ -29,8 +29,6 @@ def _row_to_roster_dict(row: Dict) -> Dict:
         "Department": row.get("department_code", ""),
         "Year": row.get("year", ""),
         "Pin": "",  # never expose hashes to the UI
-        "WhatsApp Phone": row.get("whatsapp_phone", ""),
-        "CallMeBot Key": row.get("callmebot_apikey", ""),
         "Email": row.get("email", ""),
         "Avatar": row.get("avatar_url", "") or "",
         "avatar_url": row.get("avatar_url", "") or "",
@@ -55,7 +53,7 @@ def fetch_roster_rows(dept: str = "ALL", year: str = "ALL") -> List[Dict]:
 
 def register_student(
     name: str, reg: str, code: str, contact: str, dept: str, year: str,
-    pin: Optional[str] = None, whatsapp_phone: str = "", email: str = "",
+    pin: Optional[str] = None, email: str = "",
     avatar_bytes: Optional[bytes] = None, avatar_mime: str = "image/jpeg"
 ) -> Dict:
     parts = name.strip().split()
@@ -94,7 +92,6 @@ def register_student(
             "department_code": dept.strip().upper(),
             "year": year.strip(),
             "pin_hash": hash_secret(pin.strip()) if pin else None,
-            "whatsapp_phone": whatsapp_phone.strip() if whatsapp_phone else "",
             "email": email_clean,
             "avatar_url": avatar_url,
         }).execute()
@@ -147,12 +144,8 @@ def update_contact(reg_number: str, new_contact: str) -> bool:
 
 
 def update_whatsapp(reg_number: str, phone: str, apikey: str) -> bool:
-    def _run():
-        get_client().table("students").update({
-            "whatsapp_phone": phone.strip() if phone else "",
-            "callmebot_apikey": apikey.strip() if apikey else "",
-        }).eq("reg_number", reg_number.strip().upper()).execute()
-        return True
+    return True
+
 
     return bool(safe_call(_run, default=False, log_label="update_whatsapp"))
 

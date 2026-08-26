@@ -32,7 +32,7 @@ TTL_TIMETABLE     = 300   # 5 min — timetable rarely changes
 def _normalize_roster_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     """Force columns that can have mixed types into a single consistent
     dtype, so PyArrow/Streamlit can render them without erroring."""
-    string_cols = ["Pin", "Reg Number", "Contact", "WhatsApp Phone", "CallMeBot Key"]
+    string_cols = ["Pin", "Reg Number", "Contact", "Email"]
     for col in string_cols:
         if col in df.columns:
             df[col] = df[col].fillna("").astype(str)

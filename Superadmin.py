@@ -1873,7 +1873,7 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
 
                 #  NOTIFY CLASS 
                 elif form_type == "notify_class":
-                    st.info(" Send WhatsApp Notification to Class")
+                    st.info("📢 Broadcast Announcement to Class")
                     with st.form("master_ai_notify_form"):
                         dept_opts    = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
                         fn1, fn2     = st.columns(2)
@@ -1882,7 +1882,7 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                             n_dept       = "ALL" if n_dept_label == "ALL DEPARTMENTS" else dept_opts[n_dept_label]
                         with fn2:
                             n_year = st.selectbox("Year Group", ["ALL"] + YEARS, key="ai_notify_year")
-                        n_msg = st.text_area("Message", height=120, placeholder="Type your WhatsApp message here...")
+                        n_msg = st.text_area("Message", height=120, placeholder="Type your class announcement here...")
                         fc1, fc2 = st.columns(2)
                         with fc1:
                             if st.form_submit_button(" Send Notification", use_container_width=True, type="primary"):
@@ -1890,16 +1890,16 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                                     st.warning("Please enter a message.")
                                 else:
                                     with st.spinner("Sending..."):
-                                        ok = db.notify_class_whatsapp(n_dept, n_year, n_msg.strip())
+                                        ok = db.post_announcement(n_msg.strip(), "Urgent", dept=n_dept, year=n_year)
                                     if ok:
                                         st.session_state["master_ai_pending_form"] = None
                                         st.session_state.master_ai_history.append({
                                             "role": "assistant",
-                                            "content": f" WhatsApp notification sent to **{n_dept_label} — {n_year}**!"
+                                            "content": f"📢 Announcement broadcast sent to **{n_dept_label} — {n_year}**!"
                                         })
                                         st.rerun()
                                     else:
-                                        st.error(" Failed. Check WhatsApp configuration.")
+                                        st.error(" Failed to broadcast announcement.")
                         with fc2:
                             if st.form_submit_button(" Cancel", use_container_width=True):
                                 st.session_state["master_ai_pending_form"] = None
@@ -2225,7 +2225,7 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                         st.info("No conversation to save yet.")
                 #  Monitor & Notifications 
             with st.expander(" Portal Monitor & Notifications", expanded=False):
-                st.caption("Check portal health and send alerts to your WhatsApp/Telegram.")
+                st.caption("Check portal health and configure alerts.")
 
                 monitor = MasterAIMonitor(db)
 
@@ -2290,14 +2290,14 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                 st.markdown("** Send Alert To:**")
                 notif_channel = st.radio(
                     "Channel",
-                    ["Both", "WhatsApp Only", "Telegram Only"],
+                    ["Telegram Only", "System Logs"],
                     horizontal=True,
                     key="notif_channel",
                     label_visibility="collapsed"
                 )
                 channel_map = {
-                    "Both"          : "both",
-                    "WhatsApp Only" : "whatsapp",
+                    "Telegram Only" : "telegram",
+                    "System Logs" : "system",
                     "Telegram Only" : "telegram"
                 }
                 selected_channel = channel_map[notif_channel]
@@ -2754,7 +2754,7 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                 "Save custom Google Apps Script snippets to your **FunctionLibrary** sheet, "
                 "then run them on demand via the backend. "
                 "Functions receive `params`, `ss`, `nowTs`, `findCol`, `formatTs`, "
-                "and `notifyClassWhatsApp` as arguments."
+                "as arguments."
             )
 
             fl_tabs = st.tabs([" Saved Functions", " Save / Edit", " Run"])

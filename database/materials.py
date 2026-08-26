@@ -81,8 +81,7 @@ def upload_material(
             "department_code": none_if_all(dept),
             "year": none_if_all(year),
             "uploaded_by": uploaded_by,
-            "notify_whatsapp": notify_whatsapp,
-        }).execute()
+                    }).execute()
 
         if row.data:
             notify_students_for_material(row.data[0], dept=dept, year=year)

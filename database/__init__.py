@@ -10,7 +10,6 @@ from . import materials as _materials
 from . import feedback as _feedback
 from . import rep_replies as _rep_replies
 from . import timetable as _timetable
-from . import whatsapp as _whatsapp
 from . import chat as _chat
 from . import departments as _departments
 from . import admin_tools as _admin_tools
@@ -59,11 +58,11 @@ class SupabaseDatabaseManager:
 
     def register_student(
         self, name: str, reg: str, code: str, contact: str, dept: str, year: str,
-        pin: Optional[str] = None, whatsapp_phone: str = "", email: str = "",
+        pin: Optional[str] = None, email: str = "",
         avatar_bytes: Optional[bytes] = None, avatar_mime: str = "image/jpeg"
     ) -> Dict:
         return _students.register_student(
-            name, reg, code, contact, dept, year, pin, whatsapp_phone, email, avatar_bytes, avatar_mime
+            name, reg, code, contact, dept, year, pin, email, avatar_bytes, avatar_mime
         )
 
     def delete_student(self, name: str) -> Dict:
@@ -129,10 +128,10 @@ class SupabaseDatabaseManager:
 
     def upload_material(self, file_bytes, file_name: str, mime_type: str,
                         dept: str = "ALL", year: str = "ALL",
-                        notify_whatsapp: bool = False, title: str = "",
+                        title: str = "",
                         uploaded_by: str = "Class Rep") -> bool:
         return _materials.upload_material(file_bytes, file_name, mime_type, dept, year,
-                                          notify_whatsapp, title, uploaded_by)
+                                          title, uploaded_by)
 
     def delete_material(self, file_name: str) -> bool:
         return _materials.delete_material(file_name)
@@ -212,15 +211,15 @@ class SupabaseDatabaseManager:
     def clear_timetable(self, dept: str, year: str) -> bool:
         return _timetable.clear_timetable(dept, year)
 
-    # ── WHATSAPP (optional secondary channel) ──────────────────
+    # ── NOTIFICATIONS / BROADCAST ──────────────────
     def notify_student_whatsapp(self, reg_number: str, message: str) -> bool:
-        return _whatsapp.notify_student_whatsapp(reg_number, message)
+        return True
 
     def notify_class_whatsapp(self, dept: str, year: str, message: str) -> int:
-        return _whatsapp.broadcast_whatsapp(dept, year, message)
+        return 0
 
     def broadcast_whatsapp(self, dept: str, year: str, message: str) -> int:
-        return _whatsapp.broadcast_whatsapp(dept, year, message)
+        return 0
 
     # ── CHAT HISTORY ────────────────────────────────────────────
     def save_chat_message(self, reg_number: str, role: str, message: str) -> bool:

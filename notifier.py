@@ -8,9 +8,9 @@ Architecture:
         ↓
     APScheduler (auto triggers at 6:30 AM, 30min & 15min before lectures)
         ↓
-    CallMeBot API
+    In-App Notification Hub
         ↓
-    WhatsApp messages → students
+    In-App notifications → students
 
 Run this script on a server (Railway, Render, or any VPS).
 It runs 24/7 independently of the Streamlit app, so it reads Supabase
@@ -466,7 +466,7 @@ def main():
 )
 
     log.info("════════════════════════════════════════")
-    log.info("  Smart University WhatsApp Notifier")
+    log.info("  Smart University Academic Notifier")
     log.info(f"  Timezone : {TIMEZONE}")
     log.info(f"  Morning  : {MORNING_HOUR:02d}:{MORNING_MINUTE:02d} (Mon–Sat)")
     log.info(f"  Reminders: 30min & 15min before lectures")
