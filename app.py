@@ -51,10 +51,21 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
     overflow-wrap: anywhere;
 }
 
-#MainMenu, footer { visibility: hidden !important; }
+#MainMenu, footer, header[data-testid="stHeader"], [data-testid="stHeader"] { 
+    visibility: hidden !important; 
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
 
 .stApp {
     background-color: var(--bg-app) !important;
+}
+
+.block-container {
+    padding-top: 1.25rem !important;
+    padding-bottom: 2.5rem !important;
+    max-width: 1050px !important;
 }
 
 /* Polished Scrollbars */

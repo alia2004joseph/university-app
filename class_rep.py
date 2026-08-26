@@ -572,98 +572,98 @@ def render_class_rep_interface(
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown('<div style="margin:18px 0 8px 0;font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">⚡ QUICK LAUNCH WORKSPACE</div>', unsafe_allow_html=True)
+        st.markdown('<div style="margin:22px 0 10px 0;font-size:0.78rem;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;">⚡ QUICK LAUNCH WORKSPACE</div>', unsafe_allow_html=True)
         
         g1, g2 = st.columns(2)
         with g1:
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">👥</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">👥</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Students & Group Allocations</div>
-                        <div style="font-size:0.75rem;color:#64748b;">Manage class roster ({total_students} students) & auto-assign groups</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Students & Groups</div>
+                        <div style="font-size:0.74rem;color:#64748b;">{total_students} registered students & group allocations</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("👥 Open Students & Groups", key="rep_dash_open_students", use_container_width=True, type="primary"):
+            if st.button("Open Students & Groups →", key="rep_dash_open_students", use_container_width=True, type="primary"):
                 st.session_state.rep_screen = "students"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">📢</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📢</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Notices & Course Materials</div>
-                        <div style="font-size:0.75rem;color:#64748b;">Broadcast announcements & upload lecture files</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Notices & Materials</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Broadcast announcements & course notes</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("📢 Open Notices & Materials", key="rep_dash_open_notices", use_container_width=True):
+            if st.button("Open Notices & Materials →", key="rep_dash_open_notices", use_container_width=True):
                 st.session_state.rep_screen = "notices"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">🤖</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🤖</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Rep AI Intelligence</div>
-                        <div style="font-size:0.75rem;color:#64748b;">Inbox analysis, auto announcements & conflict detection</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Rep AI Suite</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Inbox analysis, summaries & schedule generator</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("🤖 Launch Rep AI Suite", key="rep_dash_open_ai", use_container_width=True):
+            if st.button("Launch Rep AI Suite →", key="rep_dash_open_ai", use_container_width=True):
                 st.session_state.rep_screen = "ai_rep"
                 st.rerun()
 
         with g2:
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">📥</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📥</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Student Feedback & Inquiries</div>
-                        <div style="font-size:0.75rem;color:#64748b;">{pending_feedback} pending student inquiry messages</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Student Feedback</div>
+                        <div style="font-size:0.74rem;color:#64748b;">{pending_feedback} pending student inquiry messages</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("📥 Open Feedback Inbox", key="rep_dash_open_feed", use_container_width=True, type="primary"):
+            if st.button("Open Feedback Inbox →", key="rep_dash_open_feed", use_container_width=True, type="primary"):
                 st.session_state.rep_screen = "feedback"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">📅</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📅</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Class Timetable Manager</div>
-                        <div style="font-size:0.75rem;color:#64748b;">Weekly lecture slots, room allocations and timings</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Class Timetable</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Weekly lecture timetable & room allocation</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("📅 Open Timetable Manager", key="rep_dash_open_tt", use_container_width=True):
+            if st.button("Open Timetable Manager →", key="rep_dash_open_tt", use_container_width=True):
                 st.session_state.rep_screen = "timetable"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">👤</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">⚙️</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Rep Profile & Security</div>
-                        <div style="font-size:0.75rem;color:#64748b;">Rep contact details, password PIN and settings</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Rep Profile & PIN</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Manage account details & password PIN</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("⚙️ Open Rep Settings", key="rep_dash_open_prof", use_container_width=True):
+            if st.button("Open Rep Settings →", key="rep_dash_open_prof", use_container_width=True):
                 st.session_state.rep_screen = "profile"
                 st.rerun()
 
