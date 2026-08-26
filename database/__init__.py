@@ -111,10 +111,10 @@ class SupabaseDatabaseManager:
     def broadcast_announcement(self, text: str, priority: str = "Normal") -> bool:
         return _announcements.post_announcement(text=text, dept="ALL", year="ALL", priority=priority, posted_by="Super Admin")
 
-    def post_announcement(self, text: str, dept: str = "ALL", year: str = "ALL",
-                           priority: str = "Normal", pinned: bool = False,
-                           posted_by: str = "Class Rep") -> bool:
-        return _announcements.post_announcement(text, dept, year, priority, pinned, posted_by)
+    def post_announcement(self, text: str, priority: str = "Normal", dept: str = "ALL",
+            year: str = "ALL", pinned: bool = False,
+            posted_by: str = "Class Rep") -> bool:
+        return _announcements.post_announcement(text, priority, dept, year, pinned, posted_by)
 
     def delete_announcement(self, ann_id: str) -> bool:
         return _announcements.delete_announcement(ann_id)
