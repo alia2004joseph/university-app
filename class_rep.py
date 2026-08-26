@@ -122,7 +122,9 @@ def inject_rep_css(primary: str, light: str):
         padding: 8px 16px;
         font-weight: 600;
         font-size: 0.84rem;
-        color: #64748b;
+        color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
+        opacity: 1 !important;
         border: none;
         background: transparent;
         transition: all 0.15s ease;
@@ -130,6 +132,8 @@ def inject_rep_css(primary: str, light: str):
     .stTabs [aria-selected="true"] {{
         background: {primary} !important;
         color: white !important;
+        -webkit-text-fill-color: white !important;
+        opacity: 1 !important;
         box-shadow: 0 2px 8px {primary}44;
     }}
     

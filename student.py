@@ -284,12 +284,14 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         flex-wrap: wrap;
     }}
-    .stTabs [data-baseweb="tab"] {{
+        .stTabs [data-baseweb="tab"] {{
         border-radius: 8px;
         padding: 8px 16px;
         font-weight: 600;
         font-size: 0.84rem;
-        color: #64748b;
+        color: #64748b !important;
+        -webkit-text-fill-color: #64748b !important;
+        opacity: 1 !important;
         background: transparent;
         border: none;
         transition: all 0.15s ease;
@@ -301,6 +303,8 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     .stTabs [aria-selected="true"] {{
         background: #0f172a !important;
         color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        opacity: 1 !important;
         font-weight: 700 !important;
         box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15) !important;
     }}

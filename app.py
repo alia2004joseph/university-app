@@ -215,6 +215,8 @@ header[data-testid="stHeader"] {
     font-weight: 600 !important;
     font-size: 0.85rem !important;
     color: #64748b !important;
+    -webkit-text-fill-color: #64748b !important;
+    opacity: 1 !important;
     background: transparent !important;
     border: none !important;
     transition: all 0.15s ease !important;
@@ -226,6 +228,8 @@ header[data-testid="stHeader"] {
 .stTabs [aria-selected="true"] {
     background: #0f172a !important;
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
     font-weight: 700 !important;
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15) !important;
 }
