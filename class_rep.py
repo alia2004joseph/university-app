@@ -947,7 +947,7 @@ def render_class_rep_interface(
                             padding:2px 8px;border-radius:10px;margin-right:8px;">
                             {priority_val.upper()}
                         </span>
-                        <span style="font-size:0.9rem;">{ann_text_val}</span>
+                                                <span style="font-size:0.9rem;color:var(--primary-dark,#0f172a);-webkit-text-fill-color:var(--primary-dark,#0f172a);opacity:1 !important;">{ann_text_val}</span>
                     </div>
                     """, unsafe_allow_html=True)
                     if st.button(" Delete", key=f"del_ann_{aidx}"):
@@ -1018,7 +1018,9 @@ def render_class_rep_interface(
 
 
     # 4. TIMETABLE
+        # 4. TIMETABLE
     elif screen == "timetable":
+        tab_tt = st.container()
         with tab_tt:
                st.markdown("###  Class Timetable")
                st.info(f"Timetable for **{d_name} — {r_year}**. Students see this in their portal.")
