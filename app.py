@@ -408,29 +408,37 @@ else:
             📋 Class Representative Authentication
         </div>
         <div style="font-size:0.82rem;color:#64748b;margin-bottom:16px;">
-            Sign in to access your course noticeboard, timetable publisher, and student feedback console.
+            Sign in with your appointed representative credentials to access your course noticeboard, timetable publisher, and student feedback console.
         </div>
         """, unsafe_allow_html=True)
         
-        dept_options = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
-        dept_label = st.selectbox("Department", list(dept_options.keys()), key="gate_rep_dept")
-        sel_dept = dept_options[dept_label]
-        sel_year = st.selectbox("Year Group", YEARS, key="gate_rep_year")
-        rep_pw = st.text_input("Representative Password", type="password", key="gate_rep_pw", placeholder="Enter your rep access key")
+        rep_identifier = st.text_input(
+            "Representative ID or Email",
+            key="gate_rep_identifier",
+            placeholder="e.g. Reg Number (25/U/0000/PS) or rep@university.ac.ug"
+        )
+        rep_pw = st.text_input(
+            "Representative Password",
+            type="password",
+            key="gate_rep_pw",
+            placeholder="Enter your representative access key"
+        )
         
         if st.button("Sign In as Class Rep", use_container_width=True, type="primary", key="gate_rep_submit"):
-            if not rep_pw:
-                st.warning("Please enter your access password.")
+            if not rep_identifier or not rep_pw:
+                st.warning("Please enter both your Representative ID / Email and password.")
             else:
                 with st.spinner("Authenticating representative..."):
-                    res = db.verify_rep(sel_dept, sel_year, rep_pw)
+                    res = db.authenticate_rep(rep_identifier, rep_pw)
                 if res.get("status") == "success":
                     st.session_state.rep_logged_in = True
-                    st.session_state.rep_dept = sel_dept
-                    st.session_state.rep_year = sel_year
+                    st.session_state.rep_dept = res.get("dept", "MEC")
+                    st.session_state.rep_year = res.get("year", "Year 1")
                     st.session_state.rep_name = res.get("rep_name", "Class Rep")
                     st.session_state.rep_reg = res.get("rep_reg", "")
-                    st.success("Authentication successful! Loading dashboard...")
+                    st.session_state.rep_email = res.get("email", "")
+                    st.session_state.rep_avatar = res.get("avatar_url", "")
+                    st.success(f"Welcome, {res.get('rep_name')}! Loading dashboard...")
                     st.rerun()
                 else:
                     msg = res.get("message", "Invalid credentials")

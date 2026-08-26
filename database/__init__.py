@@ -178,6 +178,9 @@ class SupabaseDatabaseManager:
     def fetch_reps(self) -> List:
         return _reps.fetch_reps()
 
+    def authenticate_rep(self, identifier: str, password: str) -> Dict:
+        return _reps.authenticate_rep(identifier, password)
+
     def verify_rep(self, dept: str, year: str, password: str) -> Dict:
         return _reps.verify_rep(dept, year, password)
 

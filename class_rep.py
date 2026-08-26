@@ -378,37 +378,42 @@ def render_class_rep_interface(
     if not st.session_state.rep_logged_in:
         st.markdown("""
 <div style="font-size:1rem;font-weight:700;color:#1e293b;margin-bottom:12px;">
-    Class Rep Login
+    Class Representative Login
 </div>
 """, unsafe_allow_html=True)
-        st.info("Your login is managed by your department admin. Contact them if you cannot log in.")
+        st.info("Sign in with your appointed representative credentials (ID/Email & Password).")
 
-        dept_options = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
-        dept_label = st.selectbox("Your Department", list(dept_options.keys()), key="rep_login_dept")
-        selected_dept = dept_options[dept_label]
-        selected_year = st.selectbox("Your Year Group", YEARS, key="rep_login_year")
-        password_input = st.text_input("Password", type="password", key="rep_login_pw")
+        rep_identifier = st.text_input(
+            "Representative ID or Email",
+            key="rep_login_identifier",
+            placeholder="e.g. Reg Number (25/U/0000/PS) or rep@university.ac.ug"
+        )
+        password_input = st.text_input(
+            "Password",
+            type="password",
+            key="rep_login_pw",
+            placeholder="Enter your representative access password"
+        )
 
-        if st.button("Log In", use_container_width=True):
-            if not password_input:
-                st.warning("Please enter your password.")
+        if st.button("Log In", use_container_width=True, type="primary", key="rep_login_submit_btn"):
+            if not rep_identifier or not password_input:
+                st.warning("Please enter both your Representative ID / Email and password.")
             else:
-                with st.spinner("Verifying..."):
-                    result = db.verify_rep(selected_dept, selected_year, password_input)
+                with st.spinner("Verifying credentials..."):
+                    result = db.authenticate_rep(rep_identifier, password_input)
 
                 if result.get("status") == "success":
                     st.session_state.rep_logged_in = True
-                    st.session_state.rep_dept = selected_dept
-                    st.session_state.rep_year = selected_year
+                    st.session_state.rep_dept = result.get("dept", "MEC")
+                    st.session_state.rep_year = result.get("year", "Year 1")
                     st.session_state.rep_name = result.get("rep_name", "Class Rep")
                     st.session_state.rep_reg = result.get("rep_reg", "")
+                    st.session_state.rep_email = result.get("email", "")
+                    st.session_state.rep_avatar = result.get("avatar_url", "")
                     st.rerun()
                 else:
                     msg = result.get("message", "Invalid credentials")
-                    if "No reps configured" in msg:
-                        st.error("No rep account exists for this dept/year yet. Ask your Super Admin to create one.")
-                    else:
-                        st.error(f"{msg}")
+                    st.error(f"⚠️ {msg}")
         return
 
     #  Logged in 
