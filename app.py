@@ -168,6 +168,39 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
     transform: translateY(-1px) !important;
 }
 
+/* Segmented Dark Slate Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 4px;
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    padding: 4px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+    flex-wrap: wrap !important;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    color: #64748b !important;
+    background: transparent !important;
+    border: none !important;
+    transition: all 0.15s ease !important;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: #0f172a !important;
+    background: #f1f5f9 !important;
+}
+.stTabs [aria-selected="true"] {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15) !important;
+}
+.stTabs [data-baseweb="tab-highlight"],
+.stTabs [data-baseweb="tab-border"] { display: none !important; }
+
 /* Modern Header Card */
 .app-header-card {
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e40af 100%);

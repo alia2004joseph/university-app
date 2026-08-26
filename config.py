@@ -11,32 +11,28 @@ YEARS = ["Year 1", "Year 2", "Year 3", "Year 4"]
 
 # Preset colour palette for admin to pick from
 COLOUR_PALETTE = [
-    {"name": "Blue",       "hex": "#1a56db", "light": "#dbeafe"},
-    {"name": "Green",      "hex": "#16a34a", "light": "#dcfce7"},
-    {"name": "Orange",     "hex": "#ea580c", "light": "#ffedd5"},
-    {"name": "Purple",     "hex": "#7c3aed", "light": "#ede9fe"},
-    {"name": "Red",        "hex": "#dc2626", "light": "#fee2e2"},
-    {"name": "Pink",       "hex": "#db2777", "light": "#fce7f3"},
-    {"name": "Teal",       "hex": "#0d9488", "light": "#ccfbf1"},
+    {"name": "Navy Blue",  "hex": "#1e40af", "light": "#eff6ff"},
+    {"name": "Emerald",    "hex": "#059669", "light": "#ecfdf5"},
+    {"name": "Amber",      "hex": "#d97706", "light": "#fffbeb"},
     {"name": "Indigo",     "hex": "#4338ca", "light": "#e0e7ff"},
-    {"name": "Yellow",     "hex": "#b45309", "light": "#fef3c7"},
-    {"name": "Cyan",       "hex": "#0284c7", "light": "#e0f2fe"},
-    {"name": "Rose",       "hex": "#e11d48", "light": "#ffe4e6"},
-    {"name": "Slate",      "hex": "#475569", "light": "#f1f5f9"},
+    {"name": "Teal",       "hex": "#0f766e", "light": "#f0fdfa"},
+    {"name": "Slate",      "hex": "#334155", "light": "#f1f5f9"},
+    {"name": "Ruby",       "hex": "#be123c", "light": "#ffe4e6"},
+    {"name": "Cobalt",     "hex": "#2563eb", "light": "#eff6ff"},
 ]
 
 # Hardcoded fallback — used if Supabase is unavailable/not yet configured,
 # so the app is still usable (with demo departments) before you finish
 # setup. See README_SUPABASE_MIGRATION.md.
 FALLBACK_DEPARTMENTS = {
-    "MEC": {"name": "Mechanical Engineering", "color": "#1a56db",
-            "light": "#dbeafe", "courses": ["BMEC","BBPE","BWIE","BAGE"]},
-    "ELE": {"name": "Electrical Engineering",  "color": "#16a34a",
-            "light": "#dcfce7", "courses": ["BELE","BTEL","BPOW"]},
-    "CIV": {"name": "Civil Engineering",       "color": "#ea580c",
-            "light": "#ffedd5", "courses": ["BCIV","BSTR","BENV"]},
-    "OTH": {"name": "Others",                  "color": "#7c3aed",
-            "light": "#ede9fe", "courses": ["OTHER"]},
+    "MEC": {"name": "Mechanical Engineering", "color": "#1e40af",
+            "light": "#eff6ff", "courses": ["BMEC","BBPE","BWIE","BAGE"]},
+    "ELE": {"name": "Electrical Engineering",  "color": "#059669",
+            "light": "#ecfdf5", "courses": ["BELE","BTEL","BPOW"]},
+    "CIV": {"name": "Civil Engineering",       "color": "#d97706",
+            "light": "#fffbeb", "courses": ["BCIV","BSTR","BENV"]},
+    "OTH": {"name": "Others",                  "color": "#334155",
+            "light": "#f1f5f9", "courses": ["OTHER"]},
 }
 
 

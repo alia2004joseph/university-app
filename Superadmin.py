@@ -15,8 +15,8 @@ from config import get_departments, YEARS, get_dept_codes, dept_color, dept_ligh
 
 
 ADMIN_PRIMARY = "#0f172a"
-ADMIN_ACCENT  = "#6d28d9"
-ADMIN_LIGHT   = "#ede9fe"
+ADMIN_ACCENT  = "#1e40af"
+ADMIN_LIGHT   = "#eff6ff"
 
 
 def inject_admin_css():
@@ -512,14 +512,16 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                             if col in df_all.columns:
                                 dept_count = len(df_all[df_all[col] == code])
                                 break
-                    color = info["color"]
+                    color = info.get("color", "#1e40af")
+                    light = info.get("light", "#eff6ff")
                     st.markdown(f"""
-                    <div class="dept-card" style="--dc:{color};">
-                        <div style="font-size:0.78rem;font-weight:700;color:#94a3b8;
-                            text-transform:uppercase;letter-spacing:1px;">{code}</div>
-                        <div style="font-size:1.4rem;font-weight:900;color:{color};
-                            margin:4px 0;">{dept_count}</div>
-                        <div style="font-size:0.78rem;color:#1e293b;">{info['name']}</div>
+                    <div class="dept-card">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <span style="font-size:0.75rem;font-weight:800;color:{color};background:{light};padding:2px 8px;border-radius:6px;letter-spacing:0.5px;">{code}</span>
+                            <span style="font-size:0.75rem;color:#94a3b8;font-weight:600;">Enrolled</span>
+                        </div>
+                        <div style="font-size:1.65rem;font-weight:800;color:#0f172a;margin:2px 0 4px 0;letter-spacing:-0.5px;">{dept_count}</div>
+                        <div style="font-size:0.8rem;color:#64748b;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{info['name']}</div>
                     </div>
                     """, unsafe_allow_html=True)
 

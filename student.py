@@ -39,7 +39,7 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     
     /*  Welcome Banner  */
     .welcome-banner {{
-        background: linear-gradient(135deg, {primary} 0%, {primary}dd 100%);
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, {primary} 100%);
         border-radius: 16px;
         padding: 24px 28px;
         margin-bottom: 20px;
