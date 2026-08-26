@@ -1383,8 +1383,8 @@ def render_class_rep_interface(
                         <div style="font-size:1rem;font-weight:700;color:{s_color};margin-bottom:6px;">
                             {sentiment} Class Sentiment
                         </div>
-                        <div style="font-size:0.9rem;color:#475569;">{analysis.get("summary", "")}</div>
-                        <div style="font-size:0.82rem;color:#94a3b8;margin-top:6px;font-style:italic;">
+                        <div style="font-size:0.9rem;color:#475569 !important;-webkit-text-fill-color:#475569 !important;opacity:1 !important;">{analysis.get("summary", "")}</div>
+                        <div style="font-size:0.82rem;color:#94a3b8 !important;-webkit-text-fill-color:#94a3b8 !important;opacity:1 !important;margin-top:6px;font-style:italic;">
                             {analysis.get("sentiment_reason", "")}
                         </div>
                     </div>
