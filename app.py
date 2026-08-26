@@ -42,6 +42,7 @@ st.markdown("""
     --primary-blue: #2563eb;
     --primary-dark: #0f172a;
     --slate-border: #e2e8f0;
+    color-scheme:light;
 }
 
 body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {
@@ -49,6 +50,11 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
     line-height: 1.55;
     word-break: break-word;
     overflow-wrap: anywhere;
+}
+input, textarea, select, .stTextInput input, .stTextArea textarea, .stSelectbox select div [data-baseweb="select"] {
+color:var(--primary-dark) !important;
+background-color:#ffffff !important;
+-webkit-text-fill-color: var(--primary-dark) !important;
 }
 
 #MainMenu, footer { 
