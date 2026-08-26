@@ -1,6 +1,9 @@
 """
 app.py — Smart University App entry point.
-Roles: Student | Class Rep | Super Admin
+Secure Authentication Gateway:
+- Unauthenticated users cannot view or select roles.
+- Access to dashboards is gated behind authentication.
+- Upon login, user role, identity, and access permissions are automatically resolved.
 """
 import streamlit as st
 
@@ -12,22 +15,23 @@ st.set_page_config(
 )
 
 from database   import SheetDatabaseManager
+from database.avatars import render_avatar_html
 from cache     import cached_fetch_roster
 from ai_engine  import AISortingEngine, AIStudyAssistant, AIRepAssistant, AIAdminAssistant, MasterSuperAdminAI
 from student    import render_student_interface
-from class_rep  import render_class_rep_interface
+from class_rep  import render_class_rep_interface, YEARS
 from Superadmin import render_superadmin_interface
 from config     import get_departments
 
-#  Shared managers 
-db       = SheetDatabaseManager()
-ai       = AISortingEngine()
-ai_study = AIStudyAssistant()
-ai_rep   = AIRepAssistant()
-ai_admin = AIAdminAssistant()
+# ── Shared managers ──────────────────────────────────────────────
+db        = SheetDatabaseManager()
+ai        = AISortingEngine()
+ai_study  = AIStudyAssistant()
+ai_rep    = AIRepAssistant()
+ai_admin  = AIAdminAssistant()
 master_ai = MasterSuperAdminAI()
 
-#  Global Enhanced CSS (Executive SaaS Typography & Widget Styling)
+# ── Global Enhanced CSS ─────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -54,20 +58,10 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
 }
 
 /* Polished Scrollbars */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* Sidebar Custom Styling */
 [data-testid="stSidebar"] {
@@ -76,23 +70,6 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
 }
 [data-testid="stSidebar"] * {
     color: #f8fafc !important;
-}
-[data-testid="stSidebar"] .stRadio > div {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 6px;
-    gap: 4px;
-}
-[data-testid="stSidebar"] .stRadio label {
-    padding: 8px 14px !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    font-size: 0.88rem !important;
-    transition: all 0.2s ease !important;
-}
-[data-testid="stSidebar"] .stRadio label:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Modern Input Controls */
@@ -107,6 +84,7 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
     font-size: 0.92rem !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
+
 .stTextInput > div > div > input:focus,
 .stTextArea > div > div > textarea:focus,
 .stNumberInput > div > div > input:focus {
@@ -141,30 +119,6 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
 .stButton > button[kind="primary"]:hover {
     box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3) !important;
     transform: translateY(-1px) !important;
-}
-
-/* Clean Alert Boxes */
-.stAlert {
-    border-radius: 12px !important;
-    border: 1px solid transparent !important;
-    padding: 12px 16px !important;
-}
-
-/* Clean Expanders */
-.streamlit-expanderHeader {
-    border-radius: 10px !important;
-    background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    font-weight: 600 !important;
-    color: #1e293b !important;
-    padding: 10px 14px !important;
-}
-.streamlit-expanderContent {
-    background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-top: none !important;
-    border-radius: 0 0 10px 10px !important;
-    padding: 16px !important;
 }
 
 /* Modern Header Card */
@@ -205,14 +159,46 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
     color: #93c5fd;
     margin-bottom: 8px;
 }
+
+/* User Card in Sidebar */
+.user-sidebar-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-#  Session defaults 
-if "role" not in st.session_state:
-    st.session_state.role = "Student"
+# ── Session State Check ───────────────────────────────────────────
+student_id = st.session_state.get("student_logged_in")
+rep_logged = st.session_state.get("rep_logged_in", False)
+admin_logged = st.session_state.get("admin_logged_in", False)
 
-#  Sidebar 
+is_authenticated = bool(student_id or rep_logged or admin_logged)
+
+# Fetch roster for profile lookup
+df_profiles = cached_fetch_roster(dept="ALL", year="ALL")
+
+# ── Global Logout Handler ────────────────────────────────────────
+def handle_logout():
+    clear_keys = [
+        "student_logged_in", "rep_logged_in", "admin_logged_in",
+        "rep_dept", "rep_year", "rep_name", "rep_reg",
+        "show_reg_form", "show_forgot_pin", "show_set_pin", "pending_reg",
+        "read_announcements", "open_expanders", "show_ai_tab", "ai_chat_history",
+        "ai_pdf_text", "ai_selected_file", "ai_summary_shown", "ai_draft",
+        "admin_draft", "sheets_list", "config_data"
+    ]
+    for k in clear_keys:
+        if k in st.session_state:
+            del st.session_state[k]
+    for k in [k for k in st.session_state if k.startswith("ai_last_request_")]:
+        del st.session_state[k]
+    st.rerun()
+
+# ── Sidebar Rendering ────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
     <div style="text-align:center;padding:16px 0 12px 0;">
@@ -223,39 +209,109 @@ with st.sidebar:
     <hr style="border-color:rgba(255,255,255,0.08);margin:8px 0 16px 0;">
     """, unsafe_allow_html=True)
 
-    st.markdown('<div style="font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:8px;">PORTAL ROLE</div>', unsafe_allow_html=True)
-    st.session_state.role = st.radio(
-        "Role", ["Student", "Class Rep", "Super Admin"],
-        label_visibility="collapsed"
-    )
+    if is_authenticated:
+        # Show Logged-in User Profile in Sidebar
+        if student_id and not df_profiles.empty:
+            s_row = df_profiles[df_profiles["Reg Number"] == student_id]
+            s_name = s_row.iloc[0]["Student Name"] if not s_row.empty else "Student"
+            s_dept = s_row.iloc[0].get("Department", "") if not s_row.empty else ""
+            s_year = s_row.iloc[0].get("Year", "") if not s_row.empty else ""
+            s_avatar = s_row.iloc[0].get("Avatar", "") if not s_row.empty else ""
+            av_html = render_avatar_html(s_avatar, s_name, size=44, color="#60a5fa", light="rgba(96,165,250,0.15)")
+            
+            st.markdown(f"""
+            <div class="user-sidebar-card">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    {av_html}
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:0.88rem;font-weight:700;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{s_name}</div>
+                        <div style="font-size:0.72rem;color:#93c5fd;font-weight:600;margin-top:1px;">🎓 Student</div>
+                        <div style="font-size:0.70rem;color:#94a3b8;margin-top:2px;">{student_id}</div>
+                    </div>
+                </div>
+                <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);font-size:0.72rem;color:#cbd5e1;">
+                    Dept: <b>{s_dept}</b> · Year: <b>{s_year}</b>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        elif rep_logged:
+            r_name = st.session_state.get("rep_name", "Class Representative")
+            r_dept = st.session_state.get("rep_dept", "")
+            r_year = st.session_state.get("rep_year", "")
+            r_avatar = ""
+            try:
+                reps_data = db.fetch_reps()
+                for r in reps_data:
+                    if r.get("department_code") == r_dept and str(r.get("year")) == str(r_year):
+                        r_avatar = r.get("avatar_url", "")
+                        break
+            except Exception:
+                pass
+            av_html = render_avatar_html(r_avatar, r_name, size=44, color="#34d399", light="rgba(52,211,153,0.15)")
+            
+            st.markdown(f"""
+            <div class="user-sidebar-card">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    {av_html}
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:0.88rem;font-weight:700;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{r_name}</div>
+                        <div style="font-size:0.72rem;color:#6ee7b7;font-weight:600;margin-top:1px;">📋 Class Representative</div>
+                    </div>
+                </div>
+                <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);font-size:0.72rem;color:#cbd5e1;">
+                    Dept: <b>{r_dept}</b> · Year: <b>{r_year}</b>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        elif admin_logged:
+            a_avatar = ""
+            try:
+                a_avatar = db.get_admin_avatar()
+            except Exception:
+                pass
+            av_html = render_avatar_html(a_avatar, "Super Admin", size=44, color="#f59e0b", light="rgba(245,158,11,0.15)")
+            
+            st.markdown(f"""
+            <div class="user-sidebar-card">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    {av_html}
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:0.88rem;font-weight:700;color:#f8fafc;">University Super Admin</div>
+                        <div style="font-size:0.72rem;color:#fbbf24;font-weight:600;margin-top:1px;">⚡ Executive Console</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-    role_info = {
-        "Student":     ("🎓", "Student Portal", "Access class announcements, lecture materials, weekly timetable, rep feedback, and AI study tutor."),
-        "Class Rep":   ("📋", "Class Rep Dashboard", "Manage class roster, publish notices, distribute course files, manage timetables, and answer inquiries."),
-        "Super Admin": ("⚡", "Super Admin Console", "Oversee university departments, provision class representative accounts, broadcast notices, and inspect AI analytics."),
-    }
-    icon, title, desc = role_info[st.session_state.role]
-
-    st.markdown(f"""
-    <hr style="border-color:rgba(255,255,255,0.08);margin:16px 0;">
-    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-            <span style="font-size:1.1rem;">{icon}</span>
-            <span style="font-size:0.85rem;font-weight:700;color:#f8fafc;">{title}</span>
+        if st.button("🚪 Sign Out", use_container_width=True, key="sidebar_logout_btn"):
+            handle_logout()
+            
+        st.markdown('<hr style="border-color:rgba(255,255,255,0.08);margin:16px 0 12px 0;">', unsafe_allow_html=True)
+    else:
+        # Unauthenticated Sidebar Information (No Role Picker!)
+        st.markdown("""
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                <span style="font-size:1.1rem;">🔒</span>
+                <span style="font-size:0.85rem;font-weight:700;color:#f8fafc;">Academic Gateway</span>
+            </div>
+            <div style="font-size:0.78rem;color:#94a3b8;line-height:1.45;">
+                Access is restricted to authorized students, class representatives, and faculty staff. Please sign in to open your workspace.
+            </div>
         </div>
-        <div style="font-size:0.78rem;color:#94a3b8;line-height:1.45;">{desc}</div>
-    </div>
-    <hr style="border-color:rgba(255,255,255,0.08);margin:16px 0 12px 0;">
-    <div style="font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:10px;">DEPARTMENTS</div>
-    """, unsafe_allow_html=True)
-
-    for code, info in get_departments().items():
-        st.markdown(f"""
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:4px 6px;border-radius:6px;">
-            <div style="width:9px;height:9px;border-radius:50%;background:{info['color']};flex-shrink:0;box-shadow:0 0 6px {info['color']}88;"></div>
-            <div style="font-size:0.78rem;color:#cbd5e1;font-weight:500;">{info['name']}</div>
-        </div>
+        <hr style="border-color:rgba(255,255,255,0.08);margin:12px 0 12px 0;">
+        <div style="font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:10px;">DEPARTMENTS</div>
         """, unsafe_allow_html=True)
+        
+        for code, info in get_departments().items():
+            st.markdown(f"""
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:4px 6px;border-radius:6px;">
+                <div style="width:9px;height:9px;border-radius:50%;background:{info['color']};flex-shrink:0;box-shadow:0 0 6px {info['color']}88;"></div>
+                <div style="font-size:0.78rem;color:#cbd5e1;font-weight:500;">{info['name']}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
     st.markdown("""
     <hr style="border-color:rgba(255,255,255,0.08);margin:16px 0 10px 0;">
@@ -264,28 +320,100 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-#  Page Header 
-st.markdown("""
-<div class="app-header-card">
-    <div class="app-header-badge">
-        <span>🏛️</span> University Academic Network
-    </div>
-    <div style="font-size:1.65rem;font-weight:800;margin-bottom:4px;letter-spacing:-0.5px;line-height:1.2;">
-        Smart University Portal
-    </div>
-    <div style="font-size:0.86rem;color:#cbd5e1;font-weight:400;">
-        Centralized Class Management · Real-time Notices · Collaborative Study Hub
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-#  Fetch full roster for student login lookup (CACHED for performance)
-df_profiles = cached_fetch_roster(dept="ALL", year="ALL")
-
-#  Route by role 
-if st.session_state.role == "Student":
+# ── Main Content Router ─────────────────────────────────────────
+if student_id:
+    # 🎓 STUDENT DASHBOARD (User authenticated as student)
     render_student_interface(db, ai_study, df_profiles)
-elif st.session_state.role == "Class Rep":
+
+elif rep_logged:
+    # 📋 CLASS REP DASHBOARD (User authenticated as class rep)
     render_class_rep_interface(db, ai, ai_rep)
-elif st.session_state.role == "Super Admin":
+
+elif admin_logged:
+    # ⚡ SUPER ADMIN CONSOLE (User authenticated as super admin)
     render_superadmin_interface(db, ai_admin, master_ai)
+
+else:
+    # 🔒 UNIFIED AUTHENTICATION GATEWAY
+    st.markdown("""
+    <div class="app-header-card">
+        <div class="app-header-badge">
+            <span>🏛️</span> Academic Network Access
+        </div>
+        <div style="font-size:1.65rem;font-weight:800;margin-bottom:4px;letter-spacing:-0.5px;line-height:1.2;">
+            Smart University Portal
+        </div>
+        <div style="font-size:0.86rem;color:#cbd5e1;font-weight:400;">
+            Centralized Academic Portal · Single Sign-On Access Control
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    tab_student, tab_rep, tab_admin = st.tabs([
+        "🎓 Student Portal",
+        "📋 Class Representative",
+        "⚡ University Admin"
+    ])
+
+    # 1. Student Sign In / Registration
+    with tab_student:
+        render_student_interface(db, ai_study, df_profiles)
+
+    # 2. Class Rep Sign In
+    with tab_rep:
+        st.markdown("""
+        <div style="font-size:1.05rem;font-weight:700;color:#1e293b;margin-bottom:6px;">
+            📋 Class Representative Authentication
+        </div>
+        <div style="font-size:0.82rem;color:#64748b;margin-bottom:16px;">
+            Sign in to access your course noticeboard, timetable publisher, and student feedback console.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        dept_options = {f"{v['name']} ({k})": k for k, v in get_departments().items()}
+        dept_label = st.selectbox("Department", list(dept_options.keys()), key="gate_rep_dept")
+        sel_dept = dept_options[dept_label]
+        sel_year = st.selectbox("Year Group", YEARS, key="gate_rep_year")
+        rep_pw = st.text_input("Representative Password", type="password", key="gate_rep_pw", placeholder="Enter your rep access key")
+        
+        if st.button("Sign In as Class Rep", use_container_width=True, type="primary", key="gate_rep_submit"):
+            if not rep_pw:
+                st.warning("Please enter your access password.")
+            else:
+                with st.spinner("Authenticating representative..."):
+                    res = db.verify_rep(sel_dept, sel_year, rep_pw)
+                if res.get("status") == "success":
+                    st.session_state.rep_logged_in = True
+                    st.session_state.rep_dept = sel_dept
+                    st.session_state.rep_year = sel_year
+                    st.session_state.rep_name = res.get("rep_name", "Class Rep")
+                    st.session_state.rep_reg = res.get("rep_reg", "")
+                    st.success("Authentication successful! Loading dashboard...")
+                    st.rerun()
+                else:
+                    msg = res.get("message", "Invalid credentials")
+                    st.error(f"⚠️ {msg}")
+
+    # 3. Super Admin Sign In
+    with tab_admin:
+        st.markdown("""
+        <div style="font-size:1.05rem;font-weight:700;color:#1e293b;margin-bottom:6px;">
+            ⚡ University Administrative Console
+        </div>
+        <div style="font-size:0.82rem;color:#64748b;margin-bottom:16px;">
+            Restricted university-wide management and class representative provisioning portal.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        admin_pw = st.text_input("Super Admin Password", type="password", key="gate_admin_pw", placeholder="Enter administrative password")
+        
+        if st.button("Unlock Admin Console", use_container_width=True, type="primary", key="gate_admin_submit"):
+            correct_pw = st.secrets.get("SUPER_ADMIN_PASSWORD", "")
+            if not correct_pw:
+                st.error("No admin password configured in environment secrets.")
+            elif admin_pw == correct_pw:
+                st.session_state.admin_logged_in = True
+                st.success("Admin credentials verified! Loading console...")
+                st.rerun()
+            else:
+                st.error("⚠️ Invalid administrative password.")

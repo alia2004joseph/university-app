@@ -588,9 +588,10 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
 
     inject_css(primary, light)
 
-    with st.sidebar:
-        get_view_mode_toggle()
-        st.markdown("---")
+    if st.session_state.student_logged_in:
+        with st.sidebar:
+            get_view_mode_toggle()
+            st.markdown("---")
 
     st.markdown("""
 <div style="margin:0 0 10px 0;padding-bottom:10px;border-bottom:1px solid #e2e8f7;">
