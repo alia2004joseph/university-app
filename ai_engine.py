@@ -213,13 +213,25 @@ class KeyRotationManager:
     def _load_keys(self) -> list:
         keys = []
         for i in range(1, 10):
-            key = st.secrets.get(f"GEMINI_KEY_{i}", "") or st.secrets.get(f"GEMINI_API_KEY_{i}", "")
-            if key:
-                keys.append(key)
+            k = ""
+            try:
+                k = (st.secrets.get(f"GEMINI_KEY_{i}", "") if hasattr(st, "secrets") else "") or (st.secrets.get(f"GEMINI_API_KEY_{i}", "") if hasattr(st, "secrets") else "")
+            except Exception:
+                pass
+            if not k:
+                k = os.environ.get(f"GEMINI_KEY_{i}", "") or os.environ.get(f"GEMINI_API_KEY_{i}", "")
+            if k and k not in keys:
+                keys.append(k.strip())
         if not keys:
-            key = st.secrets.get("GEMINI_API_KEY", "")
-            if key:
-                keys.append(key)
+            k = ""
+            try:
+                k = (st.secrets.get("GEMINI_API_KEY", "") if hasattr(st, "secrets") else "") or (st.secrets.get("GEMINI_KEY", "") if hasattr(st, "secrets") else "")
+            except Exception:
+                pass
+            if not k:
+                k = os.environ.get("GEMINI_API_KEY", "") or os.environ.get("GEMINI_KEY", "")
+            if k and k not in keys:
+                keys.append(k.strip())
         return keys
 
     def get_client(self):
@@ -629,47 +641,98 @@ class AIStudyAssistant:
         self,
         image_bytes: bytes,
         mime_type: str,
-        question: str,
-        chat_history: list,
+        question: str = "",
+        chat_history: list = None,
         student_reg: str = ""
     ) -> str:
-        """Analyze an image using Gemini vision."""
+        """Analyze an image using Gemini vision with multi-key rotation and proper typing."""
         if not _key_manager.has_keys():
-            return "⚠️ No API keys found."
+            _key_manager.keys = _key_manager._load_keys()
+            if not _key_manager.has_keys():
+                return "⚠️ No Gemini API key found. Please set GEMINI_API_KEY in secrets.toml or environment."
+
         if student_reg:
             ok, wait = self._check_cooldown(student_reg)
             if not ok:
-                return f"⏳ Please wait {wait} seconds."
+                return f"⏳ Please wait {wait} seconds before making another AI request."
             self._record_request(student_reg)
 
-        import base64
-        img_b64 = base64.b64encode(image_bytes).decode("utf-8")
+        # Normalize mime type
+        clean_mime = "image/jpeg"
+        if mime_type:
+            raw_mime = mime_type.lower().split(";")[0].strip()
+            if "png" in raw_mime:
+                clean_mime = "image/png"
+            elif "webp" in raw_mime:
+                clean_mime = "image/webp"
+            elif "gif" in raw_mime:
+                clean_mime = "image/gif"
+            elif "jpeg" in raw_mime or "jpg" in raw_mime:
+                clean_mime = "image/jpeg"
+
+        # Build image part for google.genai
+        try:
+            image_part = types.Part.from_bytes(data=image_bytes, mime_type=clean_mime)
+        except Exception:
+            try:
+                image_part = types.Part(inline_data=types.Blob(mime_type=clean_mime, data=image_bytes))
+            except Exception:
+                import base64
+                image_part = {
+                    "inline_data": {
+                        "mime_type": clean_mime,
+                        "data": base64.b64encode(image_bytes).decode("utf-8")
+                    }
+                }
+
+        q_text = question.strip() if question and question.strip() else (
+            "Analyze and explain this image thoroughly for university coursework. "
+            "If it contains a diagram, circuit, or graph, explain all components and dynamics. "
+            "If it contains equations or a problem, provide full step-by-step mathematical working and solutions. "
+            "If it contains lecture notes, summarize the core principles clearly."
+        )
 
         config = types.GenerateContentConfig(
             system_instruction=(
-                "You are a university academic assistant. Analyze images (diagrams, "
-                "handwritten notes, textbook pages, graphs) and answer questions about them. "
-                "Be thorough, educational, and use proper academic language."
+                "You are an expert university academic study tutor and STEM specialist. "
+                "Analyze images (diagrams, handwritten notes, textbook pages, graphs, circuit schematics, physics/math problems). "
+                "Provide detailed, precise, educational explanations formatted with clear Markdown headings, bullet points, and LaTeX notation where applicable."
             ),
-            temperature=0.4,
+            temperature=0.3,
             max_output_tokens=6000
         )
 
-        contents = [
-            {"mime_type": mime_type, "data": img_b64},
-            question
-        ]
+        contents = [image_part, q_text]
 
-        try:
+        # Multi-key rotation & fallback model loop
+        last_error = ""
+        models_to_try = [STUDENT_MODEL, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+        seen_models = []
+        for m in models_to_try:
+            if m and m not in seen_models:
+                seen_models.append(m)
+
+        for attempt in range(max(_key_manager.total_keys(), 1)):
             client = _key_manager.get_client()
-            response = client.models.generate_content(
-                model=STUDENT_MODEL,
-                contents=contents,
-                config=config
-            )
-            return response.text
-        except Exception as e:
-            return f"⚠️ Image analysis error: {str(e)}"
+            if not client:
+                break
+            for mdl in seen_models:
+                try:
+                    response = client.models.generate_content(
+                        model=mdl,
+                        contents=contents,
+                        config=config
+                    )
+                    if response and response.text:
+                        return response.text
+                except Exception as e:
+                    last_error = str(e)
+                    if "429" in last_error or "RESOURCE_EXHAUSTED" in last_error or "quota" in last_error.lower():
+                        break
+                    continue
+            _key_manager.rotate()
+
+        return f"⚠️ Image analysis error: {last_error or 'Could not generate vision response'}\n\n💡 Tip: Verify your GEMINI_API_KEY in secrets.toml or environment variables."
 
     def answer_group_query(self, student_name: str, query: str, course_groups: dict) -> str:
         """

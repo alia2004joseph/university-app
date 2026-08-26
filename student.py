@@ -1253,26 +1253,41 @@ Group: {s_group}
         # Image Q&A Mode
         elif ai_mode == "🖼️ Image Q&A":
             st.markdown('''<div class="msg-info-card">
-                📸 Upload a photo — diagram, homework, notes — and ask the AI about it.
+                📸 Upload a photo — diagram, circuit schematic, textbook page, or handwritten problem — and ask the AI Tutor for a full step-by-step breakdown.
             </div>''', unsafe_allow_html=True)
 
             uploaded_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg", "webp"], key="vision_qa_upload")
             if uploaded_image:
-                st.image(uploaded_image, caption=uploaded_image.name)
-                image_question = st.text_area("What do you want to know about this image?", placeholder="e.g. Explain this diagram or solve this problem", height=80, key="vision_qa_question")
-                if st.button("🔍 Analyze Image", use_container_width=True, type="primary"):
-                    if image_question.strip():
-                        with st.spinner("Analyzing image..."):
+                col_img1, col_img2 = st.columns([1, 2])
+                with col_img1:
+                    st.image(uploaded_image, caption=uploaded_image.name, use_container_width=True)
+                with col_img2:
+                    image_question = st.text_area(
+                        "What do you want to know about this image? (optional)",
+                        placeholder="e.g. Explain this diagram, solve this equation, or summarize these notes...",
+                        height=100,
+                        key="vision_qa_question"
+                    )
+                    if st.button("🔍 Analyze Image with AI Tutor", use_container_width=True, type="primary"):
+                        q = image_question.strip() if image_question.strip() else "Analyze and explain this image in detail."
+                        with st.spinner("AI Tutor is analyzing the image and working through solutions..."):
                             answer = ai_study.ask_about_image(
                                 image_bytes=uploaded_image.getvalue(),
                                 mime_type=uploaded_image.type or "image/png",
-                                question=image_question.strip(),
+                                question=q,
                                 chat_history=st.session_state.ai_chat_history,
                                 student_reg=s_reg
                             )
-                        st.session_state.ai_chat_history.append({"role": "user", "content": f"🖼️ [Image] {image_question.strip()}"})
+                        st.session_state.ai_chat_history.append({"role": "user", "content": f"🖼️ [Image: {uploaded_image.name}] {q}"})
                         st.session_state.ai_chat_history.append({"role": "assistant", "content": answer})
+                        st.session_state["last_image_analysis"] = answer
                         st.rerun()
+
+            if st.session_state.get("last_image_analysis"):
+                st.markdown(f'''<div class="ann-card" style="border-left-color:#1e40af;margin-top:16px;">
+                    <span class="ann-badge badge-normal">LATEST IMAGE ANALYSIS</span>
+                    <div style="margin-top:10px;line-height:1.6;">''' + st.session_state["last_image_analysis"] + '''</div>
+                </div>''', unsafe_allow_html=True)
 
         # Report Writer Mode
         elif ai_mode == "📄 Report Writer":

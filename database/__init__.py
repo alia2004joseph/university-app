@@ -156,7 +156,7 @@ class SupabaseDatabaseManager:
     def delete_all_feedback(self, reg_number: str) -> bool:
         return _feedback.delete_all_feedback(reg_number)
 
-    def update_feedback_status(self, timestamp: str, reg_number: str, new_status: str) -> bool:
+    def update_feedback_status(self, timestamp: str, reg_number: str, new_status: str = "Reviewed") -> bool:
         return _feedback.update_feedback_status(timestamp, reg_number, new_status)
 
     # ── REP REPLIES ─────────────────────────────────────────────
