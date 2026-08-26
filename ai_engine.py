@@ -732,6 +732,8 @@ class AIStudyAssistant:
                     continue
             _key_manager.rotate()
 
+                if last_error and ("API_KEY_INVALID" in last_error or "API key not valid" in last_error):
+            return "⚠️ Your Gemini API key is invalid or has been revoked.\n\n💡 Tip: Generate a new key at https://aistudio.google.com/apikey and update GEMINI_API_KEY in secrets.toml or your environment variables, then restart the app."
         return f"⚠️ Image analysis error: {last_error or 'Could not generate vision response'}\n\n💡 Tip: Verify your GEMINI_API_KEY in secrets.toml or environment variables."
 
     def answer_group_query(self, student_name: str, query: str, course_groups: dict) -> str:
