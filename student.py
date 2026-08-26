@@ -22,7 +22,7 @@ from notifications_ui import render_notification_bell
 from database.students import is_valid_email
 
 
-def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
+def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     is_mob = is_mobile()
     css = f"""
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -49,13 +49,13 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     
     /*  Welcome Banner  */
     .welcome-banner {{
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, {primary} 100%);
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e40af 100%) !important;
         border-radius: 16px;
         padding: 24px 28px;
         margin-bottom: 20px;
-        color: white;
-        box-shadow: 0 4px 18px -2px rgba(0,0,0,0.12);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #ffffff !important;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.12);
         position: relative;
         overflow: hidden;
     }}
@@ -63,12 +63,13 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         font-size: 1.55rem;
         font-weight: 800;
         margin: 0 0 4px 0;
-        color: white;
+        color: #ffffff !important;
         letter-spacing: -0.3px;
     }}
     .welcome-banner p {{
         font-size: 0.88rem;
         opacity: 0.9;
+        color: #cbd5e1 !important;
         margin: 0 0 12px 0;
     }}
     
@@ -87,7 +88,7 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         padding: 4px 13px;
         font-size: 0.74rem;
         font-weight: 600;
-        color: white;
+        color: #ffffff !important;
         display: inline-flex;
         align-items: center;
         gap: 5px;
@@ -110,7 +111,7 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     .stat-card .s-val {{
         font-size: 1.5rem;
         font-weight: 800;
-        color: {primary};
+        color: #1e40af;
     }}
     .stat-card .s-label {{
         font-size: 0.72rem;
@@ -213,7 +214,7 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }}
     .group-banner {{
-        background: linear-gradient(135deg, {primary}, {primary}dd);
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e40af 100%);
         border-radius: 14px;
         padding: 20px 24px;
         margin-bottom: 16px;
@@ -256,7 +257,7 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         border-radius: 12px;
         padding: 14px 18px;
         margin-bottom: 18px;
-        border-left: 4px solid {primary};
+        border-left: 4px solid #1e40af;
         border-top: 1px solid #e2e8f0;
         border-right: 1px solid #e2e8f0;
         border-bottom: 1px solid #e2e8f0;
@@ -284,14 +285,14 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
         transition: all 0.15s ease;
     }}
     .stTabs [data-baseweb="tab"]:hover {{
-        color: #1e293b;
-        background: #f8fafc;
+        color: #0f172a;
+        background: #f1f5f9;
     }}
     .stTabs [aria-selected="true"] {{
-        background: {primary} !important;
-        color: white !important;
+        background: #0f172a !important;
+        color: #ffffff !important;
         font-weight: 700 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15) !important;
     }}
     .stTabs [data-baseweb="tab-highlight"],
     .stTabs [data-baseweb="tab-border"] {{ display: none; }}
@@ -300,7 +301,7 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
     .stButton > button {{
         border-radius: 10px;
         font-weight: 600;
-        min-height: 42px;
+        min-height: 40px;
         transition: all 0.2s ease;
     }}
     """
@@ -382,7 +383,8 @@ def inject_css(primary: str = "#1a56db", light: str = "#dbeafe"):
             margin: 14px 0 !important;
         }}
         """
-    st.markdown(f"<style>{{css}}</style>", unsafe_allow_html=True)
+    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
 def metric_card(title, value, icon, color="#0f172a"):
     st.markdown(f"""
     <div class="metric-card" style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
@@ -603,11 +605,12 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
             get_view_mode_toggle()
             st.markdown("---")
 
-    st.markdown("""
-<div style="margin:0 0 10px 0;padding-bottom:10px;border-bottom:1px solid #e2e8f7;">
-    <div style="font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;
-        color:#94a3b8;font-weight:600;margin-bottom:2px;">Welcome to</div>
-    <div style="font-size:1.2rem;font-weight:800;color:#1e293b;">
+    if not st.session_state.student_logged_in:
+        st.markdown("""
+<div style="margin:0 0 14px 0;padding-bottom:10px;border-bottom:1px solid #e2e8f7;">
+    <div style="font-size:0.68rem;letter-spacing:2px;text-transform:uppercase;
+        color:#94a3b8;font-weight:700;margin-bottom:2px;">Sign in to</div>
+    <div style="font-size:1.3rem;font-weight:800;color:#0f172a;">
         Student Portal
     </div>
 </div>
@@ -1006,97 +1009,97 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
 
         st.markdown('<div style="margin:16px 0 8px 0;font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">⚡ QUICK LAUNCH WORKSPACE</div>', unsafe_allow_html=True)
         
-        # Modern App Grid
+        # Modern Streamlined Action Grid
         grid_col1, grid_col2 = st.columns(2)
         with grid_col1:
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">🤖</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🤖</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">AI Study Tutor</div>
-                        <div style="font-size:0.75rem;color:#64748b;">Interactive lecture Q&A, diagram vision & lab report writer</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">AI Study Tutor</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Interactive lecture Q&A & lab report writer</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("🚀 Open AI Study Tutor (Full Screen)", key="dash_open_ai", use_container_width=True, type="primary"):
+            if st.button("Open AI Study Tutor →", key="dash_open_ai", use_container_width=True, type="primary"):
                 st.session_state.student_screen = "ai_tutor"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">📁</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📁</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Course Materials</div>
-                        <div style="font-size:0.75rem;color:#64748b;">{len(materials_list)} lecture notes & past papers ready to download</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Course Materials</div>
+                        <div style="font-size:0.74rem;color:#64748b;">{len(materials_list)} lecture notes & past papers</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("📂 Open Course Materials", key="dash_open_mat", use_container_width=True):
+            if st.button("Open Course Materials →", key="dash_open_mat", use_container_width=True):
                 st.session_state.student_screen = "materials"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">📢</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📢</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Noticeboard</div>
-                        <div style="font-size:0.75rem;color:#64748b;">{unread_count} unread announcement(s)</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Noticeboard</div>
+                        <div style="font-size:0.74rem;color:#64748b;">{unread_count} unread announcement(s)</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("📢 Open Noticeboard", key="dash_open_notices", use_container_width=True):
+            if st.button("Open Noticeboard →", key="dash_open_notices", use_container_width=True):
                 st.session_state.student_screen = "notices"
                 st.rerun()
 
         with grid_col2:
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">📅</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📅</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Class Timetable</div>
-                        <div style="font-size:0.75rem;color:#64748b;">Weekly lecture schedule & room locations</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Class Timetable</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Weekly lecture schedule & room locations</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("🗓️ Open Timetable", key="dash_open_tt", use_container_width=True):
+            if st.button("Open Timetable →", key="dash_open_tt", use_container_width=True):
                 st.session_state.student_screen = "timetable"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">💬</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">💬</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Message Class Rep</div>
-                        <div style="font-size:0.75rem;color:#64748b;">Inquiries & responses ({unread_rep_count} new reply)</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Message Class Rep</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Inquiries & responses ({unread_rep_count} new reply)</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("💬 Open Rep Messages", key="dash_open_msg", use_container_width=True):
+            if st.button("Open Rep Messages →", key="dash_open_msg", use_container_width=True):
                 st.session_state.student_screen = "messages"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <span style="font-size:1.4rem;">👥</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">👥</div>
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">My Study Group</div>
-                        <div style="font-size:0.75rem;color:#64748b;">Assigned Group: {s_group}</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">My Study Group</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Assigned Group: {s_group}</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("👥 View Study Group", key="dash_open_grp", use_container_width=True):
+            if st.button("View Study Group →", key="dash_open_grp", use_container_width=True):
                 st.session_state.student_screen = "group"
                 st.rerun()
 
