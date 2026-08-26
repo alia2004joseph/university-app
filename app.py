@@ -51,13 +51,22 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
     overflow-wrap: anywhere;
 }
 
-#MainMenu, footer, header[data-testid="stHeader"], [data-testid="stHeader"] { 
+#MainMenu, footer { 
     visibility: hidden !important; 
     height: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
 }
-
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    height: 2.5rem !important;
+}
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"] {
+    visibility: visible !important;
+    display: flex !important;
+    opacity: 1 !important;
+}
 .stApp {
     background-color: var(--bg-app) !important;
 }
