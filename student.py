@@ -930,28 +930,20 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
         nav_options = [
             ("dashboard", "🏠 Dashboard"),
             ("ai_tutor",   "🤖 AI Study Tutor"),
-            ("materials",  f"📁 Materials ({len(materials_list)})"),
-            ("timetable",  "📅 Timetable"),
-            ("notices",    f"📢 Notices ({unread_count})" if unread_count else "📢 Notices"),
-            ("messages",   f"💬 Rep Replies ({unread_rep_count})" if unread_rep_count else "✉️ Messages & Chat"),
+            ("materials",  f"📁 Course Materials ({len(materials_list)})"),
+            ("timetable",  "📅 Class Timetable"),
+            ("notices",    f"📢 Noticeboard ({unread_count})" if unread_count else "📢 Noticeboard"),
+            ("messages",   f"💬 Rep Inquiries ({unread_rep_count})" if unread_rep_count else "✉️ Messages & Chat"),
             ("group",      f"👥 My Group ({s_group})"),
             ("profile",    "👤 Profile & Security"),
             ("features",   "🧩 Slot Features"),
         ]
-        nav_keys = [k for k, _ in nav_options]
-        nav_labels = [l for _, l in nav_options]
-        cur_idx = nav_keys.index(st.session_state.student_screen) if st.session_state.student_screen in nav_keys else 0
-        selected_nav = st.radio(
-            "Navigation",
-            nav_labels,
-            index=cur_idx,
-            key="student_sidebar_nav_radio",
-            label_visibility="collapsed"
-        )
-        new_screen_key = nav_keys[nav_labels.index(selected_nav)]
-        if new_screen_key != st.session_state.student_screen:
-            st.session_state.student_screen = new_screen_key
-            st.rerun()
+        for n_key, n_label in nav_options:
+            is_active = (st.session_state.student_screen == n_key)
+            if st.button(n_label, key=f"s_nav_btn_{n_key}", use_container_width=True, type="primary" if is_active else "secondary"):
+                if st.session_state.student_screen != n_key:
+                    st.session_state.student_screen = n_key
+                    st.rerun()
 
     # -------------------------------------------------------------
     # SCREEN ROUTING & RENDERING

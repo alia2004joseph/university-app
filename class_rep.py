@@ -27,15 +27,15 @@ def inject_rep_css(primary: str, light: str):
     #MainMenu, footer {{ visibility: hidden !important; }}
     .stApp {{ background-color: #f8fafc !important; }}
     
-    /*  Rep Banner  */
+    /*  Rep Banner with Dark Executive Contrast  */
     .rep-banner {{
-        background: linear-gradient(135deg, {primary} 0%, {primary}dd 100%);
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, {primary} 100%);
         border-radius: 16px;
         padding: 24px 28px;
         margin-bottom: 20px;
-        color: white;
-        box-shadow: 0 4px 18px -2px rgba(0,0,0,0.12);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.12);
         position: relative;
         overflow: hidden;
     }}
@@ -43,8 +43,13 @@ def inject_rep_css(primary: str, light: str):
         font-size: 1.55rem;
         font-weight: 800;
         margin: 0 0 4px 0;
-        color: white;
+        color: #ffffff !important;
         letter-spacing: -0.3px;
+    }}
+    .rep-banner p {{
+        color: #cbd5e1 !important;
+        margin: 2px 0 0 0;
+        font-size: 0.92rem;
     }}
     
     /*  Badges & Chips  */
@@ -118,39 +123,26 @@ def inject_rep_css(primary: str, light: str):
         font-weight: 600;
         font-size: 0.84rem;
         color: #64748b;
-        background: transparent;
         border: none;
+        background: transparent;
         transition: all 0.15s ease;
-    }}
-    .stTabs [data-baseweb="tab"]:hover {{
-        color: #1e293b;
-        background: #f8fafc;
     }}
     .stTabs [aria-selected="true"] {{
         background: {primary} !important;
         color: white !important;
-        font-weight: 700 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        box-shadow: 0 2px 8px {primary}44;
     }}
-    .stTabs [data-baseweb="tab-highlight"],
-    .stTabs [data-baseweb="tab-border"] {{ display: none; }}
-    """
-    if is_mob:
-        css += f"""
+    
+    /*  Mobile Optimization  */
+    @media (max-width: 768px) {{
         .rep-banner {{
-            padding: 16px 18px !important;
+            padding: 16px !important;
             border-radius: 12px !important;
         }}
         .rep-banner h2 {{
-            font-size: 1.2rem !important;
+            font-size: 1.25rem !important;
         }}
-        .rep-badge {{
-            font-size: 0.68rem !important;
-            padding: 3px 10px !important;
-        }}
-        .stButton button {{
-            width: 100% !important;
-            font-size: 0.92rem !important;
+        .stButton > button {{
             padding: 10px !important;
             min-height: 44px !important;
         }}
@@ -165,8 +157,10 @@ def inject_rep_css(primary: str, light: str):
             font-size: 0.75rem !important;
             padding: 6px 12px !important;
         }}
-        """
-    st.markdown(f"<style>{{css}}</style>", unsafe_allow_html=True)
+    }}
+    """
+    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
 def render_rep_roster_mobile(df, total_students):
     """Render class roster as cards for mobile."""
     st.caption(f" Showing {len(df)} of {total_students} students (mobile view)")
@@ -494,20 +488,12 @@ def render_class_rep_interface(
             ("profile",   "👤 Rep Profile & Security"),
             ("features",  "🧩 Slot Features"),
         ]
-        nav_keys = [k for k, _ in nav_options]
-        nav_labels = [l for _, l in nav_options]
-        cur_idx = nav_keys.index(st.session_state.rep_screen) if st.session_state.rep_screen in nav_keys else 0
-        selected_nav = st.radio(
-            "Navigation",
-            nav_labels,
-            index=cur_idx,
-            key="rep_sidebar_nav_radio",
-            label_visibility="collapsed"
-        )
-        new_screen_key = nav_keys[nav_labels.index(selected_nav)]
-        if new_screen_key != st.session_state.rep_screen:
-            st.session_state.rep_screen = new_screen_key
-            st.rerun()
+        for n_key, n_label in nav_options:
+            is_active = (st.session_state.rep_screen == n_key)
+            if st.button(n_label, key=f"rep_nav_btn_{n_key}", use_container_width=True, type="primary" if is_active else "secondary"):
+                if st.session_state.rep_screen != n_key:
+                    st.session_state.rep_screen = n_key
+                    st.rerun()
 
     screen = st.session_state.rep_screen
 

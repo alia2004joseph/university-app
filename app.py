@@ -1,9 +1,9 @@
 """
 app.py — Smart University App entry point.
 Secure Authentication Gateway:
-- Unauthenticated users cannot view or select roles.
-- Access to dashboards is gated behind authentication.
-- Upon login, user role, identity, and access permissions are automatically resolved.
+- Role selection & departments are hidden from unauthenticated visitors.
+- High-contrast, executive SaaS styling with clear sign-out controls.
+- Seamless, non-redundant navigation.
 """
 import streamlit as st
 
@@ -63,16 +63,63 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-/* Sidebar Custom Styling */
+/* Sidebar Base Styling */
 [data-testid="stSidebar"] {
     background: #0f172a !important;
     border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
-[data-testid="stSidebar"] * {
-    color: #f8fafc !important;
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] div {
+    color: #f8fafc;
 }
 
-/* Modern Input Controls */
+/* Sidebar General Buttons (Clean dark aesthetic) */
+[data-testid="stSidebar"] .stButton > button {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #f1f5f9 !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    font-size: 0.86rem !important;
+    padding: 0.55rem 0.9rem !important;
+    transition: all 0.18s ease !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Primary Sidebar Nav Item (Active indicator) */
+[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #60a5fa !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* Prominent Sign Out Button */
+.logout-btn-container .stButton > button,
+[data-testid="stSidebar"] button[key*="logout"],
+[data-testid="stSidebar"] button[key*="sign_out"] {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border: 1px solid #ef4444 !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3) !important;
+}
+.logout-btn-container .stButton > button:hover,
+[data-testid="stSidebar"] button[key*="logout"]:hover,
+[data-testid="stSidebar"] button[key*="sign_out"]:hover {
+    background: #b91c1c !important;
+    border-color: #f87171 !important;
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.5) !important;
+}
+
+/* Modern Input Controls in Main App */
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea,
 .stSelectbox > div > div,
@@ -92,7 +139,7 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
 }
 
-/* Refined Buttons */
+/* Refined Main Page Buttons */
 .stButton > button {
     border-radius: 10px !important;
     font-weight: 600 !important;
@@ -166,7 +213,7 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 14px;
     padding: 14px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -185,11 +232,12 @@ df_profiles = cached_fetch_roster(dept="ALL", year="ALL")
 def handle_logout():
     clear_keys = [
         "student_logged_in", "rep_logged_in", "admin_logged_in",
-        "rep_dept", "rep_year", "rep_name", "rep_reg",
+        "rep_dept", "rep_year", "rep_name", "rep_reg", "rep_avatar",
+        "student_screen", "rep_screen", "admin_screen",
         "show_reg_form", "show_forgot_pin", "show_set_pin", "pending_reg",
         "read_announcements", "open_expanders", "show_ai_tab", "ai_chat_history",
         "ai_pdf_text", "ai_selected_file", "ai_summary_shown", "ai_draft",
-        "admin_draft", "sheets_list", "config_data"
+        "admin_draft", "sheets_list", "config_data", "funcs_list", "slot_cfg_list"
     ]
     for k in clear_keys:
         if k in st.session_state:
@@ -201,12 +249,12 @@ def handle_logout():
 # ── Sidebar Rendering ────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
-    <div style="text-align:center;padding:16px 0 12px 0;">
-        <div style="font-size:2.2rem;line-height:1;">🏛️</div>
-        <div style="font-size:1.15rem;font-weight:800;color:#f8fafc;margin-top:8px;letter-spacing:-0.3px;">Smart University</div>
-        <div style="font-size:0.75rem;color:#94a3b8;margin-top:2px;font-weight:500;">Academic Portal · 2025/2026</div>
+    <div style="text-align:center;padding:14px 0 10px 0;">
+        <div style="font-size:2rem;line-height:1;">🏛️</div>
+        <div style="font-size:1.1rem;font-weight:800;color:#f8fafc;margin-top:6px;letter-spacing:-0.3px;">Smart University</div>
+        <div style="font-size:0.72rem;color:#94a3b8;margin-top:2px;font-weight:500;">Academic Portal · 2025/2026</div>
     </div>
-    <hr style="border-color:rgba(255,255,255,0.08);margin:8px 0 16px 0;">
+    <hr style="border-color:rgba(255,255,255,0.08);margin:6px 0 14px 0;">
     """, unsafe_allow_html=True)
 
     if is_authenticated:
@@ -239,15 +287,17 @@ with st.sidebar:
             r_name = st.session_state.get("rep_name", "Class Representative")
             r_dept = st.session_state.get("rep_dept", "")
             r_year = st.session_state.get("rep_year", "")
-            r_avatar = ""
-            try:
-                reps_data = db.fetch_reps()
-                for r in reps_data:
-                    if r.get("department_code") == r_dept and str(r.get("year")) == str(r_year):
-                        r_avatar = r.get("avatar_url", "")
-                        break
-            except Exception:
-                pass
+            r_avatar = st.session_state.get("rep_avatar", "")
+            if not r_avatar:
+                try:
+                    reps_data = db.fetch_reps()
+                    for r in reps_data:
+                        if r.get("department_code") == r_dept and str(r.get("year")) == str(r_year):
+                            r_avatar = r.get("avatar_url", "")
+                            st.session_state.rep_avatar = r_avatar
+                            break
+                except Exception:
+                    pass
             av_html = render_avatar_html(r_avatar, r_name, size=44, color="#34d399", light="rgba(52,211,153,0.15)")
             
             st.markdown(f"""
@@ -285,52 +335,44 @@ with st.sidebar:
             </div>
             """, unsafe_allow_html=True)
 
-        if st.button("🚪 Sign Out", use_container_width=True, key="sidebar_logout_btn"):
+        # High-visibility Log Out Button
+        st.markdown('<div class="logout-btn-container">', unsafe_allow_html=True)
+        if st.button("🚪 Sign Out", use_container_width=True, key="app_sign_out_btn"):
             handle_logout()
-            
-        st.markdown('<hr style="border-color:rgba(255,255,255,0.08);margin:16px 0 12px 0;">', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<hr style="border-color:rgba(255,255,255,0.08);margin:14px 0 10px 0;">', unsafe_allow_html=True)
+
     else:
-        # Unauthenticated Sidebar Information (No Role Picker!)
+        # Unauthenticated Sidebar (Clean & Secure - NO departments list)
         st.markdown("""
         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;margin-bottom:14px;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
                 <span style="font-size:1.1rem;">🔒</span>
-                <span style="font-size:0.85rem;font-weight:700;color:#f8fafc;">Academic Gateway</span>
+                <span style="font-size:0.85rem;font-weight:700;color:#f8fafc;">Secure Gateway</span>
             </div>
             <div style="font-size:0.78rem;color:#94a3b8;line-height:1.45;">
-                Access is restricted to authorized students, class representatives, and faculty staff. Please sign in to open your workspace.
+                Authorized portal for registered students, appointed class representatives, and faculty administration.
             </div>
         </div>
-        <hr style="border-color:rgba(255,255,255,0.08);margin:12px 0 12px 0;">
-        <div style="font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;font-weight:700;margin-bottom:10px;">DEPARTMENTS</div>
         """, unsafe_allow_html=True)
-        
-        for code, info in get_departments().items():
-            st.markdown(f"""
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:4px 6px;border-radius:6px;">
-                <div style="width:9px;height:9px;border-radius:50%;background:{info['color']};flex-shrink:0;box-shadow:0 0 6px {info['color']}88;"></div>
-                <div style="font-size:0.78rem;color:#cbd5e1;font-weight:500;">{info['name']}</div>
-            </div>
-            """, unsafe_allow_html=True)
 
     st.markdown("""
-    <hr style="border-color:rgba(255,255,255,0.08);margin:16px 0 10px 0;">
-    <div style="font-size:0.68rem;color:#64748b;text-align:center;line-height:1.4;">
-        Smart University System v2.5<br><span style="color:#475569;">Engineered for Academic Excellence</span>
+    <div style="font-size:0.68rem;color:#64748b;text-align:center;line-height:1.4;margin-top:8px;">
+        Smart University System v2.5<br><span style="color:#475569;">Academic Operations Hub</span>
     </div>
     """, unsafe_allow_html=True)
 
 # ── Main Content Router ─────────────────────────────────────────
 if student_id:
-    # 🎓 STUDENT DASHBOARD (User authenticated as student)
+    # 🎓 STUDENT DASHBOARD
     render_student_interface(db, ai_study, df_profiles)
 
 elif rep_logged:
-    # 📋 CLASS REP DASHBOARD (User authenticated as class rep)
+    # 📋 CLASS REP DASHBOARD
     render_class_rep_interface(db, ai, ai_rep)
 
 elif admin_logged:
-    # ⚡ SUPER ADMIN CONSOLE (User authenticated as super admin)
+    # ⚡ SUPER ADMIN CONSOLE
     render_superadmin_interface(db, ai_admin, master_ai)
 
 else:
