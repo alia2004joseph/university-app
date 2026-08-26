@@ -484,16 +484,209 @@ def render_class_rep_interface(
     """, unsafe_allow_html=True)
 
     #  Primary Hub Tabs (Organized into 5 Clean Sections)
-    tab_roster, tab_notices, tab_tt, tab_feedback, tab_ai_settings = st.tabs([
-        "👥 Students & Groups",
-        "📢 Notices & Materials",
-        "📅 Class Timetable",
-        "💬 Feedback & Replies" + (f" ({pending_feedback})" if pending_feedback else ""),
-        "⚙️ AI Tools & Settings"
-    ])
+    
+    # Rep screen default
+    if "rep_screen" not in st.session_state:
+        st.session_state.rep_screen = "dashboard"
 
-    # 1. STUDENTS & GROUPS
-    with tab_roster:
+    # Sidebar Navigation Menu
+    with st.sidebar:
+        st.markdown('<div style="font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;font-weight:700;margin:12px 0 8px 0;">CLASS REP WORKSPACE</div>', unsafe_allow_html=True)
+        nav_options = [
+            ("dashboard", "🏠 Dashboard"),
+            ("students",  f"👥 Students & Groups ({total_students})"),
+            ("notices",   "📢 Notices & Materials"),
+            ("timetable", "📅 Class Timetable"),
+            ("feedback",  f"💬 Feedback ({pending_feedback})" if pending_feedback else "💬 Student Feedback"),
+            ("ai_rep",    "🤖 Rep AI Intelligence"),
+            ("profile",   "👤 Rep Profile & Security"),
+            ("features",  "🧩 Slot Features"),
+        ]
+        nav_keys = [k for k, _ in nav_options]
+        nav_labels = [l for _, l in nav_options]
+        cur_idx = nav_keys.index(st.session_state.rep_screen) if st.session_state.rep_screen in nav_keys else 0
+        selected_nav = st.radio(
+            "Navigation",
+            nav_labels,
+            index=cur_idx,
+            key="rep_sidebar_nav_radio",
+            label_visibility="collapsed"
+        )
+        new_screen_key = nav_keys[nav_labels.index(selected_nav)]
+        if new_screen_key != st.session_state.rep_screen:
+            st.session_state.rep_screen = new_screen_key
+            st.rerun()
+
+    screen = st.session_state.rep_screen
+
+    # Render Sub-Screen Header if not on Dashboard
+    if screen != "dashboard":
+        screen_titles = {
+            "students":   ("👥", "Students & Group Allocations", f"{total_students} registered students · Group management"),
+            "notices":    ("📢", "Class Notices & Course Materials", "Publish announcements and upload lecture materials"),
+            "timetable":  ("📅", "Class Timetable Manager", "Manage weekly lecture schedule, halls and times"),
+            "feedback":   ("💬", "Student Inquiries & Feedback", f"{pending_feedback} pending inquiry messages"),
+            "ai_rep":     ("🤖", "Rep AI Intelligence Suite", "Inbox analysis, timetable generators & conflict checkers"),
+            "profile":    ("👤", "Rep Profile & Security", "Manage rep credentials, phone and password PIN"),
+            "features":   ("🧩", "Slot Features", "Custom class tools and extensions"),
+        }
+        s_icon, s_title, s_desc = screen_titles.get(screen, ("📌", "Class Rep View", ""))
+        top_c1, top_c2 = st.columns([1, 4])
+        with top_c1:
+            if st.button("← Back to Dashboard", use_container_width=True, key=f"rep_back_btn_{screen}"):
+                st.session_state.rep_screen = "dashboard"
+                st.rerun()
+        with top_c2:
+            st.markdown(f"""
+            <div style="display:flex;align-items:center;justify-content:space-between;background:white;border:1px solid #e2e8f0;border-radius:12px;padding:8px 16px;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:1.3rem;">{s_icon}</span>
+                    <div>
+                        <div style="font-size:1.05rem;font-weight:800;color:#0f172a;line-height:1.2;">{s_title}</div>
+                        <div style="font-size:0.72rem;color:#64748b;">{s_desc}</div>
+                    </div>
+                </div>
+                <div style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">
+                    ● Full Screen
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('<div style="margin-bottom:14px;"></div>', unsafe_allow_html=True)
+
+    # 1. DASHBOARD
+    if screen == "dashboard":
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.markdown(f"""
+            <div class="metric-card" style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                <div style="font-size:1.5rem;margin-bottom:4px;">👥</div>
+                <div style="font-size:1.35rem;font-weight:800;color:#0f172a;margin-bottom:2px;">{total_students}</div>
+                <div style="font-size:0.7rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">Registered Students</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with c2:
+            st.markdown(f"""
+            <div class="metric-card" style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                <div style="font-size:1.5rem;margin-bottom:4px;">📥</div>
+                <div style="font-size:1.35rem;font-weight:800;color:#0f172a;margin-bottom:2px;">{pending_feedback}</div>
+                <div style="font-size:0.7rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">Pending Inquiries</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with c3:
+            st.markdown(f"""
+            <div class="metric-card" style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                <div style="font-size:1.5rem;margin-bottom:4px;">📢</div>
+                <div style="font-size:1.35rem;font-weight:800;color:#0f172a;margin-bottom:2px;">{len(announcements)}</div>
+                <div style="font-size:0.7rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">Announcements</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with c4:
+            st.markdown(f"""
+            <div class="metric-card" style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                <div style="font-size:1.5rem;margin-bottom:4px;">📁</div>
+                <div style="font-size:1.35rem;font-weight:800;color:#0f172a;margin-bottom:2px;">{len(materials)}</div>
+                <div style="font-size:0.7rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">Course Materials</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown('<div style="margin:18px 0 8px 0;font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">⚡ QUICK LAUNCH WORKSPACE</div>', unsafe_allow_html=True)
+        
+        g1, g2 = st.columns(2)
+        with g1:
+            st.markdown(f"""
+            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span style="font-size:1.4rem;">👥</span>
+                    <div>
+                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Students & Group Allocations</div>
+                        <div style="font-size:0.75rem;color:#64748b;">Manage class roster ({total_students} students) & auto-assign groups</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("👥 Open Students & Groups", key="rep_dash_open_students", use_container_width=True, type="primary"):
+                st.session_state.rep_screen = "students"
+                st.rerun()
+
+            st.markdown(f"""
+            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span style="font-size:1.4rem;">📢</span>
+                    <div>
+                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Notices & Course Materials</div>
+                        <div style="font-size:0.75rem;color:#64748b;">Broadcast announcements & upload lecture files</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("📢 Open Notices & Materials", key="rep_dash_open_notices", use_container_width=True):
+                st.session_state.rep_screen = "notices"
+                st.rerun()
+
+            st.markdown(f"""
+            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span style="font-size:1.4rem;">🤖</span>
+                    <div>
+                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Rep AI Intelligence</div>
+                        <div style="font-size:0.75rem;color:#64748b;">Inbox analysis, auto announcements & conflict detection</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🤖 Launch Rep AI Suite", key="rep_dash_open_ai", use_container_width=True):
+                st.session_state.rep_screen = "ai_rep"
+                st.rerun()
+
+        with g2:
+            st.markdown(f"""
+            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span style="font-size:1.4rem;">📥</span>
+                    <div>
+                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Student Feedback & Inquiries</div>
+                        <div style="font-size:0.75rem;color:#64748b;">{pending_feedback} pending student inquiry messages</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("📥 Open Feedback Inbox", key="rep_dash_open_feed", use_container_width=True, type="primary"):
+                st.session_state.rep_screen = "feedback"
+                st.rerun()
+
+            st.markdown(f"""
+            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span style="font-size:1.4rem;">📅</span>
+                    <div>
+                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Class Timetable Manager</div>
+                        <div style="font-size:0.75rem;color:#64748b;">Weekly lecture slots, room allocations and timings</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("📅 Open Timetable Manager", key="rep_dash_open_tt", use_container_width=True):
+                st.session_state.rep_screen = "timetable"
+                st.rerun()
+
+            st.markdown(f"""
+            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.03);margin-bottom:12px;margin-top:12px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                    <span style="font-size:1.4rem;">👤</span>
+                    <div>
+                        <div style="font-size:1rem;font-weight:800;color:#0f172a;">Rep Profile & Security</div>
+                        <div style="font-size:0.75rem;color:#64748b;">Rep contact details, password PIN and settings</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("⚙️ Open Rep Settings", key="rep_dash_open_prof", use_container_width=True):
+                st.session_state.rep_screen = "profile"
+                st.rerun()
+
+    # 2. STUDENTS & GROUPS
+    elif screen == "students":
+
         sub_roster, sub_groups = st.tabs([
             f"📋 Class Roster ({total_students})",
             "👥 Group Allocations"
@@ -724,8 +917,11 @@ def render_class_rep_interface(
         # 
 
 
-    # 2. NOTICES & MATERIALS
-    with tab_notices:
+
+
+    # 3. NOTICES & MATERIALS
+    elif screen == "notices":
+
         sub_ann, sub_mat = st.tabs([
             "📢 Announcements",
             "📁 Course Materials"
@@ -865,192 +1061,198 @@ def render_class_rep_interface(
         # 
 
 
-    # 3. TIMETABLE
-    with tab_tt:
-        st.markdown("###  Class Timetable")
-        st.info(f"Timetable for **{d_name} — {r_year}**. Students see this in their portal.")
-
-        TT_PALETTE = [
-            "#1a56db", "#16a34a", "#ea580c", "#7c3aed",
-            "#dc2626", "#db2777", "#0d9488", "#b45309",
-            "#0284c7", "#4338ca", "#e11d48", "#475569"
-        ]
-        TT_LIGHTS = [
-            "#dbeafe", "#dcfce7", "#ffedd5", "#ede9fe",
-            "#fee2e2", "#fce7f3", "#ccfbf1", "#fef3c7",
-            "#e0f2fe", "#e0e7ff", "#ffe4e6", "#f1f5f9"
-        ]
-
-        def auto_color(course_name):
-            idx = sum(ord(c) for c in course_name.upper()) % len(TT_PALETTE)
-            return TT_PALETTE[idx], TT_LIGHTS[idx]
-
-        def format_lecturer(name):
-            name = name.strip()
-            if not name:
-                return ""
-            name = re.sub(r'(Dr|Prof|Mr|Mrs|Ms)\.(?=[^\s])', r'\1. ', name)
-            return name.title()
-
-        timetable = db.fetch_timetable(dept=r_dept, year=r_year)
-
-        #  Add entry manually 
-        st.markdown("####  Add Entry")
-        with st.form("add_tt_form", clear_on_submit=True):
-            c1, c2 = st.columns(2)
-            with c1:
-                tt_day = st.selectbox("Day", ["Monday", "Tuesday", "Wednesday",
-                                              "Thursday", "Friday", "Saturday", "Sunday"])
-                tt_time = st.text_input("Time", placeholder="e.g. 8:00 AM")
-            with c2:
-                tt_course = st.text_input("Course Code / Name", placeholder="e.g. BMEC 2101")
-                tt_lecturer = st.text_input("Lecturer Name", placeholder="e.g. Dr. Okello")
-
-            tt_type = st.radio("Session Type", ["Weekly", "One-off"], horizontal=True,
-                               help="Weekly = every week | One-off = single special session")
-
-            if st.form_submit_button(" Add Entry", use_container_width=True):
-                if not tt_time or not tt_course:
-                    st.warning("Please fill in Day, Time and Course at minimum.")
-                else:
-                    c_hex, c_light = auto_color(tt_course)
-                    with st.spinner("Saving..."):
-                        ok = db.add_timetable_entry(
-                            r_dept, r_year, tt_day,
-                            tt_time, tt_course, tt_lecturer,
-                            color=c_hex, entry_type=tt_type
-                        )
-                    if ok:
-                        st.success(f" Added: {tt_day} {tt_time} — {tt_course}")
-                        st.rerun()
-                    else:
-                        st.error(" Failed to add entry.")
-
-        st.markdown("---")
-
-        #  AI parse from raw text 
-        st.markdown("####  Import from Raw Text")
-        with st.expander("Paste raw timetable text and let AI parse it"):
-            raw_tt = st.text_area("Paste timetable here:", height=150,
-                                  placeholder="e.g. Monday 8am BMEC, Tuesday 10am BBPE...")
-            if st.button(" Parse & Import with AI", key="parse_tt_btn"):
-                if not raw_tt.strip():
-                    st.warning("Please paste some timetable text.")
-                else:
-                    with st.spinner("Parsing..."):
-                        from ai_engine import _call_with_retry
-                        from google.genai import types as _types
-                        prompt = (
-                            "Parse this timetable text into a JSON array. "
-                            "Each item must have: day, time, course, lecturer, type. "
-                            "Days must be full names (Monday, Tuesday etc). "
-                            "type must be Weekly or One-off. "
-                            "lecturer can be empty string if not mentioned. "
-                            "Return ONLY raw JSON array, no markdown.\n\n"
-                            "Timetable: " + raw_tt
-                        )
-                        config = _types.GenerateContentConfig(
-                            response_mime_type="application/json"
-                        )
-                        result = _call_with_retry("models/gemini-2.5-flash", prompt, config)
-                        try:
-                            entries = _json.loads(result)
-                            added = 0
-                            for entry in entries:
-                                day = entry.get("day", "").strip()
-                                time = entry.get("time", "").strip()
-                                course = entry.get("course", "").strip()
-                                if day and time and course:
-                                    lecturer = entry.get("lecturer", "").strip()
-                                    entry_type = entry.get("type", "Weekly").strip()
-                                    c_hex, _ = auto_color(course)
-                                    if db.add_timetable_entry(
-                                        r_dept, r_year, day, time,
-                                        course, lecturer, c_hex, entry_type
-                                    ):
-                                        added += 1
-                            st.success(f" Imported {added} entries!")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f" Could not parse: {e}")
-
-        st.markdown("---")
-
-        #  View & delete entries 
-        st.markdown("####  Current Timetable")
-
-        if not timetable:
-            st.info("No timetable entries yet.")
-        else:
-            day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-            by_day = {}
-            for entry in timetable:
-                d = entry.get("day", "Other")
-                by_day.setdefault(d, []).append(entry)
-
-            for day in day_order:
-                if day not in by_day:
-                    continue
-                st.markdown(f"**{day}**")
-                entries = sorted(by_day[day], key=lambda x: x.get("time", ""))
-                for eidx, entry in enumerate(entries):
-                    c1, c2 = st.columns([5, 1])
-                    with c1:
-                        e_color = entry.get('color', '') or primary
-                        e_lcolor, _ = auto_color(entry.get('course', ''))
-                        e_color = e_color if e_color else e_lcolor
-                        lect_str = (
-                            '<span style="color:#475569;font-size:0.82rem;font-weight:600;">'
-                            + " " + entry.get("lecturer", "").title() + "</span>"
-                        ) if entry.get("lecturer") else ""
-                        type_badge = f"<span style=\"background:#f1f5f9;color:#64748b;font-size:0.65rem;font-weight:700;padding:1px 7px;border-radius:8px;margin-left:6px;\">{entry.get('type', 'Weekly')}</span>"
-                        st.markdown(f"""
-                        <div style="background:white;border-radius:10px;padding:10px 16px;
-                            margin-bottom:6px;border:1px solid #e2e8f7;
-                            border-left:4px solid {e_color};">
-                            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
-                                <span style="font-weight:800;color:{e_color};min-width:90px;">{entry.get('time', '')}</span>
-                                <span style="color:#1e293b;font-weight:600;">{entry.get('course', '')}</span>
-                                {type_badge}
-                            </div>
-                            <div style="margin-top:3px;">{lect_str}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    with c2:
-                        if st.button("", key=f"del_tt_{day}_{eidx}"):
-                            with st.spinner("Deleting..."):
-                                ok = db.delete_timetable_entry(
-                                    r_dept, r_year, day, entry.get("time", "")
-                                )
-                            if ok:
-                                st.rerun()
-
-            st.markdown("---")
-            if st.button(" Clear Entire Timetable", type="secondary"):
-                st.session_state["confirm_clear_tt"] = True
-                st.rerun()
-
-            if st.session_state.get("confirm_clear_tt"):
-                st.warning(" Delete ALL timetable entries for this class?")
-                ca, cb = st.columns(2)
-                with ca:
-                    if st.button(" Yes, clear all", key="yes_clear_tt"):
-                        with st.spinner("Clearing..."):
-                            db.clear_timetable(r_dept, r_year)
-                        st.session_state["confirm_clear_tt"] = False
-                        st.rerun()
-                with cb:
-                    if st.button(" Cancel", key="no_clear_tt"):
-                        st.session_state["confirm_clear_tt"] = False
-                        st.rerun()
-
-    # 
-    #  FEEDBACK — FIXED WITH HTML CLEANING
-    # 
 
 
-    # 4. FEEDBACK & REPLIES
-    with tab_feedback:
+    # 4. TIMETABLE
+    elif screen == "timetable":
+        with tab_tt:
+               st.markdown("###  Class Timetable")
+               st.info(f"Timetable for **{d_name} — {r_year}**. Students see this in their portal.")
+
+               TT_PALETTE = [
+                   "#1a56db", "#16a34a", "#ea580c", "#7c3aed",
+                   "#dc2626", "#db2777", "#0d9488", "#b45309",
+                   "#0284c7", "#4338ca", "#e11d48", "#475569"
+               ]
+               TT_LIGHTS = [
+                   "#dbeafe", "#dcfce7", "#ffedd5", "#ede9fe",
+                   "#fee2e2", "#fce7f3", "#ccfbf1", "#fef3c7",
+                   "#e0f2fe", "#e0e7ff", "#ffe4e6", "#f1f5f9"
+               ]
+
+               def auto_color(course_name):
+                   idx = sum(ord(c) for c in course_name.upper()) % len(TT_PALETTE)
+                   return TT_PALETTE[idx], TT_LIGHTS[idx]
+
+               def format_lecturer(name):
+                   name = name.strip()
+                   if not name:
+                       return ""
+                   name = re.sub(r'(Dr|Prof|Mr|Mrs|Ms)\.(?=[^\s])', r'\1. ', name)
+                   return name.title()
+
+               timetable = db.fetch_timetable(dept=r_dept, year=r_year)
+
+               #  Add entry manually 
+               st.markdown("####  Add Entry")
+               with st.form("add_tt_form", clear_on_submit=True):
+                   c1, c2 = st.columns(2)
+                   with c1:
+                       tt_day = st.selectbox("Day", ["Monday", "Tuesday", "Wednesday",
+                                                     "Thursday", "Friday", "Saturday", "Sunday"])
+                       tt_time = st.text_input("Time", placeholder="e.g. 8:00 AM")
+                   with c2:
+                       tt_course = st.text_input("Course Code / Name", placeholder="e.g. BMEC 2101")
+                       tt_lecturer = st.text_input("Lecturer Name", placeholder="e.g. Dr. Okello")
+
+                   tt_type = st.radio("Session Type", ["Weekly", "One-off"], horizontal=True,
+                                      help="Weekly = every week | One-off = single special session")
+
+                   if st.form_submit_button(" Add Entry", use_container_width=True):
+                       if not tt_time or not tt_course:
+                           st.warning("Please fill in Day, Time and Course at minimum.")
+                       else:
+                           c_hex, c_light = auto_color(tt_course)
+                           with st.spinner("Saving..."):
+                               ok = db.add_timetable_entry(
+                                   r_dept, r_year, tt_day,
+                                   tt_time, tt_course, tt_lecturer,
+                                   color=c_hex, entry_type=tt_type
+                               )
+                           if ok:
+                               st.success(f" Added: {tt_day} {tt_time} — {tt_course}")
+                               st.rerun()
+                           else:
+                               st.error(" Failed to add entry.")
+
+               st.markdown("---")
+
+               #  AI parse from raw text 
+               st.markdown("####  Import from Raw Text")
+               with st.expander("Paste raw timetable text and let AI parse it"):
+                   raw_tt = st.text_area("Paste timetable here:", height=150,
+                                         placeholder="e.g. Monday 8am BMEC, Tuesday 10am BBPE...")
+                   if st.button(" Parse & Import with AI", key="parse_tt_btn"):
+                       if not raw_tt.strip():
+                           st.warning("Please paste some timetable text.")
+                       else:
+                           with st.spinner("Parsing..."):
+                               from ai_engine import _call_with_retry
+                               from google.genai import types as _types
+                               prompt = (
+                                   "Parse this timetable text into a JSON array. "
+                                   "Each item must have: day, time, course, lecturer, type. "
+                                   "Days must be full names (Monday, Tuesday etc). "
+                                   "type must be Weekly or One-off. "
+                                   "lecturer can be empty string if not mentioned. "
+                                   "Return ONLY raw JSON array, no markdown.\n\n"
+                                   "Timetable: " + raw_tt
+                               )
+                               config = _types.GenerateContentConfig(
+                                   response_mime_type="application/json"
+                               )
+                               result = _call_with_retry("models/gemini-2.5-flash", prompt, config)
+                               try:
+                                   entries = _json.loads(result)
+                                   added = 0
+                                   for entry in entries:
+                                       day = entry.get("day", "").strip()
+                                       time = entry.get("time", "").strip()
+                                       course = entry.get("course", "").strip()
+                                       if day and time and course:
+                                           lecturer = entry.get("lecturer", "").strip()
+                                           entry_type = entry.get("type", "Weekly").strip()
+                                           c_hex, _ = auto_color(course)
+                                           if db.add_timetable_entry(
+                                               r_dept, r_year, day, time,
+                                               course, lecturer, c_hex, entry_type
+                                           ):
+                                               added += 1
+                                   st.success(f" Imported {added} entries!")
+                                   st.rerun()
+                               except Exception as e:
+                                   st.error(f" Could not parse: {e}")
+
+               st.markdown("---")
+
+               #  View & delete entries 
+               st.markdown("####  Current Timetable")
+
+               if not timetable:
+                   st.info("No timetable entries yet.")
+               else:
+                   day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                   by_day = {}
+                   for entry in timetable:
+                       d = entry.get("day", "Other")
+                       by_day.setdefault(d, []).append(entry)
+
+                   for day in day_order:
+                       if day not in by_day:
+                           continue
+                       st.markdown(f"**{day}**")
+                       entries = sorted(by_day[day], key=lambda x: x.get("time", ""))
+                       for eidx, entry in enumerate(entries):
+                           c1, c2 = st.columns([5, 1])
+                           with c1:
+                               e_color = entry.get('color', '') or primary
+                               e_lcolor, _ = auto_color(entry.get('course', ''))
+                               e_color = e_color if e_color else e_lcolor
+                               lect_str = (
+                                   '<span style="color:#475569;font-size:0.82rem;font-weight:600;">'
+                                   + " " + entry.get("lecturer", "").title() + "</span>"
+                               ) if entry.get("lecturer") else ""
+                               type_badge = f"<span style=\"background:#f1f5f9;color:#64748b;font-size:0.65rem;font-weight:700;padding:1px 7px;border-radius:8px;margin-left:6px;\">{entry.get('type', 'Weekly')}</span>"
+                               st.markdown(f"""
+                               <div style="background:white;border-radius:10px;padding:10px 16px;
+                                   margin-bottom:6px;border:1px solid #e2e8f7;
+                                   border-left:4px solid {e_color};">
+                                   <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+                                       <span style="font-weight:800;color:{e_color};min-width:90px;">{entry.get('time', '')}</span>
+                                       <span style="color:#1e293b;font-weight:600;">{entry.get('course', '')}</span>
+                                       {type_badge}
+                                   </div>
+                                   <div style="margin-top:3px;">{lect_str}</div>
+                               </div>
+                               """, unsafe_allow_html=True)
+                           with c2:
+                               if st.button("", key=f"del_tt_{day}_{eidx}"):
+                                   with st.spinner("Deleting..."):
+                                       ok = db.delete_timetable_entry(
+                                           r_dept, r_year, day, entry.get("time", "")
+                                       )
+                                   if ok:
+                                       st.rerun()
+
+                   st.markdown("---")
+                   if st.button(" Clear Entire Timetable", type="secondary"):
+                       st.session_state["confirm_clear_tt"] = True
+                       st.rerun()
+
+                   if st.session_state.get("confirm_clear_tt"):
+                       st.warning(" Delete ALL timetable entries for this class?")
+                       ca, cb = st.columns(2)
+                       with ca:
+                           if st.button(" Yes, clear all", key="yes_clear_tt"):
+                               with st.spinner("Clearing..."):
+                                   db.clear_timetable(r_dept, r_year)
+                               st.session_state["confirm_clear_tt"] = False
+                               st.rerun()
+                       with cb:
+                           if st.button(" Cancel", key="no_clear_tt"):
+                               st.session_state["confirm_clear_tt"] = False
+                               st.rerun()
+
+           # 
+           #  FEEDBACK — FIXED WITH HTML CLEANING
+           # 
+
+
+
+
+    # 5. FEEDBACK & REPLIES
+    elif screen == "feedback":
+
         sub_fb, sub_rep = st.tabs([
             f"📥 Student Feedback ({pending_feedback})" if pending_feedback else "📥 Student Feedback",
             f"💬 Sent Replies ({unread_replies})" if unread_replies else "💬 Sent Replies"
@@ -1192,464 +1394,468 @@ def render_class_rep_interface(
         # 
 
 
-    # 5. AI TOOLS & SETTINGS
-    with tab_ai_settings:
-        sub_ai, sub_settings, sub_features = st.tabs([
-            "🤖 Rep AI Assistant",
-            "👤 Rep Profile & Security",
-            "🧩 Slot Features"
-        ])
-        with sub_ai:
-            st.markdown("###  AI Class Manager")
-            st.markdown(f'<div class="scope-badge"> Powered by AI · {d_name} — {r_year}</div>', unsafe_allow_html=True)
 
-            ai_tabs = st.tabs([
-                " Inbox Analysis",
-                " Announcements",
-                "⏰ Reminders",
-                " Groups",
-                " Generate TT",
-                " Format TT",
-                " Conflicts",
-                " TT Q&A",
-            ])
 
-            # 
-            #  FULL INBOX ANALYSIS
-            # 
-            with ai_tabs[0]:
-                st.markdown("####  Full Class Inbox Analysis")
-                st.info("AI reads all feedback, announcements and timetable — then gives you a complete class intelligence report.")
+    # 6. REP AI INTELLIGENCE
+    elif screen == "ai_rep":
 
-                if st.button(" Run Full Analysis", use_container_width=True, type="primary"):
-                    with st.spinner(" Analyzing your entire class inbox..."):
-                        timetable_data = db.fetch_timetable(dept=r_dept, year=r_year)
-                        analysis = ai_rep.analyze_feedback_inbox(
-                            feedback_list, announcements, timetable_data
-                        )
+        st.markdown("###  AI Class Manager")
+        st.markdown(f'<div class="scope-badge"> Powered by AI · {d_name} — {r_year}</div>', unsafe_allow_html=True)
 
-                    if "error" in analysis:
-                        st.error(f" {analysis['error']}")
-                    else:
-                        sentiment = analysis.get("sentiment", "Neutral")
-                        s_color = {"Positive": "#16a34a", "Neutral": "#0284c7",
-                                   "Stressed": "#ea580c", "Concerned": "#dc2626"}.get(sentiment, primary)
-                        st.markdown(f"""
-                        <div style="background:white;border-radius:14px;padding:20px 24px;
-                            border:1px solid #e2e8f7;margin-bottom:16px;border-left:5px solid {s_color};">
-                            <div style="font-size:0.75rem;color:#94a3b8;font-weight:700;
-                                text-transform:uppercase;margin-bottom:6px;"> Class Summary</div>
-                            <div style="font-size:1rem;font-weight:700;color:{s_color};margin-bottom:6px;">
-                                {sentiment} Class Sentiment
-                            </div>
-                            <div style="font-size:0.9rem;color:#475569;">{analysis.get("summary", "")}</div>
-                            <div style="font-size:0.82rem;color:#94a3b8;margin-top:6px;font-style:italic;">
-                                {analysis.get("sentiment_reason", "")}
-                            </div>
+
+        ai_tool = st.radio(
+            "Select AI Intelligence Tool:",
+            ["📊 Full Inbox Analysis", "📢 Smart Announcements", "⏰ Auto Reminders", "👥 Group Allocator", "✨ Generate Timetable", "🧹 Format Timetable", "⚠️ Detect Conflicts", "💬 Timetable Q&A"],
+            horizontal=True,
+            key="rep_ai_tool_select"
+        )
+        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+
+
+        # 
+        #  FULL INBOX ANALYSIS
+        # 
+        if ai_tool == "📊 Full Inbox Analysis":
+            st.markdown("####  Full Class Inbox Analysis")
+            st.info("AI reads all feedback, announcements and timetable — then gives you a complete class intelligence report.")
+
+            if st.button(" Run Full Analysis", use_container_width=True, type="primary"):
+                with st.spinner(" Analyzing your entire class inbox..."):
+                    timetable_data = db.fetch_timetable(dept=r_dept, year=r_year)
+                    analysis = ai_rep.analyze_feedback_inbox(
+                        feedback_list, announcements, timetable_data
+                    )
+
+                if "error" in analysis:
+                    st.error(f" {analysis['error']}")
+                else:
+                    sentiment = analysis.get("sentiment", "Neutral")
+                    s_color = {"Positive": "#16a34a", "Neutral": "#0284c7",
+                               "Stressed": "#ea580c", "Concerned": "#dc2626"}.get(sentiment, primary)
+                    st.markdown(f"""
+                    <div style="background:white;border-radius:14px;padding:20px 24px;
+                        border:1px solid #e2e8f7;margin-bottom:16px;border-left:5px solid {s_color};">
+                        <div style="font-size:0.75rem;color:#94a3b8;font-weight:700;
+                            text-transform:uppercase;margin-bottom:6px;"> Class Summary</div>
+                        <div style="font-size:1rem;font-weight:700;color:{s_color};margin-bottom:6px;">
+                            {sentiment} Class Sentiment
                         </div>
-                        """, unsafe_allow_html=True)
-
-                        cats = analysis.get("categories", {})
-                        if any(cats.values()):
-                            st.markdown("####  Message Categories")
-                            cat_cols = st.columns(4)
-                            cat_data = [
-                                (" Questions", cats.get("questions", []), "#0284c7"),
-                                (" Urgent", cats.get("urgent", []), "#dc2626"),
-                                (" Complaints", cats.get("complaints", []), "#ea580c"),
-                                (" Requests", cats.get("requests", []), "#7c3aed"),
-                            ]
-                            for col, (label, items, color) in zip(cat_cols, cat_data):
-                                with col:
-                                    st.markdown(f"""
-                                    <div style="background:white;border-radius:10px;padding:12px;
-                                        border:1px solid #e2e8f7;border-top:3px solid {color};text-align:center;">
-                                        <div style="font-size:1.4rem;font-weight:800;color:{color};">{len(items)}</div>
-                                        <div style="font-size:0.72rem;color:#94a3b8;font-weight:600;">{label}</div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
-                            if cats.get("urgent"):
-                                st.markdown("** Urgent Matters:**")
-                                for u in cats["urgent"]:
-                                    st.error(f" {u}")
-
-                        auto_replies = analysis.get("auto_replies", [])
-                        if auto_replies:
-                            st.markdown("####  AI Activity Log — Suggested Replies")
-                            st.caption("Review each reply below. Approve to send, or edit first.")
-                            for idx, ar in enumerate(auto_replies):
-                                conf = ar.get("confidence", "Medium")
-                                conf_color = {"High": "#16a34a", "Medium": "#d4820a", "Low": "#dc2626"}.get(conf, "#64748b")
-                                with st.expander(f" {ar.get('student_name', '')} — {ar.get('original_message', '')[:60]}..."):
-                                    st.markdown(f"""
-                                    <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;
-                                        margin-bottom:8px;font-size:0.88rem;color:#475569;">
-                                        <strong>Student said:</strong> {ar.get('original_message', '')}
-                                    </div>
-                                    <div style="font-size:0.75rem;color:{conf_color};font-weight:700;margin-bottom:6px;">
-                                         AI Confidence: {conf}
-                                    </div>
-                                    """, unsafe_allow_html=True)
-                                    edited_reply = st.text_area(
-                                        "AI Suggested Reply (edit if needed):",
-                                        value=ar.get("suggested_reply", ""),
-                                        key=f"ai_auto_reply_{idx}",
-                                        height=80
-                                    )
-                                    reg_match = ""
-                                    name_match = ar.get("student_name", "")
-                                    for fb in feedback_list:
-                                        if isinstance(fb, list) and len(fb) >= 5:
-                                            if str(fb[2]).strip().lower() == name_match.strip().lower():
-                                                reg_match = str(fb[1])
-                                                break
-                                    ca, cb = st.columns(2)
-                                    with ca:
-                                        if st.button(" Send This Reply", key=f"send_auto_{idx}", use_container_width=True):
-                                            if reg_match and edited_reply.strip():
-                                                #  CLEAN HTML 
-                                                reply_clean = re.sub(r'<[^>]+>', '', edited_reply)
-                                                reply_clean = reply_clean.replace('&nbsp;', ' ')
-                                                reply_clean = reply_clean.replace('**', '')
-                                                reply_clean = reply_clean.strip()
-                                                ok = db.post_rep_reply(
-                                                    reg_number=reg_match,
-                                                    student_name=name_match,
-                                                    message=reply_clean,
-                                                    rep_name=r_name,
-                                                    dept=r_dept, year=r_year
-                                                )
-                                                if ok:
-                                                    st.success(" Reply sent!")
-                                                else:
-                                                    st.error(" Failed to send.")
-                                            else:
-                                                st.warning("Could not match student. Send manually from Feedback tab.")
-                                    with cb:
-                                        if st.button("⏭ Skip", key=f"skip_auto_{idx}", use_container_width=True):
-                                            st.info("Skipped.")
-
-                        sugg_anns = analysis.get("suggested_announcements", [])
-                        if sugg_anns:
-                            st.markdown("####  AI Suggested Announcements")
-                            for sidx, sa in enumerate(sugg_anns):
-                                with st.expander(f" {sa.get('text', '')[:60]}..."):
-                                    st.info(f" Reason: {sa.get('reason', '')}")
-                                    edited_ann = st.text_area(
-                                        "Edit before posting:",
-                                        value=sa.get("text", ""),
-                                        key=f"sugg_ann_{sidx}",
-                                        height=80
-                                    )
-                                    pri = st.selectbox(
-                                        "Priority:", ["Normal", "Urgent"],
-                                        index=1 if sa.get("priority", "").lower() == "urgent" else 0,
-                                        key=f"sugg_ann_pri_{sidx}"
-                                    )
-                                    if st.button(" Post This Announcement", key=f"post_sugg_{sidx}", use_container_width=True):
-                                        if db.post_announcement(edited_ann, pri, dept=r_dept, year=r_year):
-                                            from cache import cached_fetch_announcements
-                                            cached_fetch_announcements.clear()
-                                            st.success(" Posted!")
-                                        else:
-                                            st.error(" Failed.")
-
-                        deadlines = analysis.get("deadlines_detected", [])
-                        if deadlines:
-                            st.markdown("#### ⏰ Deadlines Detected")
-                            for dl in deadlines:
-                                with st.expander(f"⏰ {dl.get('item', '')} — {dl.get('date', '')}"):
-                                    st.markdown(f"**Reminder draft:**")
-                                    reminder = st.text_area(
-                                        "", value=dl.get("reminder_draft", ""),
-                                        key=f"dl_remind_{dl.get('item', '')}",
-                                        height=80
-                                    )
-                                    if st.button(" Post Reminder", key=f"post_dl_{dl.get('item', '')}", use_container_width=True):
-                                        if db.post_announcement(reminder, "Urgent", dept=r_dept, year=r_year):
-                                            st.success(" Reminder posted!")
-
-                        action_items = analysis.get("rep_action_items", [])
-                        if action_items:
-                            st.markdown("####  Your Action Items")
-                            st.caption("These need your personal attention — AI cannot handle them.")
-                            for item in action_items:
-                                st.markdown(f"-  {item}")
-
-                        grp_sugg = analysis.get("group_suggestion", "")
-                        if grp_sugg:
-                            st.markdown("####  Group Allocation Note")
-                            st.info(f" {grp_sugg}")
-
-            # 
-            #  SUGGEST ANNOUNCEMENTS
-            # 
-            with ai_tabs[1]:
-                st.markdown("####  AI Announcement Suggestions")
-                rough = st.text_area(
-                    "What do you want to announce? (rough idea is fine)",
-                    placeholder="e.g. remind students about the test next week, inform about lab cancellation...",
-                    height=100
-                )
-                priority = st.selectbox("Priority", ["Normal", "Urgent"], key="sugg_ann_pri")
-                if st.button(" Draft with AI", use_container_width=True, type="primary") and rough.strip():
-                    with st.spinner("Drafting..."):
-                        draft = ai_rep.draft_announcement(rough, priority)
-                    st.session_state.rep_ai_draft = draft
-
-                if st.session_state.get("rep_ai_draft"):
-                    st.markdown("**AI Draft — edit before posting:**")
-                    edited = st.text_area("", value=st.session_state.rep_ai_draft, height=150, key="manager_draft_edit")
-                    pri2 = st.selectbox("Priority", ["Normal", "Urgent"], key="manager_draft_pri")
-                    if st.button(" Post This", use_container_width=True, type="primary"):
-                        if db.post_announcement(edited, pri2, dept=r_dept, year=r_year):
-                            from cache import cached_fetch_announcements
-                            cached_fetch_announcements.clear()
-                            st.session_state.rep_ai_draft = ""
-                            st.success(" Posted!")
-                            st.rerun()
-
-            # 
-            # ⏰ DEADLINE REMINDERS
-            # 
-            with ai_tabs[2]:
-                st.markdown("#### ⏰ Deadline Detection & Reminders")
-                st.info("AI scans your announcements for deadlines and drafts reminder messages.")
-                if st.button(" Scan for Deadlines", use_container_width=True, type="primary"):
-                    with st.spinner("Scanning announcements..."):
-                        result = ai_rep.suggest_deadline_reminders(announcements)
-                    st.markdown(result)
-
-            # 
-            #  GROUP ALLOCATION ADVICE
-            # 
-            with ai_tabs[3]:
-                st.markdown("####  AI Group Allocation Advice")
-                st.info("AI analyzes your class roster and recommends the best grouping strategy.")
-                constraints = st.text_area(
-                    "Any special constraints? (optional)",
-                    placeholder="e.g. mix course codes, keep final year students separate...",
-                    height=80
-                )
-                if st.button(" Get Recommendations", use_container_width=True, type="primary"):
-                    with st.spinner("Analyzing class..."):
-                        result = ai_rep.suggest_group_allocation(df_class, constraints)
-                    st.markdown(result)
-
-            # 
-            #  GENERATE TIMETABLE
-            # 
-            with ai_tabs[4]:
-                st.markdown("####  AI Timetable Generator")
-                st.info("Enter your courses and AI will suggest a balanced weekly timetable.")
-                courses_input = st.text_area(
-                    "Enter courses (one per line):",
-                    placeholder="e.g.\nThermodynamics\nEngineering Mathematics\nFluid Mechanics\nMaterial Science",
-                    height=150
-                )
-                constraints_tt = st.text_area(
-                    "Constraints (optional):",
-                    placeholder="e.g. No classes before 9am, Wednesday afternoons free...",
-                    height=80
-                )
-                if st.button(" Generate Timetable", use_container_width=True, type="primary") and courses_input.strip():
-                    courses_list = [c.strip() for c in courses_input.strip().split("\n") if c.strip()]
-                    with st.spinner("Generating timetable..."):
-                        result = ai_rep.generate_timetable_suggestion(courses_list, constraints_tt)
-                    st.markdown(result)
-                    if st.button(" Post as Announcement", key="post_tt_gen"):
-                        if db.post_announcement(result, "Normal", dept=r_dept, year=r_year):
-                            st.success(" Posted!")
-
-            # 
-            #  FORMAT TIMETABLE
-            # 
-            with ai_tabs[5]:
-                st.markdown("####  Format Raw Timetable")
-                raw = st.text_area("Paste raw timetable:", height=200)
-                if st.button(" Format with AI", use_container_width=True) and raw.strip():
-                    with st.spinner("Formatting..."):
-                        result = ai_rep.format_timetable(raw)
-                    st.markdown(result)
-                    if st.button(" Post as Announcement", key="post_fmt_tt"):
-                        if db.post_announcement(result, "Normal", dept=r_dept, year=r_year):
-                            st.success(" Posted!")
-
-            # 
-            #  CHECK CONFLICTS
-            # 
-            with ai_tabs[6]:
-                st.markdown("####  Timetable Conflict Checker")
-                raw = st.text_area("Paste timetable to check:", height=200)
-                if st.button(" Check for Conflicts", use_container_width=True) and raw.strip():
-                    with st.spinner("Checking..."):
-                        result = ai_rep.check_timetable_conflicts(raw)
-                    st.markdown(result)
-
-            # 
-            #  TIMETABLE Q&A
-            # 
-            with ai_tabs[7]:
-                st.markdown("####  Ask About the Timetable")
-                timetable_qa = st.text_area("Paste timetable:", height=150)
-                question_qa = st.text_input("Your question:", placeholder="When is the Engineering Maths lecture?")
-                if st.button("Ask AI", use_container_width=True) and question_qa.strip() and timetable_qa.strip():
-                    with st.spinner("Answering..."):
-                        result = ai_rep.answer_timetable_question(question_qa, timetable_qa)
-                    st.info(result)
-
-        # 
-        #  SETTINGS
-        # 
-
-        with sub_settings:
-            st.markdown("###  Account Settings")
-            rep_prof_av = render_avatar_html(r_avatar, r_name, size=72, color=primary, light=light)
-            st.markdown(f"""
-            <div style="background:white;border-radius:14px;padding:20px 24px;
-                border:1px solid #e2e8f7;margin-bottom:20px;">
-                <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
-                    {rep_prof_av}
-                    <div>
-                        <div style="font-size:1.15rem;font-weight:800;color:#1e293b;">{r_name}</div>
-                        <div style="font-size:0.82rem;color:#94a3b8;">Class Representative · {r_year}</div>
+                        <div style="font-size:0.9rem;color:#475569;">{analysis.get("summary", "")}</div>
+                        <div style="font-size:0.82rem;color:#94a3b8;margin-top:6px;font-style:italic;">
+                            {analysis.get("sentiment_reason", "")}
+                        </div>
                     </div>
-                </div>
-                <div style="font-size:0.95rem;font-weight:800;color:#1e293b;margin-bottom:12px;">
-                     Rep Profile Details
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;
-                    border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
-                    <span style="color:#94a3b8;">Name</span>
-                    <span style="font-weight:700;">{r_name}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;
-                    border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
-                    <span style="color:#94a3b8;">Reg Number</span>
-                    <span style="font-weight:700;">{r_reg}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;
-                    border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
-                    <span style="color:#94a3b8;">Department</span>
-                    <span style="font-weight:700;">{d_name}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.9rem;">
-                    <span style="color:#94a3b8;">Year</span>
-                    <span style="font-weight:700;">{r_year}</span>
+                    """, unsafe_allow_html=True)
+
+                    cats = analysis.get("categories", {})
+                    if any(cats.values()):
+                        st.markdown("####  Message Categories")
+                        cat_cols = st.columns(4)
+                        cat_data = [
+                            (" Questions", cats.get("questions", []), "#0284c7"),
+                            (" Urgent", cats.get("urgent", []), "#dc2626"),
+                            (" Complaints", cats.get("complaints", []), "#ea580c"),
+                            (" Requests", cats.get("requests", []), "#7c3aed"),
+                        ]
+                        for col, (label, items, color) in zip(cat_cols, cat_data):
+                            with col:
+                                st.markdown(f"""
+                                <div style="background:white;border-radius:10px;padding:12px;
+                                    border:1px solid #e2e8f7;border-top:3px solid {color};text-align:center;">
+                                    <div style="font-size:1.4rem;font-weight:800;color:{color};">{len(items)}</div>
+                                    <div style="font-size:0.72rem;color:#94a3b8;font-weight:600;">{label}</div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        if cats.get("urgent"):
+                            st.markdown("** Urgent Matters:**")
+                            for u in cats["urgent"]:
+                                st.error(f" {u}")
+
+                    auto_replies = analysis.get("auto_replies", [])
+                    if auto_replies:
+                        st.markdown("####  AI Activity Log — Suggested Replies")
+                        st.caption("Review each reply below. Approve to send, or edit first.")
+                        for idx, ar in enumerate(auto_replies):
+                            conf = ar.get("confidence", "Medium")
+                            conf_color = {"High": "#16a34a", "Medium": "#d4820a", "Low": "#dc2626"}.get(conf, "#64748b")
+                            with st.expander(f" {ar.get('student_name', '')} — {ar.get('original_message', '')[:60]}..."):
+                                st.markdown(f"""
+                                <div style="background:#f8fafc;border-radius:8px;padding:10px 14px;
+                                    margin-bottom:8px;font-size:0.88rem;color:#475569;">
+                                    <strong>Student said:</strong> {ar.get('original_message', '')}
+                                </div>
+                                <div style="font-size:0.75rem;color:{conf_color};font-weight:700;margin-bottom:6px;">
+                                     AI Confidence: {conf}
+                                </div>
+                                """, unsafe_allow_html=True)
+                                edited_reply = st.text_area(
+                                    "AI Suggested Reply (edit if needed):",
+                                    value=ar.get("suggested_reply", ""),
+                                    key=f"ai_auto_reply_{idx}",
+                                    height=80
+                                )
+                                reg_match = ""
+                                name_match = ar.get("student_name", "")
+                                for fb in feedback_list:
+                                    if isinstance(fb, list) and len(fb) >= 5:
+                                        if str(fb[2]).strip().lower() == name_match.strip().lower():
+                                            reg_match = str(fb[1])
+                                            break
+                                ca, cb = st.columns(2)
+                                with ca:
+                                    if st.button(" Send This Reply", key=f"send_auto_{idx}", use_container_width=True):
+                                        if reg_match and edited_reply.strip():
+                                            #  CLEAN HTML 
+                                            reply_clean = re.sub(r'<[^>]+>', '', edited_reply)
+                                            reply_clean = reply_clean.replace('&nbsp;', ' ')
+                                            reply_clean = reply_clean.replace('**', '')
+                                            reply_clean = reply_clean.strip()
+                                            ok = db.post_rep_reply(
+                                                reg_number=reg_match,
+                                                student_name=name_match,
+                                                message=reply_clean,
+                                                rep_name=r_name,
+                                                dept=r_dept, year=r_year
+                                            )
+                                            if ok:
+                                                st.success(" Reply sent!")
+                                            else:
+                                                st.error(" Failed to send.")
+                                        else:
+                                            st.warning("Could not match student. Send manually from Feedback tab.")
+                                with cb:
+                                    if st.button("⏭ Skip", key=f"skip_auto_{idx}", use_container_width=True):
+                                        st.info("Skipped.")
+
+                    sugg_anns = analysis.get("suggested_announcements", [])
+                    if sugg_anns:
+                        st.markdown("####  AI Suggested Announcements")
+                        for sidx, sa in enumerate(sugg_anns):
+                            with st.expander(f" {sa.get('text', '')[:60]}..."):
+                                st.info(f" Reason: {sa.get('reason', '')}")
+                                edited_ann = st.text_area(
+                                    "Edit before posting:",
+                                    value=sa.get("text", ""),
+                                    key=f"sugg_ann_{sidx}",
+                                    height=80
+                                )
+                                pri = st.selectbox(
+                                    "Priority:", ["Normal", "Urgent"],
+                                    index=1 if sa.get("priority", "").lower() == "urgent" else 0,
+                                    key=f"sugg_ann_pri_{sidx}"
+                                )
+                                if st.button(" Post This Announcement", key=f"post_sugg_{sidx}", use_container_width=True):
+                                    if db.post_announcement(edited_ann, pri, dept=r_dept, year=r_year):
+                                        from cache import cached_fetch_announcements
+                                        cached_fetch_announcements.clear()
+                                        st.success(" Posted!")
+                                    else:
+                                        st.error(" Failed.")
+
+                    deadlines = analysis.get("deadlines_detected", [])
+                    if deadlines:
+                        st.markdown("#### ⏰ Deadlines Detected")
+                        for dl in deadlines:
+                            with st.expander(f"⏰ {dl.get('item', '')} — {dl.get('date', '')}"):
+                                st.markdown(f"**Reminder draft:**")
+                                reminder = st.text_area(
+                                    "", value=dl.get("reminder_draft", ""),
+                                    key=f"dl_remind_{dl.get('item', '')}",
+                                    height=80
+                                )
+                                if st.button(" Post Reminder", key=f"post_dl_{dl.get('item', '')}", use_container_width=True):
+                                    if db.post_announcement(reminder, "Urgent", dept=r_dept, year=r_year):
+                                        st.success(" Reminder posted!")
+
+                    action_items = analysis.get("rep_action_items", [])
+                    if action_items:
+                        st.markdown("####  Your Action Items")
+                        st.caption("These need your personal attention — AI cannot handle them.")
+                        for item in action_items:
+                            st.markdown(f"-  {item}")
+
+                    grp_sugg = analysis.get("group_suggestion", "")
+                    if grp_sugg:
+                        st.markdown("####  Group Allocation Note")
+                        st.info(f" {grp_sugg}")
+
+        # 
+        #  SUGGEST ANNOUNCEMENTS
+        # 
+        elif ai_tool == "📢 Smart Announcements":
+            st.markdown("####  AI Announcement Suggestions")
+            rough = st.text_area(
+                "What do you want to announce? (rough idea is fine)",
+                placeholder="e.g. remind students about the test next week, inform about lab cancellation...",
+                height=100
+            )
+            priority = st.selectbox("Priority", ["Normal", "Urgent"], key="sugg_ann_pri")
+            if st.button(" Draft with AI", use_container_width=True, type="primary") and rough.strip():
+                with st.spinner("Drafting..."):
+                    draft = ai_rep.draft_announcement(rough, priority)
+                st.session_state.rep_ai_draft = draft
+
+            if st.session_state.get("rep_ai_draft"):
+                st.markdown("**AI Draft — edit before posting:**")
+                edited = st.text_area("", value=st.session_state.rep_ai_draft, height=150, key="manager_draft_edit")
+                pri2 = st.selectbox("Priority", ["Normal", "Urgent"], key="manager_draft_pri")
+                if st.button(" Post This", use_container_width=True, type="primary"):
+                    if db.post_announcement(edited, pri2, dept=r_dept, year=r_year):
+                        from cache import cached_fetch_announcements
+                        cached_fetch_announcements.clear()
+                        st.session_state.rep_ai_draft = ""
+                        st.success(" Posted!")
+                        st.rerun()
+
+        # 
+        # ⏰ DEADLINE REMINDERS
+        # 
+        elif ai_tool == "⏰ Auto Reminders":
+            st.markdown("#### ⏰ Deadline Detection & Reminders")
+            st.info("AI scans your announcements for deadlines and drafts reminder messages.")
+            if st.button(" Scan for Deadlines", use_container_width=True, type="primary"):
+                with st.spinner("Scanning announcements..."):
+                    result = ai_rep.suggest_deadline_reminders(announcements)
+                st.markdown(result)
+
+        # 
+        #  GROUP ALLOCATION ADVICE
+        # 
+        elif ai_tool == "👥 Group Allocator":
+            st.markdown("####  AI Group Allocation Advice")
+            st.info("AI analyzes your class roster and recommends the best grouping strategy.")
+            constraints = st.text_area(
+                "Any special constraints? (optional)",
+                placeholder="e.g. mix course codes, keep final year students separate...",
+                height=80
+            )
+            if st.button(" Get Recommendations", use_container_width=True, type="primary"):
+                with st.spinner("Analyzing class..."):
+                    result = ai_rep.suggest_group_allocation(df_class, constraints)
+                st.markdown(result)
+
+        # 
+        #  GENERATE TIMETABLE
+        # 
+        elif ai_tool == "✨ Generate Timetable":
+            st.markdown("####  AI Timetable Generator")
+            st.info("Enter your courses and AI will suggest a balanced weekly timetable.")
+            courses_input = st.text_area(
+                "Enter courses (one per line):",
+                placeholder="e.g.\nThermodynamics\nEngineering Mathematics\nFluid Mechanics\nMaterial Science",
+                height=150
+            )
+            constraints_tt = st.text_area(
+                "Constraints (optional):",
+                placeholder="e.g. No classes before 9am, Wednesday afternoons free...",
+                height=80
+            )
+            if st.button(" Generate Timetable", use_container_width=True, type="primary") and courses_input.strip():
+                courses_list = [c.strip() for c in courses_input.strip().split("\n") if c.strip()]
+                with st.spinner("Generating timetable..."):
+                    result = ai_rep.generate_timetable_suggestion(courses_list, constraints_tt)
+                st.markdown(result)
+                if st.button(" Post as Announcement", key="post_tt_gen"):
+                    if db.post_announcement(result, "Normal", dept=r_dept, year=r_year):
+                        st.success(" Posted!")
+
+        # 
+        #  FORMAT TIMETABLE
+        # 
+        elif ai_tool == "🧹 Format Timetable":
+            st.markdown("####  Format Raw Timetable")
+            raw = st.text_area("Paste raw timetable:", height=200)
+            if st.button(" Format with AI", use_container_width=True) and raw.strip():
+                with st.spinner("Formatting..."):
+                    result = ai_rep.format_timetable(raw)
+                st.markdown(result)
+                if st.button(" Post as Announcement", key="post_fmt_tt"):
+                    if db.post_announcement(result, "Normal", dept=r_dept, year=r_year):
+                        st.success(" Posted!")
+
+        # 
+        #  CHECK CONFLICTS
+        # 
+        elif ai_tool == "⚠️ Detect Conflicts":
+            st.markdown("####  Timetable Conflict Checker")
+            raw = st.text_area("Paste timetable to check:", height=200)
+            if st.button(" Check for Conflicts", use_container_width=True) and raw.strip():
+                with st.spinner("Checking..."):
+                    result = ai_rep.check_timetable_conflicts(raw)
+                st.markdown(result)
+
+        # 
+        #  TIMETABLE Q&A
+        # 
+        elif ai_tool == "💬 Timetable Q&A":
+            st.markdown("####  Ask About the Timetable")
+            timetable_qa = st.text_area("Paste timetable:", height=150)
+            question_qa = st.text_input("Your question:", placeholder="When is the Engineering Maths lecture?")
+            if st.button("Ask AI", use_container_width=True) and question_qa.strip() and timetable_qa.strip():
+                with st.spinner("Answering..."):
+                    result = ai_rep.answer_timetable_question(question_qa, timetable_qa)
+                st.info(result)
+
+    # 
+    #  SETTINGS
+    # 
+
+
+
+    # 7. REP PROFILE & SECURITY
+    elif screen == "profile":
+
+        st.markdown("###  Account Settings")
+        rep_prof_av = render_avatar_html(r_avatar, r_name, size=72, color=primary, light=light)
+        st.markdown(f"""
+        <div style="background:white;border-radius:14px;padding:20px 24px;
+            border:1px solid #e2e8f7;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                {rep_prof_av}
+                <div>
+                    <div style="font-size:1.15rem;font-weight:800;color:#1e293b;">{r_name}</div>
+                    <div style="font-size:0.82rem;color:#94a3b8;">Class Representative · {r_year}</div>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            <div style="font-size:0.95rem;font-weight:800;color:#1e293b;margin-bottom:12px;">
+                 Rep Profile Details
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;
+                border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
+                <span style="color:#94a3b8;">Name</span>
+                <span style="font-weight:700;">{r_name}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;
+                border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
+                <span style="color:#94a3b8;">Reg Number</span>
+                <span style="font-weight:700;">{r_reg}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;
+                border-bottom:1px solid #f1f5f9;font-size:0.9rem;">
+                <span style="color:#94a3b8;">Department</span>
+                <span style="font-weight:700;">{d_name}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.9rem;">
+                <span style="color:#94a3b8;">Year</span>
+                <span style="font-weight:700;">{r_year}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            st.markdown("#### 📸 Profile Photo")
-            with st.expander("Update Rep Photo", expanded=bool(not r_avatar)):
-                new_rep_pic = st.file_uploader("Upload photo (JPG/PNG)", type=["png", "jpg", "jpeg", "webp"], key="rep_av_up")
-                col_rp1, col_rp2 = st.columns(2)
-                with col_rp1:
-                    if st.button("💾 Save Photo", key="save_rep_pic_btn", use_container_width=True, type="primary"):
-                        if new_rep_pic:
-                            with st.spinner("Uploading photo..."):
-                                url = db.upload_rep_avatar(r_dept, r_year, new_rep_pic.getvalue(), new_rep_pic.type or "image/jpeg")
-                            if url:
-                                st.session_state.rep_avatar = url
-                                st.success("✅ Profile photo updated!")
-                                st.rerun()
-                            else:
-                                st.error("Failed to upload photo.")
+        st.markdown("#### 📸 Profile Photo")
+        with st.expander("Update Rep Photo", expanded=bool(not r_avatar)):
+            new_rep_pic = st.file_uploader("Upload photo (JPG/PNG)", type=["png", "jpg", "jpeg", "webp"], key="rep_av_up")
+            col_rp1, col_rp2 = st.columns(2)
+            with col_rp1:
+                if st.button("💾 Save Photo", key="save_rep_pic_btn", use_container_width=True, type="primary"):
+                    if new_rep_pic:
+                        with st.spinner("Uploading photo..."):
+                            url = db.upload_rep_avatar(r_dept, r_year, new_rep_pic.getvalue(), new_rep_pic.type or "image/jpeg")
+                        if url:
+                            st.session_state.rep_avatar = url
+                            st.success("✅ Profile photo updated!")
+                            st.rerun()
                         else:
-                            st.warning("Please select an image first.")
-                with col_rp2:
-                    if r_avatar and st.button("🗑️ Remove Photo", key="del_rep_pic_btn", use_container_width=True):
-                        with st.spinner("Removing..."):
-                            db.delete_rep_avatar(r_dept, r_year)
-                        st.session_state.rep_avatar = ""
-                        st.success("Profile photo removed.")
-                        st.rerun()
-
-            st.markdown("####  Change Password")
-            if not st.session_state.rep_show_change_pw:
-                if st.button(" Change My Password"):
-                    st.session_state.rep_show_change_pw = True
+                            st.error("Failed to upload photo.")
+                    else:
+                        st.warning("Please select an image first.")
+            with col_rp2:
+                if r_avatar and st.button("🗑️ Remove Photo", key="del_rep_pic_btn", use_container_width=True):
+                    with st.spinner("Removing..."):
+                        db.delete_rep_avatar(r_dept, r_year)
+                    st.session_state.rep_avatar = ""
+                    st.success("Profile photo removed.")
                     st.rerun()
-            else:
-                with st.form("change_pw_form", clear_on_submit=True):
-                    old_pw = st.text_input("Current Password", type="password")
-                    new_pw = st.text_input("New Password", type="password")
-                    new_pw2 = st.text_input("Confirm New Password", type="password")
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        save_btn = st.form_submit_button(" Save", use_container_width=True)
-                    with c2:
-                        cancel_btn = st.form_submit_button(" Cancel", use_container_width=True)
 
-                    if cancel_btn:
-                        st.session_state.rep_show_change_pw = False
-                        st.rerun()
+        st.markdown("####  Change Password")
+        if not st.session_state.rep_show_change_pw:
+            if st.button(" Change My Password"):
+                st.session_state.rep_show_change_pw = True
+                st.rerun()
+        else:
+            with st.form("change_pw_form", clear_on_submit=True):
+                old_pw = st.text_input("Current Password", type="password")
+                new_pw = st.text_input("New Password", type="password")
+                new_pw2 = st.text_input("Confirm New Password", type="password")
+                c1, c2 = st.columns(2)
+                with c1:
+                    save_btn = st.form_submit_button(" Save", use_container_width=True)
+                with c2:
+                    cancel_btn = st.form_submit_button(" Cancel", use_container_width=True)
 
-                    if save_btn:
-                        if not old_pw or not new_pw:
-                            st.warning("Please fill in all fields.")
-                        elif new_pw != new_pw2:
-                            st.error(" New passwords do not match.")
-                        elif len(new_pw) < 6:
-                            st.error(" New password must be at least 6 characters.")
+                if cancel_btn:
+                    st.session_state.rep_show_change_pw = False
+                    st.rerun()
+
+                if save_btn:
+                    if not old_pw or not new_pw:
+                        st.warning("Please fill in all fields.")
+                    elif new_pw != new_pw2:
+                        st.error(" New passwords do not match.")
+                    elif len(new_pw) < 6:
+                        st.error(" New password must be at least 6 characters.")
+                    else:
+                        with st.spinner("Updating..."):
+                            result = db.change_rep_password(r_dept, r_year, old_pw, new_pw)
+                        if result.get("status") == "success":
+                            st.success(" Password changed successfully!")
+                            st.session_state.rep_show_change_pw = False
+                            st.rerun()
                         else:
-                            with st.spinner("Updating..."):
-                                result = db.change_rep_password(r_dept, r_year, old_pw, new_pw)
-                            if result.get("status") == "success":
-                                st.success(" Password changed successfully!")
-                                st.session_state.rep_show_change_pw = False
-                                st.rerun()
-                            else:
-                                st.error(f" {result.get('message', 'Failed')}")
+                            st.error(f" {result.get('message', 'Failed')}")
 
-            #  WhatsApp Broadcast 
-            st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-            with st.expander(" Send WhatsApp Broadcast to Entire Class", expanded=False):
-                st.info(
-                    f"Sends a direct WhatsApp message to all **{total_students}** opted-in students "
-                    f"in **{d_name} — {r_year}**. Use for urgent one-off messages only."
-                )
-                with st.form("broadcast_wa_form", clear_on_submit=True):
-                    bc_msg = st.text_area(
-                        "Message to send",
-                        height=100,
-                        placeholder="e.g. Everyone report to Block B Lab at 3PM today."
-                    )
-                    bc_btn = st.form_submit_button(" Send Broadcast", use_container_width=True, type="primary")
-
-                    if bc_btn:
-                        if not bc_msg.strip():
-                            st.warning("Please enter a message.")
-                        else:
-                            full_msg = (
-                                f" Message from your Class Rep ({r_name})\n\n"
-                                f"{d_name} — {r_year}\n\n"
-                                f"{bc_msg.strip()}\n\n"
-                                f"Open the Smart University App for more details."
-                            )
-                            with st.spinner("Sending to class..."):
-                                sent = db.broadcast_whatsapp(r_dept, r_year, full_msg)
-                            if sent > 0:
-                                st.success(f" Broadcast sent to {sent} student(s)!")
-                            else:
-                                st.warning(
-                                    " No students with WhatsApp set up in your class yet. "
-                                    "Ask students to add their number in Profile → WhatsApp Notifications."
-                                )
-
-        # 
-        #  FEATURES (Dynamic Slots)
-        # 
-
-        with sub_features:
-            render_rep_slots(db, r_reg, r_name, r_dept, r_year, primary, light, df_class)
-
-        #  Logout 
+        #  WhatsApp Broadcast 
         st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-        if st.button(" Log Out"):
-            for k in ["rep_logged_in", "rep_dept", "rep_year", "rep_name",
-                      "rep_reg", "rep_ai_draft", "rep_ai_reply",
-                      "pending_allocations", "rep_show_change_pw"]:
-                if k in st.session_state:
-                    del st.session_state[k]
-            st.rerun()
+        with st.expander(" Send WhatsApp Broadcast to Entire Class", expanded=False):
+            st.info(
+                f"Sends a direct WhatsApp message to all **{total_students}** opted-in students "
+                f"in **{d_name} — {r_year}**. Use for urgent one-off messages only."
+            )
+            with st.form("broadcast_wa_form", clear_on_submit=True):
+                bc_msg = st.text_area(
+                    "Message to send",
+                    height=100,
+                    placeholder="e.g. Everyone report to Block B Lab at 3PM today."
+                )
+                bc_btn = st.form_submit_button(" Send Broadcast", use_container_width=True, type="primary")
+
+                if bc_btn:
+                    if not bc_msg.strip():
+                        st.warning("Please enter a message.")
+                    else:
+                        full_msg = (
+                            f" Message from your Class Rep ({r_name})\n\n"
+                            f"{d_name} — {r_year}\n\n"
+                            f"{bc_msg.strip()}\n\n"
+                            f"Open the Smart University App for more details."
+                        )
+                        with st.spinner("Sending to class..."):
+                            sent = db.broadcast_whatsapp(r_dept, r_year, full_msg)
+                        if sent > 0:
+                            st.success(f" Broadcast sent to {sent} student(s)!")
+                        else:
+                            st.warning(
+                                " No students with WhatsApp set up in your class yet. "
+                                "Ask students to add their number in Profile → WhatsApp Notifications."
+                            )
+
+    # 
+    #  FEATURES (Dynamic Slots)
+    # 
+
+
+
+    # 8. SLOT FEATURES
+    elif screen == "features":
+
+        render_rep_slots(db, r_reg, r_name, r_dept, r_year, primary, light, df_class)
+
+    #  Logout 
+    st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+    if st.button(" Log Out"):
+        for k in ["rep_logged_in", "rep_dept", "rep_year", "rep_name",
+                  "rep_reg", "rep_ai_draft", "rep_ai_reply",
+                  "pending_allocations", "rep_show_change_pw"]:
+            if k in st.session_state:
+                del st.session_state[k]
+        st.rerun()

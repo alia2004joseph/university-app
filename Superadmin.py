@@ -438,16 +438,72 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
     """, unsafe_allow_html=True)
 
     #  Primary Hub Tabs (5 Clean Categorized Sections)
-    tab_overview, tab_people, tab_broadcast, tab_ai, tab_tools = st.tabs([
-        "🏛️ University Overview",
-        "👥 Reps & Students",
-        "📢 Broadcast & Feedback",
-        "🤖 AI Intelligence",
-        "⚙️ System Tools"
-    ])
+    
+    # Super Admin screen default
+    if "admin_screen" not in st.session_state:
+        st.session_state.admin_screen = "overview"
 
-    # 1. OVERVIEW & DEPARTMENTS
-    with tab_overview:
+    # Sidebar Navigation Menu
+    with st.sidebar:
+        st.markdown('<div style="font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;color:#94a3b8;font-weight:700;margin:12px 0 8px 0;">SUPER ADMIN CONSOLE</div>', unsafe_allow_html=True)
+        nav_options = [
+            ("overview",  "🏛️ University Overview"),
+            ("roster",    f"👥 Reps & Students ({total_students})"),
+            ("broadcast", f"📢 Broadcast & Feedback ({total_feedback})"),
+            ("ai_admin",  "🤖 AI Intelligence & Master AI"),
+            ("tools",     "⚙️ System Tools & Sheets"),
+        ]
+        nav_keys = [k for k, _ in nav_options]
+        nav_labels = [l for _, l in nav_options]
+        cur_idx = nav_keys.index(st.session_state.admin_screen) if st.session_state.admin_screen in nav_keys else 0
+        selected_nav = st.radio(
+            "Admin Navigation",
+            nav_labels,
+            index=cur_idx,
+            key="admin_sidebar_nav_radio",
+            label_visibility="collapsed"
+        )
+        new_screen_key = nav_keys[nav_labels.index(selected_nav)]
+        if new_screen_key != st.session_state.admin_screen:
+            st.session_state.admin_screen = new_screen_key
+            st.rerun()
+
+    screen = st.session_state.admin_screen
+
+    # Render Sub-Screen Header if not on Overview
+    if screen != "overview":
+        screen_titles = {
+            "roster":     ("👥", "Class Representatives & Student Database", f"{len(reps_list)} Class Reps · {total_students} Students"),
+            "broadcast":  ("📢", "Campus Broadcast & Student Feedback", f"{total_feedback} student feedback tickets received"),
+            "ai_admin":   ("🤖", "Master AI & Department Intelligence", "LLM Provider management, AI metrics, and Master Super Admin AI"),
+            "tools":      ("⚙️", "University Database & System Tools", "Live Google Sheets / Supabase explorer and schema managers"),
+        }
+        s_icon, s_title, s_desc = screen_titles.get(screen, ("📌", "Admin Module", ""))
+        top_c1, top_c2 = st.columns([1, 4])
+        with top_c1:
+            if st.button("← Back to Overview", use_container_width=True, key=f"admin_back_btn_{screen}"):
+                st.session_state.admin_screen = "overview"
+                st.rerun()
+        with top_c2:
+            st.markdown(f"""
+            <div style="display:flex;align-items:center;justify-content:space-between;background:white;border:1px solid #e2e8f0;border-radius:12px;padding:8px 16px;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:1.3rem;">{s_icon}</span>
+                    <div>
+                        <div style="font-size:1.05rem;font-weight:800;color:#0f172a;line-height:1.2;">{s_title}</div>
+                        <div style="font-size:0.72rem;color:#64748b;">{s_desc}</div>
+                    </div>
+                </div>
+                <div style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">
+                    ● Full Screen
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('<div style="margin-bottom:14px;"></div>', unsafe_allow_html=True)
+
+    # 1. OVERVIEW SCREEN
+    if screen == "overview":
+
         sub_overview, sub_depts = st.tabs([
             "📊 University Analytics",
             f"🏢 Departments ({total_depts})"
@@ -699,8 +755,11 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
         # 
 
 
-    # 2. REPS & STUDENTS
-    with tab_people:
+
+
+    # 2. REPS & STUDENTS SCREEN
+    elif screen == "roster":
+
         sub_reps, sub_students = st.tabs([
             f"🎖️ Class Reps ({len(reps_list)})",
             f"🎓 Student Database ({total_students})"
@@ -914,8 +973,11 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
         # 
 
 
-    # 3. BROADCAST & FEEDBACK
-    with tab_broadcast:
+
+
+    # 3. BROADCAST & FEEDBACK SCREEN
+    elif screen == "broadcast":
+
         sub_broad, sub_feed = st.tabs([
             "📢 University Broadcast",
             f"💬 Student Feedback ({total_feedback})"
@@ -1035,8 +1097,11 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
         # 
 
 
-    # 4. AI INTELLIGENCE & MASTER AI
-    with tab_ai:
+
+
+    # 4. AI INTELLIGENCE SCREEN
+    elif screen == "ai_admin":
+
         sub_ai_insights, sub_master_ai = st.tabs([
             "📈 Department AI Analytics",
             "🧠 Master Super Admin AI"
@@ -2373,8 +2438,11 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                     del st.session_state[k]
             st.rerun()
 
-    # 5. SYSTEM TOOLS
-    with tab_tools:
+
+
+    # 5. SYSTEM TOOLS SCREEN
+    elif screen == "tools":
+
         st.markdown("###  Advanced Tools")
         st.info(
             "Direct access to Sheet Manager, Config, Data Explorer, "
@@ -2788,3 +2856,4 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
         # 
     #  MASTER SUPER ADMIN AI  (tabs[8])
     # 
+
