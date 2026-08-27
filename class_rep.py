@@ -19,11 +19,21 @@ def inject_rep_css(primary: str, light: str):
     body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         line-height: 1.55;
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
+        word-break: normal;
     }}
     
     #MainMenu, footer {{ visibility: hidden !important; }}
+    header[data-testid="stHeader"] {{
+        background: transparent !important;
+        height: 2.5rem !important;
+    }}
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] {{
+        visibility: visible !important;
+        display: flex !important;
+        opacity: 1 !important;
+    }}
     .stApp {{ background-color: #f8fafc !important; }}
     
     /* Rep Banner with Dark Executive Contrast */
@@ -152,16 +162,44 @@ def inject_rep_css(primary: str, light: str):
         display: none !important;
     }}
 
-    /* Horizontal Radio Scroll for AI Tools */
+    /* Horizontal Radio Scroll & Card Styling for AI Tools */
     div[data-testid="stRadio"] > div[role="radiogroup"] {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
-        flex-wrap: nowrap !important;
-        padding-bottom: 6px;
-        scrollbar-width: none;
+        gap: 8px !important;
+        padding: 4px 2px 10px 2px !important;
+        scrollbar-width: none !important;
     }}
     div[data-testid="stRadio"] > div[role="radiogroup"]::-webkit-scrollbar {{
-        display: none;
+        display: none !important;
+    }}
+    div[data-testid="stRadio"] label[data-baseweb="radio"] {{
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 7px 12px !important;
+        margin-right: 0 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+        transition: all 0.15s ease !important;
+    }}
+    div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {{
+        border-color: #cbd5e1 !important;
+        background: #f8fafc !important;
+    }}
+    div[data-testid="stRadio"] label[data-baseweb="radio"] p {{
+        font-size: 0.82rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        margin: 0 !important;
     }}
     
     /* ─────────────────────────────────────────────
@@ -1289,22 +1327,25 @@ def render_class_rep_interface(
 
     # 6. REP AI INTELLIGENCE
     elif screen == "ai_rep":
-        st.markdown("### AI Class Manager")
+        st.markdown("### 🤖 AI Class Manager")
         st.markdown(f'<div class="scope-badge">Powered by AI · {d_name} — {r_year}</div>', unsafe_allow_html=True)
 
-        ai_tool = st.radio(
-            "Select AI Intelligence Tool:",
-            ["📊 Full Inbox Analysis", "📢 Smart Announcements", "⏰ Auto Reminders", "👥 Group Allocator", "✨ Generate Timetable", "🧹 Format Timetable", "⚠️ Detect Conflicts", "💬 Timetable Q&A"],
-            horizontal=True,
-            key="rep_ai_tool_select"
-        )
-        st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
+        ai_tabs = st.tabs([
+            "📊 Inbox Analysis",
+            "📢 Announcements",
+            "⏰ Reminders",
+            "👥 Groups",
+            "✨ Generate TT",
+            "🧹 Format TT",
+            "⚠️ Conflicts",
+            "💬 TT Q&A"
+        ])
 
-        if ai_tool == "📊 Full Inbox Analysis":
-            st.markdown("#### Full Class Inbox Analysis")
+        with ai_tabs[0]:
+            st.markdown("#### 📊 Full Class Inbox Analysis")
             st.info("AI reads all feedback, announcements and timetable to give you a complete intelligence report.")
 
-            if st.button("Run Full Analysis", use_container_width=True, type="primary"):
+            if st.button("Run Full Analysis", use_container_width=True, type="primary", key="btn_run_full_analysis"):
                 with st.spinner("Analyzing your entire class inbox..."):
                     timetable_data = db.fetch_timetable(dept=r_dept, year=r_year)
                     analysis = ai_rep.analyze_feedback_inbox(
@@ -1329,15 +1370,16 @@ def render_class_rep_interface(
                     </div>
                     """, unsafe_allow_html=True)
 
-        elif ai_tool == "📢 Smart Announcements":
-            st.markdown("#### AI Announcement Suggestions")
+        with ai_tabs[1]:
+            st.markdown("#### 📢 AI Announcement Suggestions")
             rough = st.text_area(
                 "Announcement concept:",
                 placeholder="e.g. remind students about the test next week...",
-                height=90
+                height=90,
+                key="sugg_ann_rough"
             )
             priority = st.selectbox("Priority", ["Normal", "Urgent"], key="sugg_ann_pri")
-            if st.button("Draft with AI", use_container_width=True, type="primary") and rough.strip():
+            if st.button("Draft with AI", use_container_width=True, type="primary", key="btn_draft_ann") and rough.strip():
                 with st.spinner("Drafting..."):
                     draft = ai_rep.draft_announcement(rough, priority)
                 st.session_state.rep_ai_draft = draft
@@ -1346,70 +1388,73 @@ def render_class_rep_interface(
                 st.markdown("**AI Draft:**")
                 edited = st.text_area("", value=st.session_state.rep_ai_draft, height=130, key="manager_draft_edit")
                 pri2 = st.selectbox("Priority", ["Normal", "Urgent"], key="manager_draft_pri")
-                if st.button("Post This Draft", use_container_width=True, type="primary"):
+                if st.button("Post This Draft", use_container_width=True, type="primary", key="btn_post_draft"):
                     if db.post_announcement(edited, pri2, dept=r_dept, year=r_year):
                         st.session_state.rep_ai_draft = ""
                         st.success("Posted!")
                         st.rerun()
 
-        elif ai_tool == "⏰ Auto Reminders":
-            st.markdown("#### Deadline Detection & Reminders")
-            if st.button("Scan for Deadlines", use_container_width=True, type="primary"):
+        with ai_tabs[2]:
+            st.markdown("#### ⏰ Deadline Detection & Reminders")
+            if st.button("Scan for Deadlines", use_container_width=True, type="primary", key="btn_scan_deadlines"):
                 with st.spinner("Scanning announcements..."):
                     result = ai_rep.suggest_deadline_reminders(announcements)
                 st.markdown(result)
 
-        elif ai_tool == "👥 Group Allocator":
-            st.markdown("#### AI Group Allocation Advice")
+        with ai_tabs[3]:
+            st.markdown("#### 👥 AI Group Allocation Advice")
             constraints = st.text_area(
                 "Any special constraints? (optional)",
                 placeholder="e.g. mix course codes...",
-                height=80
+                height=80,
+                key="group_alloc_constraints"
             )
-            if st.button("Get Recommendations", use_container_width=True, type="primary"):
+            if st.button("Get Recommendations", use_container_width=True, type="primary", key="btn_group_alloc"):
                 with st.spinner("Analyzing class..."):
                     result = ai_rep.suggest_group_allocation(df_class, constraints)
                 st.markdown(result)
 
-        elif ai_tool == "✨ Generate Timetable":
-            st.markdown("#### AI Timetable Generator")
+        with ai_tabs[4]:
+            st.markdown("#### ✨ AI Timetable Generator")
             courses_input = st.text_area(
                 "Enter courses (one per line):",
                 placeholder="Thermodynamics\nMathematics\nFluid Mechanics",
-                height=120
+                height=120,
+                key="tt_gen_courses"
             )
             constraints_tt = st.text_area(
                 "Constraints (optional):",
                 placeholder="e.g. No classes before 9am...",
-                height=80
+                height=80,
+                key="tt_gen_constraints"
             )
-            if st.button("Generate Timetable", use_container_width=True, type="primary") and courses_input.strip():
+            if st.button("Generate Timetable", use_container_width=True, type="primary", key="btn_gen_tt") and courses_input.strip():
                 courses_list = [c.strip() for c in courses_input.strip().split("\n") if c.strip()]
                 with st.spinner("Generating timetable..."):
                     result = ai_rep.generate_timetable_suggestion(courses_list, constraints_tt)
                 st.markdown(result)
 
-        elif ai_tool == "🧹 Format Timetable":
-            st.markdown("#### Format Raw Timetable")
-            raw = st.text_area("Paste raw timetable:", height=150)
-            if st.button("Format with AI", use_container_width=True, type="primary") and raw.strip():
+        with ai_tabs[5]:
+            st.markdown("#### 🧹 Format Raw Timetable")
+            raw = st.text_area("Paste raw timetable:", height=150, key="fmt_raw_tt")
+            if st.button("Format with AI", use_container_width=True, type="primary", key="btn_fmt_tt") and raw.strip():
                 with st.spinner("Formatting..."):
                     result = ai_rep.format_timetable(raw)
                 st.markdown(result)
 
-        elif ai_tool == "⚠️ Detect Conflicts":
-            st.markdown("#### Timetable Conflict Checker")
-            raw = st.text_area("Paste timetable to check:", height=150)
-            if st.button("Check for Conflicts", use_container_width=True, type="primary") and raw.strip():
+        with ai_tabs[6]:
+            st.markdown("#### ⚠️ Timetable Conflict Checker")
+            raw_c = st.text_area("Paste timetable to check:", height=150, key="conflict_raw_tt")
+            if st.button("Check for Conflicts", use_container_width=True, type="primary", key="btn_conflict_tt") and raw_c.strip():
                 with st.spinner("Checking..."):
-                    result = ai_rep.check_timetable_conflicts(raw)
+                    result = ai_rep.check_timetable_conflicts(raw_c)
                 st.markdown(result)
 
-        elif ai_tool == "💬 Timetable Q&A":
-            st.markdown("#### Ask About the Timetable")
-            timetable_qa = st.text_area("Paste timetable:", height=120)
-            question_qa = st.text_input("Your question:", placeholder="When is the Engineering Maths lecture?")
-            if st.button("Ask AI", use_container_width=True, type="primary") and question_qa.strip() and timetable_qa.strip():
+        with ai_tabs[7]:
+            st.markdown("#### 💬 Ask About the Timetable")
+            timetable_qa = st.text_area("Paste timetable:", height=120, key="qa_tt_content")
+            question_qa = st.text_input("Your question:", placeholder="When is the Engineering Maths lecture?", key="qa_tt_question")
+            if st.button("Ask AI", use_container_width=True, type="primary", key="btn_qa_tt") and question_qa.strip() and timetable_qa.strip():
                 with st.spinner("Answering..."):
                     result = ai_rep.answer_timetable_question(question_qa, timetable_qa)
                 st.info(result)
