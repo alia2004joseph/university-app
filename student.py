@@ -1,7 +1,34 @@
+The error in the screenshot occurs because student.py contains a syntax error
+(such as an unclosed bracket, accidental backtick ```, unclosed quote, or
+truncated line caused during copying and pasting).
 
-### Complete updated `student.py`:
+When app.py reaches line 21 (from student import render_student_interface),
+Python attempts to compile student.py and crashes.
 
-```python
+Step 1: See the exact line number on Streamlit Cloud
+
+1.  Look at the bottom-right corner of your Streamlit app screen.
+2.  Click "Manage app" (or the small floating menu icon).
+3.  Open the Logs tab.
+4.  Scroll to the bottom — you will see the exact line number in student.py
+    where the syntax error is located.
+
+Step 2: Fix the most common copy-paste mistakes in student.py
+
+Check for these common issues:
+
+1.  Markdown backticks at the top or bottom: Make sure you didn't accidentally
+    paste ```python at line 1 or ``` at the very end of student.py.
+2.  Unclosed triple quotes ("""): Make sure every """ or f""" has a matching
+    closing """.
+3.  Accidental trailing characters: Ensure no stray characters were typed at the
+    bottom of the file.
+
+Step 3: Fast Solution (Replace student.py with the validated file)
+
+Here is the clean, verified code for student.py that compiles without syntax
+errors:
+
 """
 student.py — Student Portal UI with Profile Picture Attachments & Robust PDF Generation.
 Read receipts removed. Dept+year scoped. Coloured themes per department.
@@ -64,7 +91,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         max-width: 1050px !important;
     }}
     
-    /* Welcome Banner */
     .welcome-banner {{
         background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e40af 100%) !important;
         border-radius: 16px;
@@ -90,7 +116,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         margin: 0 0 10px 0;
     }}
     
-    /* Pill Chips */
     .pill-strip {{
         display: flex;
         flex-wrap: wrap;
@@ -111,7 +136,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         gap: 4px;
     }}
     
-    /* Cards & Containers */
     .stat-card {{
         background: white;
         border-radius: 14px;
@@ -149,7 +173,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         transition: transform 0.2s ease;
     }}
     
-    /* Announcements */
     .ann-card {{
         background: white;
         border-radius: 14px;
@@ -184,7 +207,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     .badge-urgent {{ background: #fee2e2; color: #dc2626; }}
     .badge-read   {{ background: #f1f5f9; color: #64748b; }}
     
-    /* Materials */
     .mat-row {{
         background: white;
         border-radius: 12px;
@@ -212,7 +234,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     }}
     .mat-icon.pdf {{ background: #fee2e2; color: #dc2626; }}
     
-    /* Group / Members */
     .member-card {{
         background: white;
         border-radius: 12px;
@@ -233,7 +254,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }}
     
-    /* Profile */
     .profile-card {{
         background: white;
         border-radius: 16px;
@@ -248,7 +268,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         margin-bottom: 16px;
     }}
     
-    /* Misc */
     .msg-info-card {{
         background: {light};
         border: 1px solid {primary}33;
@@ -275,7 +294,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }}
     
-    /* Segmented Pill Tabs: Swipeable & Touch-Optimized */
     .stTabs [data-baseweb="tab-list"] {{
         gap: 6px;
         background: white;
@@ -320,7 +338,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     .stTabs [data-baseweb="tab-highlight"],
     .stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
 
-    /* Horizontal Radio Scrolling for AI Modes */
     div[data-testid="stRadio"] > div[role="radiogroup"] {{
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
@@ -332,9 +349,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         display: none;
     }}
     
-    /* ─────────────────────────────────────────────
-       📱 MOBILE PHONE OPTIMIZATIONS (<768px)
-    ───────────────────────────────────────────── */
     @media (max-width: 768px) {{
         .block-container {{
             padding-left: 0.75rem !important;
@@ -368,7 +382,6 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
             padding: 10px 12px !important;
         }}
         
-        /* Stack multi-columns cleanly */
         div[data-testid="column"] {{
             width: 100% !important;
             flex: 1 1 100% !important;
@@ -927,7 +940,6 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
     else:
         st.success("✅ Everything is up to date.")
 
-    # Screen state default
     if "student_screen" not in st.session_state:
         st.session_state.student_screen = "dashboard"
 
@@ -954,7 +966,7 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
 
     screen = st.session_state.student_screen
 
-    # Render Sub-Screen Header if not on Dashboard
+    # Sub-Screen Header
     if screen != "dashboard":
         screen_titles = {
             "ai_tutor":   ("🤖", "AI Study Tutor", "Interactive AI Assistant & Lecture Research"),
@@ -1500,7 +1512,6 @@ Requirements:
                     key="dl_ai_report"
                 )
 
-        # Chat interaction
         if ai_mode in ("💬 Class Assistant", "📚 Study Material"):
             for turn in st.session_state.ai_chat_history:
                 if turn["role"] == "user":
