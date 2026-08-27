@@ -31,7 +31,7 @@ ai_rep    = AIRepAssistant()
 ai_admin  = AIAdminAssistant()
 master_ai = MasterSuperAdminAI()
 
-# ── Global Enhanced CSS ─────────────────────────────────────────
+# ── Global Enhanced CSS (Fully Mobile-Responsive) ─────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -42,7 +42,12 @@ st.markdown("""
     --primary-blue: #2563eb;
     --primary-dark: #0f172a;
     --slate-border: #e2e8f0;
-    color-scheme:light;
+    color-scheme: light;
+}
+
+/* Global Typography & Box-sizing */
+*, *:before, *:after {
+    box-sizing: border-box !important;
 }
 
 body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {
@@ -51,15 +56,17 @@ body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label 
     word-break: break-word;
     overflow-wrap: anywhere;
 }
+
 input, textarea, select, .stTextInput input, .stTextArea textarea, .stSelectbox select div [data-baseweb="select"] {
-color:var(--primary-dark) !important;
-background-color:#ffffff !important;
--webkit-text-fill-color: var(--primary-dark) !important;
+    color: var(--primary-dark) !important;
+    background-color: #ffffff !important;
+    -webkit-text-fill-color: var(--primary-dark) !important;
 }
-label, div[data-testid= "stwidgetlabel"] p, div[data-testid= "stwidgetlabel"] label {
-color:var(--primary-dark) !important;
--webkit-text-fill-color: var(--primary-dark) !important;
-opacity: 1 !important;
+
+label, div[data-testid="stwidgetlabel"] p, div[data-testid="stwidgetlabel"] label {
+    color: var(--primary-dark) !important;
+    -webkit-text-fill-color: var(--primary-dark) !important;
+    opacity: 1 !important;
 }
 
 #MainMenu, footer { 
@@ -68,16 +75,19 @@ opacity: 1 !important;
     padding: 0 !important;
     margin: 0 !important;
 }
+
 header[data-testid="stHeader"] {
     background: transparent !important;
     height: 2.5rem !important;
 }
+
 [data-testid="collapsedControl"],
 [data-testid="stSidebarCollapsedControl"] {
     visibility: visible !important;
     display: flex !important;
     opacity: 1 !important;
 }
+
 .stApp {
     background-color: var(--bg-app) !important;
 }
@@ -106,7 +116,7 @@ header[data-testid="stHeader"] {
     color: #f8fafc;
 }
 
-/* Sidebar General Buttons (Clean dark aesthetic) */
+/* Sidebar General Buttons */
 [data-testid="stSidebar"] .stButton > button {
     background: rgba(255, 255, 255, 0.06) !important;
     color: #f1f5f9 !important;
@@ -124,7 +134,7 @@ header[data-testid="stHeader"] {
     transform: translateY(-1px) !important;
 }
 
-/* Primary Sidebar Nav Item (Active indicator) */
+/* Primary Sidebar Nav Item */
 [data-testid="stSidebar"] .stButton > button[kind="primary"] {
     background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
     color: #ffffff !important;
@@ -199,19 +209,25 @@ header[data-testid="stHeader"] {
     transform: translateY(-1px) !important;
 }
 
-/* Segmented Dark Slate Tabs */
+/* Tabs: Touch-Friendly & Responsive */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 4px;
+    gap: 6px;
     background: #ffffff !important;
     border-radius: 12px !important;
-    padding: 4px !important;
+    padding: 6px !important;
     border: 1px solid #e2e8f0 !important;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
-    flex-wrap: wrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+}
+.stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
+    display: none;
 }
 .stTabs [data-baseweb="tab"] {
     border-radius: 8px !important;
-    padding: 8px 16px !important;
+    padding: 8px 14px !important;
     font-weight: 600 !important;
     font-size: 0.85rem !important;
     color: #64748b !important;
@@ -219,6 +235,8 @@ header[data-testid="stHeader"] {
     opacity: 1 !important;
     background: transparent !important;
     border: none !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
     transition: all 0.15s ease !important;
 }
 .stTabs [data-baseweb="tab"]:hover {
@@ -241,7 +259,7 @@ header[data-testid="stHeader"] {
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e40af 100%);
     border-radius: 16px;
     padding: 24px 28px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
     color: white;
     box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -282,31 +300,55 @@ header[data-testid="stHeader"] {
     border-radius: 14px;
     padding: 14px;
     margin-bottom: 14px;
-
-}
-div[data-testid="stAlert"] p, div[data-testid="stAlert"] div{
-color: var(--primary-dark) !important;
--webkit-text-fill-color: var(--primary-dark) !important;
-opacity: 1 !important;
-
-div[data-basweb="tab"]{
-overflow-x: auto !important;
--webkit-overflow-scrolling: touch ;
-scrollbar-width: thin;}
-
-div[data-basweb="tab"]{
-font-size: 0.85rem !important;
-padding: 8px 10px !important;
-white-space: nowrap !important;
 }
 
+/* Alert Styling (Fixed unclosed bracket) */
+div[data-testid="stAlert"] p, div[data-testid="stAlert"] div {
+    color: var(--primary-dark) !important;
+    -webkit-text-fill-color: var(--primary-dark) !important;
+    opacity: 1 !important;
+}
 
+/* ─────────────────────────────────────────────────────────────
+   📱 MOBILE & PHONE RESPONSIVE OVERRIDES (under 768px)
+───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1.5rem !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+    
+    .app-header-card {
+        padding: 18px 16px !important;
+        border-radius: 12px !important;
+    }
+    
+    .app-header-card div[style*="font-size:1.65rem"] {
+        font-size: 1.3rem !important;
+    }
 
+    /* Stack Streamlit columns vertically on mobile phones */
+    div[data-testid="column"] {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+        margin-bottom: 0.75rem !important;
+    }
 
+    div[data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }
 
+    /* Full-width inputs and buttons on mobile */
+    .stButton > button {
+        width: 100% !important;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
-
 # ── Session State Check ───────────────────────────────────────────
 student_id = st.session_state.get("student_logged_in")
 rep_logged = st.session_state.get("rep_logged_in", False)
