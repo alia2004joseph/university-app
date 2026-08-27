@@ -8,7 +8,7 @@ Secure Authentication Gateway:
 import streamlit as st
 
 st.set_page_config(
-    page_title="Smart University Portal",
+    page_title="Smart University App",
     page_icon="🎓",
     layout="centered",
     initial_sidebar_state="expanded"
@@ -383,7 +383,7 @@ with st.sidebar:
     <div style="text-align:center;padding:14px 0 10px 0;">
         <div style="font-size:2rem;line-height:1;">🏛️</div>
         <div style="font-size:1.1rem;font-weight:800;color:#f8fafc;margin-top:6px;letter-spacing:-0.3px;">Smart University</div>
-        <div style="font-size:0.72rem;color:#94a3b8;margin-top:2px;font-weight:500;">Academic Portal · 2025/2026</div>
+        <div style="font-size:0.72rem;color:#94a3b8;margin-top:2px;font-weight:500;">Academic Portal · </div>
     </div>
     <hr style="border-color:rgba(255,255,255,0.08);margin:6px 0 14px 0;">
     """, unsafe_allow_html=True)
