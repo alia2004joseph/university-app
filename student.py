@@ -1,33 +1,4 @@
-The error in the screenshot occurs because student.py contains a syntax error
-(such as an unclosed bracket, accidental backtick ```, unclosed quote, or
-truncated line caused during copying and pasting).
 
-When app.py reaches line 21 (from student import render_student_interface),
-Python attempts to compile student.py and crashes.
-
-Step 1: See the exact line number on Streamlit Cloud
-
-1.  Look at the bottom-right corner of your Streamlit app screen.
-2.  Click "Manage app" (or the small floating menu icon).
-3.  Open the Logs tab.
-4.  Scroll to the bottom — you will see the exact line number in student.py
-    where the syntax error is located.
-
-Step 2: Fix the most common copy-paste mistakes in student.py
-
-Check for these common issues:
-
-1.  Markdown backticks at the top or bottom: Make sure you didn't accidentally
-    paste ```python at line 1 or ``` at the very end of student.py.
-2.  Unclosed triple quotes ("""): Make sure every """ or f""" has a matching
-    closing """.
-3.  Accidental trailing characters: Ensure no stray characters were typed at the
-    bottom of the file.
-
-Step 3: Fast Solution (Replace student.py with the validated file)
-
-Here is the clean, verified code for student.py that compiles without syntax
-errors:
 
 """
 student.py — Student Portal UI with Profile Picture Attachments & Robust PDF Generation.
@@ -54,13 +25,10 @@ from database.students import is_valid_email
 
 
 def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
+    is_mob = is_mobile()
     css = f"""
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
-    *, *:before, *:after {{
-        box-sizing: border-box !important;
-    }}
-
     body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         line-height: 1.55;
@@ -68,7 +36,7 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         overflow-wrap: anywhere;
     }}
     
-    #MainMenu, footer {{ 
+      #MainMenu, footer {{ 
         visibility: hidden !important; 
         height: 0 !important;
         padding: 0 !important;
@@ -91,11 +59,12 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         max-width: 1050px !important;
     }}
     
+    /*  Welcome Banner  */
     .welcome-banner {{
         background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e40af 100%) !important;
         border-radius: 16px;
-        padding: 22px 24px;
-        margin-bottom: 18px;
+        padding: 24px 28px;
+        margin-bottom: 20px;
         color: #ffffff !important;
         box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.16);
         border: 1px solid rgba(255, 255, 255, 0.12);
@@ -103,19 +72,20 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         overflow: hidden;
     }}
     .welcome-banner h2 {{
-        font-size: 1.45rem;
+        font-size: 1.55rem;
         font-weight: 800;
         margin: 0 0 4px 0;
         color: #ffffff !important;
         letter-spacing: -0.3px;
     }}
     .welcome-banner p {{
-        font-size: 0.86rem;
+        font-size: 0.88rem;
         opacity: 0.9;
         color: #cbd5e1 !important;
-        margin: 0 0 10px 0;
+        margin: 0 0 12px 0;
     }}
     
+    /*  Pill Chips  */
     .pill-strip {{
         display: flex;
         flex-wrap: wrap;
@@ -127,19 +97,20 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         backdrop-filter: blur(8px);
         border: 1px solid rgba(255, 255, 255, 0.25);
         border-radius: 20px;
-        padding: 4px 12px;
-        font-size: 0.72rem;
+        padding: 4px 13px;
+        font-size: 0.74rem;
         font-weight: 600;
         color: #ffffff !important;
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 5px;
     }}
     
+    /*  Cards & Containers  */
     .stat-card {{
         background: white;
         border-radius: 14px;
-        padding: 16px 14px;
+        padding: 18px 14px;
         text-align: center;
         border: 1px solid #e2e8f0;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04);
@@ -150,12 +121,12 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         box-shadow: 0 4px 10px rgba(0,0,0,0.06);
     }}
     .stat-card .s-val {{
-        font-size: 1.4rem;
+        font-size: 1.5rem;
         font-weight: 800;
         color: #1e40af;
     }}
     .stat-card .s-label {{
-        font-size: 0.70rem;
+        font-size: 0.72rem;
         color: #64748b;
         text-transform: uppercase;
         font-weight: 700;
@@ -165,19 +136,23 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     .metric-card {{
         background: white;
         border-radius: 14px;
-        padding: 14px 12px;
+        padding: 18px 14px;
         text-align: center;
         border: 1px solid #e2e8f0;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         transition: transform 0.2s ease;
     }}
+    .metric-card:hover {{
+        transform: translateY(-2px);
+    }}
     
+    /*  Announcements  */
     .ann-card {{
         background: white;
         border-radius: 14px;
-        padding: 16px 18px;
-        margin-bottom: 10px;
+        padding: 18px 20px;
+        margin-bottom: 12px;
         border: 1px solid #e2e8f0;
         border-left: 4px solid {primary};
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
@@ -199,94 +174,101 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         align-items: center;
         padding: 3px 10px;
         border-radius: 20px;
-        font-size: 0.68rem;
+        font-size: 0.7rem;
         font-weight: 700;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
     }}
     .badge-normal {{ background: {light}; color: {primary}; }}
     .badge-urgent {{ background: #fee2e2; color: #dc2626; }}
     .badge-read   {{ background: #f1f5f9; color: #64748b; }}
     
+    /*  Materials  */
     .mat-row {{
         background: white;
-        border-radius: 12px;
-        padding: 14px 16px;
-        margin-bottom: 8px;
+        border-radius: 14px;
+        padding: 16px 20px;
+        margin-bottom: 10px;
         border: 1px solid #e2e8f0;
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 16px;
         transition: all 0.2s ease;
     }}
+    .mat-row:hover {{
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }}
     .mat-icon {{
-        width: 42px;
-        height: 42px;
-        border-radius: 10px;
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
         background: {light};
         color: {primary};
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.72rem;
+        font-size: 0.75rem;
         font-weight: 800;
         flex-shrink: 0;
     }}
     .mat-icon.pdf {{ background: #fee2e2; color: #dc2626; }}
     
+    /*  Group / Members  */
     .member-card {{
         background: white;
         border-radius: 12px;
-        padding: 12px 16px;
+        padding: 14px 18px;
         margin-bottom: 8px;
         border: 1px solid #e2e8f0;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 14px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }}
     .group-banner {{
         background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e40af 100%);
         border-radius: 14px;
-        padding: 18px 20px;
-        margin-bottom: 14px;
+        padding: 20px 24px;
+        margin-bottom: 16px;
         color: white;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }}
     
+    /*  Profile  */
     .profile-card {{
         background: white;
         border-radius: 16px;
-        padding: 22px;
+        padding: 26px;
         border: 1px solid #e2e8f0;
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }}
     .profile-avatar-wrap {{
         display: flex;
         align-items: center;
-        gap: 16px;
-        margin-bottom: 16px;
+        gap: 18px;
+        margin-bottom: 18px;
     }}
     
+    /*  Misc  */
     .msg-info-card {{
         background: {light};
         border: 1px solid {primary}33;
         border-radius: 12px;
-        padding: 12px 16px;
-        margin-bottom: 14px;
-        font-size: 0.86rem;
+        padding: 14px 18px;
+        margin-bottom: 16px;
+        font-size: 0.88rem;
         color: {primary};
     }}
     .pro-divider {{
         height: 1px;
         background: #e2e8f0;
-        margin: 16px 0;
+        margin: 20px 0;
     }}
     .activity-strip {{
         background: white;
         border-radius: 12px;
-        padding: 12px 16px;
-        margin-bottom: 16px;
+        padding: 14px 18px;
+        margin-bottom: 18px;
         border-left: 4px solid #1e40af;
         border-top: 1px solid #e2e8f0;
         border-right: 1px solid #e2e8f0;
@@ -294,33 +276,26 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }}
     
+    /*  Segmented Pill Tabs  */
     .stTabs [data-baseweb="tab-list"] {{
-        gap: 6px;
+        gap: 4px;
         background: white;
         border-radius: 12px;
-        padding: 5px;
+        padding: 4px;
         border: 1px solid #e2e8f0;
         box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        flex-wrap: nowrap !important;
-        scrollbar-width: none;
+        flex-wrap: wrap;
     }}
-    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{
-        display: none;
-    }}
-    .stTabs [data-baseweb="tab"] {{
+        .stTabs [data-baseweb="tab"] {{
         border-radius: 8px;
-        padding: 7px 14px;
+        padding: 8px 16px;
         font-weight: 600;
-        font-size: 0.82rem;
+        font-size: 0.84rem;
         color: #64748b !important;
         -webkit-text-fill-color: #64748b !important;
         opacity: 1 !important;
         background: transparent;
         border: none;
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
         transition: all 0.15s ease;
     }}
     .stTabs [data-baseweb="tab"]:hover {{
@@ -336,76 +311,104 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15) !important;
     }}
     .stTabs [data-baseweb="tab-highlight"],
-    .stTabs [data-baseweb="tab-border"] {{ display: none !important; }}
-
-    div[data-testid="stRadio"] > div[role="radiogroup"] {{
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        flex-wrap: nowrap !important;
-        padding-bottom: 6px;
-        scrollbar-width: none;
-    }}
-    div[data-testid="stRadio"] > div[role="radiogroup"]::-webkit-scrollbar {{
-        display: none;
-    }}
+    .stTabs [data-baseweb="tab-border"] {{ display: none; }}
     
-    @media (max-width: 768px) {{
-        .block-container {{
-            padding-left: 0.75rem !important;
-            padding-right: 0.75rem !important;
-            padding-top: 1rem !important;
-        }}
-        .welcome-banner {{
-            padding: 16px 14px !important;
-            border-radius: 12px !important;
-        }}
-        .welcome-banner h2 {{
-            font-size: 1.25rem !important;
-        }}
-        .stButton > button {{
-            width: 100% !important;
-            min-height: 44px !important;
-            font-size: 0.88rem !important;
-        }}
-        .stTabs [data-baseweb="tab"] {{
-            font-size: 0.76rem !important;
-            padding: 6px 10px !important;
-        }}
-        .metric-card {{
-            padding: 12px 8px !important;
-            border-radius: 10px !important;
-        }}
-        .ann-card {{
-            padding: 12px 14px !important;
-        }}
-        .mat-row {{
-            padding: 10px 12px !important;
-        }}
-        
-        div[data-testid="column"] {{
-            width: 100% !important;
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-            margin-bottom: 0.6rem !important;
-        }}
-        div[data-testid="stHorizontalBlock"] {{
-            flex-wrap: wrap !important;
-            gap: 0.5rem !important;
-        }}
+    /*  Buttons (desktop)  */
+    .stButton > button {{
+        border-radius: 10px;
+        font-weight: 600;
+        min-height: 40px;
+        transition: all 0.2s ease;
     }}
     """
+    if is_mob:
+        css += f"""
+        /* MOBILE OVERRIDES */
+        body, .stApp {{
+            font-size: 15px !important;
+            line-height: 1.55;
+        }}
+        .stApp {{
+            padding: 0 !important;
+        }}
+        .block-container {{
+            padding: 12px 12px 40px 12px !important;
+            max-width: 100% !important;
+        }}
+        h1 {{ font-size: 1.35rem !important; margin-bottom: 8px !important; }}
+        h2 {{ font-size: 1.15rem !important; }}
+        h3 {{ font-size: 1.0rem !important; }}
+        .welcome-banner {{
+            padding: 18px 16px !important;
+            border-radius: 14px !important;
+            margin-bottom: 16px !important;
+        }}
+        .welcome-banner h2 {{ font-size: 1.25rem !important; margin-bottom: 4px !important; }}
+        .welcome-banner p {{ font-size: 0.8rem !important; margin-bottom: 10px !important; }}
+        .pill {{ font-size: 0.68rem !important; padding: 3px 10px !important; }}
+        .stButton > button {{
+            width: 100% !important;
+            min-height: 48px !important;
+            font-size: 0.92rem !important;
+            padding: 10px 14px !important;
+            border-radius: 10px !important;
+            margin-bottom: 6px !important;
+        }}
+        .stTextInput input,
+        .stTextArea textarea,
+        .stSelectbox select {{
+            font-size: 1rem !important;
+            min-height: 48px !important;
+            border-radius: 10px !important;
+            padding: 10px 14px !important;
+        }}
+        .stTabs [data-baseweb="tab-list"] {{
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: none !important;
+            padding: 4px 4px !important;
+            gap: 4px !important;
+            border-radius: 10px !important;
+        }}
+        .metric-card {{
+            padding: 14px 10px !important;
+            border-radius: 12px !important;
+            margin-bottom: 8px !important;
+        }}
+        .ann-card {{
+            padding: 14px 14px !important;
+            border-radius: 10px !important;
+            margin-bottom: 8px !important;
+        }}
+        .mat-row {{
+            padding: 12px 14px !important;
+            flex-wrap: nowrap !important;
+            gap: 10px !important;
+        }}
+        .member-card {{
+            padding: 10px 12px !important;
+            gap: 10px !important;
+        }}
+        .profile-card {{
+            padding: 18px 16px !important;
+            border-radius: 14px !important;
+        }}
+        .pro-divider {{
+            margin: 14px 0 !important;
+        }}
+        """
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
-
 
 def metric_card(title, value, icon, color="#0f172a"):
     st.markdown(f"""
-    <div class="metric-card" style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:12px 10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-        <div style="font-size:1.4rem;margin-bottom:2px;">{icon}</div>
-        <div style="font-size:1.2rem;font-weight:800;color:#0f172a;margin-bottom:2px;">{value}</div>
-        <div style="font-size:0.68rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{title}</div>
+    <div class="metric-card" style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+        <div style="font-size:1.5rem;margin-bottom:4px;">{icon}</div>
+        <div style="font-size:1.35rem;font-weight:800;color:#0f172a;margin-bottom:2px;">{value}</div>
+        <div style="font-size:0.7rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{title}</div>
     </div>
     """, unsafe_allow_html=True)
-
 
 def render_student_roster_mobile(df, total_students):
     """Render student roster as cards with avatars on mobile."""
@@ -421,18 +424,18 @@ def render_student_roster_mobile(df, total_students):
         avatar_url = row.get("Avatar", row.get("avatar_url", ""))
         dept = row.get("Department", row.get("department", row.get("dept", "")))
         color = dept_color(dept) if dept else "#6d28d9"
-        avatar_html = render_avatar_html(avatar_url, name, size=38, color=color, light=dept_light(dept))
+        avatar_html = render_avatar_html(avatar_url, name, size=40, color=color, light=dept_light(dept))
 
         st.markdown(f"""
         <div style="background:white;border-radius:10px;padding:12px 14px;margin-bottom:8px;
             border:1px solid #e2e8f7;border-left:3px solid {color};display:flex;align-items:center;gap:12px;">
             {avatar_html}
-            <div style="flex:1;min-width:0;">
-                <div style="font-weight:700;font-size:0.92rem;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{name}</div>
+            <div style="flex:1;">
+                <div style="font-weight:700;font-size:0.95rem;">{name}</div>
                 <div style="font-size:0.75rem;color:#94a3b8;">{reg} · {course}</div>
-                <div style="font-size:0.70rem;color:#64748b;margin-top:4px;">
-                    <span style="background:#f1f5f9;padding:1px 6px;border-radius:6px;">{dept}</span>
-                    <span style="background:#f1f5f9;padding:1px 6px;border-radius:6px;margin-left:4px;">{group}</span>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:4px;">
+                    <span style="background:#f1f5f9;padding:1px 8px;border-radius:8px;">{dept}</span>
+                    <span style="background:#f1f5f9;padding:1px 8px;border-radius:8px;margin-left:4px;">{group}</span>
                 </div>
             </div>
         </div>
@@ -497,10 +500,10 @@ def render_student_slots(db, s_reg, s_name, s_dept, s_year, primary, light):
         st.markdown(f"""
         <div style="background:white;border-radius:14px;padding:{padding};
             margin-bottom:12px;border:1px solid #e2e8f7;border-left:4px solid {primary};">
-            <div style="font-size:{'0.95rem' if is_mob else '1.05rem'};font-weight:800;color:#1e293b;">
+            <div style="font-size:{'1.0rem' if is_mob else '1.1rem'};font-weight:800;color:#1e293b;">
                 {icon} {title}
             </div>
-            {"<div style='font-size:0.78rem;color:#94a3b8;margin-top:3px;'>" + desc + "</div>" if desc else ""}
+            {"<div style='font-size:0.82rem;color:#94a3b8;margin-top:3px;'>" + desc + "</div>" if desc else ""}
         </div>
         """, unsafe_allow_html=True)
         result_key = f"slot_result_{sid}"
@@ -636,7 +639,7 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
     if not st.session_state.student_logged_in and not st.session_state.show_reg_form:
         if st.session_state.show_forgot_pin:
             st.subheader("🔑 Reset Your PIN")
-            st.info("Enter your Registration Number and registered Contact Number.")
+            st.info("Enter your Registration Number and the Contact Number you registered with.")
 
             with st.form("reset_pin_form", clear_on_submit=True):
                 reset_reg     = st.text_input("Registration Number", placeholder="25/U/0000/PS").strip().upper()
@@ -644,7 +647,7 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                 reset_pin1    = st.text_input("New PIN (4 digits)",   type="password", max_chars=6)
                 reset_pin2    = st.text_input("Confirm New PIN",      type="password", max_chars=6)
                 c1, c2        = st.columns(2)
-                with c1: reset_btn  = st.form_submit_button("Reset PIN",  use_container_width=True, type="primary")
+                with c1: reset_btn  = st.form_submit_button("Reset PIN",  use_container_width=True)
                 with c2: cancel_btn = st.form_submit_button("← Back",     use_container_width=True)
 
                 if cancel_btn:
@@ -670,11 +673,11 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
 
         elif st.session_state.show_set_pin:
             st.subheader("🔐 Set Your PIN")
-            st.info("Welcome! This is your first login. Please set a 4-digit PIN.")
+            st.info("Welcome! This is your first login. Please set a 4-digit PIN for future logins.")
             with st.form("set_pin_form", clear_on_submit=True):
                 pin1 = st.text_input("Choose a PIN (4 digits)", type="password", max_chars=6)
                 pin2 = st.text_input("Confirm PIN",              type="password", max_chars=6)
-                if st.form_submit_button("Set PIN & Log In", use_container_width=True, type="primary"):
+                if st.form_submit_button("Set PIN & Log In", use_container_width=True):
                     if not pin1:
                         st.warning("Please enter a PIN.")
                     elif not pin1.isdigit() or len(pin1) < 4:
@@ -699,12 +702,11 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
             st.subheader("🎓 Student Login")
             login_reg = st.text_input("Registration Number", placeholder="e.g., 25/U/0000/PS").strip().upper()
             login_pin = st.text_input("PIN", type="password", max_chars=6, placeholder="Enter your 4-digit PIN")
-            
             c1, c2 = st.columns(2)
-            with c1: login_btn = st.button("Log In", use_container_width=True, type="primary")
+            with c1: login_btn = st.button("Log In",              use_container_width=True)
             with c2: reg_btn   = st.button("Register New Account", use_container_width=True)
 
-            if st.button("Forgot PIN?", type="secondary", use_container_width=True):
+            if st.button("Forgot PIN?", type="secondary"):
                 st.session_state.show_forgot_pin = True
                 st.rerun()
 
@@ -798,6 +800,7 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                     return raw
 
                 contact_clean = normalize_ug_phone(contact)
+
                 contact_invalid = not contact_clean.startswith("+256") or len(contact_clean) != 13
 
                 errors = []
@@ -849,7 +852,7 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                     except Exception as e:
                         st.error(f"⚠️ Registration error: {str(e)}")
 
-        if st.button("← Back to Login", use_container_width=True):
+        if st.button("← Back to Login"):
             st.session_state.show_reg_form = False
             st.rerun()
 
@@ -897,18 +900,18 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
     unread_count = len(unread)
 
     # Welcome Banner with Profile Photo
-    banner_avatar_html = render_avatar_html(s_avatar, s_name, size=50, color="white", light="rgba(255,255,255,0.25)")
+    banner_avatar_html = render_avatar_html(s_avatar, s_name, size=52, color="white", light="rgba(255,255,255,0.25)")
     st.markdown(f"""
     <div class="welcome-banner">
-        <div style="display:flex;align-items:center;gap:14px;">
+        <div style="display:flex;align-items:center;gap:16px;">
             {banner_avatar_html}
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:0.70rem;letter-spacing:1.5px;text-transform:uppercase;
+            <div style="flex:1;">
+                <div style="font-size:0.72rem;letter-spacing:2px;text-transform:uppercase;
                     opacity:0.85;margin-bottom:2px;">{s_dept_name} · {s_year}</div>
-                <h2 style="margin:0;font-size:1.35rem;font-weight:800;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">👋 Welcome, {s_name}!</h2>
+                <h2 style="margin:0;">👋 Welcome, {s_name}!</h2>
             </div>
         </div>
-        <div class="pill-strip" style="margin-top:10px;">
+        <div class="pill-strip" style="margin-top:12px;">
             <span class="pill">🆔 {s_reg}</span>
             <span class="pill">📚 {s_course}</span>
             <span class="pill">👥 {s_group}</span>
@@ -923,23 +926,31 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
     # Activity Strip
     items = ""
     if unread_count:
-        items += f'<div style="font-size:0.85rem;color:#475569;padding:2px 0;">• &nbsp;{unread_count} unread announcement(s)</div>'
+        items += f'<div style="font-size:0.88rem;color:#475569;padding:3px 0;">• &nbsp;{unread_count} unread announcement(s)</div>'
     if materials_list:
-        items += f'<div style="font-size:0.85rem;color:#475569;padding:2px 0;">• &nbsp;{len(materials_list)} material(s) available</div>'
+        items += f'<div style="font-size:0.88rem;color:#475569;padding:3px 0;">• &nbsp;{len(materials_list)} material(s) available</div>'
     if unread_rep_count:
-        items += f'<div style="font-size:0.85rem;color:#475569;padding:2px 0;">• &nbsp;{unread_rep_count} new reply from Class Rep</div>'
+        items += f'<div style="font-size:0.88rem;color:#475569;padding:3px 0;">• &nbsp;{unread_rep_count} new reply from Class Rep</div>'
 
     if items:
         st.markdown(f"""
         <div class="activity-strip">
-            <div style="font-size:0.72rem;font-weight:700;letter-spacing:1px;
-                text-transform:uppercase;color:{primary};margin-bottom:6px;">📌 Recent Activity</div>
+            <div style="font-size:0.75rem;font-weight:700;letter-spacing:1px;
+                text-transform:uppercase;color:{primary};margin-bottom:8px;">📌 Recent Activity</div>
             {items}
         </div>
         """, unsafe_allow_html=True)
     else:
         st.success("✅ Everything is up to date.")
 
+    notices_label = f"📢 Notices ({unread_count})" if unread_count else "📢 Notices"
+    replies_label = f"💬 Replies ({unread_rep_count})" if unread_rep_count else "💬 Replies"
+
+    notices_total_unread = (unread_count + unread_rep_count)
+    notices_hub_label = f"💬 Notices & Chat ({notices_total_unread})" if notices_total_unread else "💬 Notices & Chat"
+
+    
+    # Screen state default
     if "student_screen" not in st.session_state:
         st.session_state.student_screen = "dashboard"
 
@@ -949,12 +960,12 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
         nav_options = [
             ("dashboard", "🏠 Dashboard"),
             ("ai_tutor",   "🤖 AI Study Tutor"),
-            ("materials",  f"📁 Materials ({len(materials_list)})"),
-            ("timetable",  "📅 Timetable"),
-            ("notices",    f"📢 Notices ({unread_count})" if unread_count else "📢 Notices"),
-            ("messages",   f"💬 Rep Replies ({unread_rep_count})" if unread_rep_count else "✉️ Messages & Chat"),
+            ("materials",  f"📁 Course Materials ({len(materials_list)})"),
+            ("timetable",  "📅 Class Timetable"),
+            ("notices",    f"📢 Noticeboard ({unread_count})" if unread_count else "📢 Noticeboard"),
+            ("messages",   f"💬 Rep Inquiries ({unread_rep_count})" if unread_rep_count else "✉️ Messages & Chat"),
             ("group",      f"👥 My Group ({s_group})"),
-            ("profile",    "👤 Profile & PIN"),
+            ("profile",    "👤 Profile & Security"),
             ("features",   "🧩 Slot Features"),
         ]
         for n_key, n_label in nav_options:
@@ -964,108 +975,113 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                     st.session_state.student_screen = n_key
                     st.rerun()
 
+    # -------------------------------------------------------------
+    # SCREEN ROUTING & RENDERING
+    # -------------------------------------------------------------
     screen = st.session_state.student_screen
 
-    # Sub-Screen Header
+    # Render Sub-Screen Header if not on Dashboard
     if screen != "dashboard":
         screen_titles = {
             "ai_tutor":   ("🤖", "AI Study Tutor", "Interactive AI Assistant & Lecture Research"),
             "materials":  ("📁", "Course Materials", "Lecture notes, slides, handouts and past papers"),
-            "timetable":  ("📅", "Class Timetable", "Weekly schedule and lecture hall details"),
-            "notices":    ("📢", "Class Noticeboard", "Official announcements and notices"),
-            "messages":   ("✉️", "Class Rep Inquiries", "Direct communication with your representative"),
-            "group":      ("👥", "My Study Group", "Assigned project group and peer contacts"),
-            "profile":    ("👤", "Profile & Security", "Manage contact info, password PIN and photo"),
-            "features":   ("🧩", "Class Custom Features", "Interactive tools and custom extensions"),
+            "timetable":  ("📅", "Class Timetable", "Weekly schedule, lecture halls and instructor details"),
+            "notices":    ("📢", "Class Noticeboard", "Official class announcements and university notices"),
+            "messages":   ("✉️", "Class Rep Inquiries & Replies", "Direct communication with your class representative"),
+            "group":      ("👥", "My Study Group", "Assigned project group and peer contact information"),
+            "profile":    ("👤", "Profile & Security Settings", "Manage contact info, password PIN, and portrait photo"),
+            "features":   ("🧩", "Class Custom Features", "Interactive department modules and custom tools"),
         }
         s_icon, s_title, s_desc = screen_titles.get(screen, ("📌", "Student View", ""))
         
-        top_c1, top_c2 = st.columns([1, 3])
+        top_c1, top_c2 = st.columns([1, 4])
         with top_c1:
-            if st.button("← Dashboard", use_container_width=True, key=f"back_btn_{screen}"):
+            if st.button("← Back to Dashboard", use_container_width=True, key=f"back_btn_{screen}"):
                 st.session_state.student_screen = "dashboard"
                 st.rerun()
         with top_c2:
             st.markdown(f"""
-            <div style="display:flex;align-items:center;justify-content:space-between;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:6px 12px;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:1.1rem;">{s_icon}</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;background:white;border:1px solid #e2e8f0;border-radius:12px;padding:8px 16px;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:1.3rem;">{s_icon}</span>
                     <div>
-                        <div style="font-size:0.92rem;font-weight:800;color:#0f172a;line-height:1.2;">{s_title}</div>
-                        <div style="font-size:0.70rem;color:#64748b;">{s_desc}</div>
+                        <div style="font-size:1.05rem;font-weight:800;color:#0f172a;line-height:1.2;">{s_title}</div>
+                        <div style="font-size:0.72rem;color:#64748b;">{s_desc}</div>
                     </div>
+                </div>
+                <div style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">
+                    ● Full Screen
                 </div>
             </div>
             """, unsafe_allow_html=True)
-        st.markdown('<div style="margin-bottom:12px;"></div>', unsafe_allow_html=True)
+        st.markdown('<div style="margin-bottom:14px;"></div>', unsafe_allow_html=True)
 
     # 1. DASHBOARD SCREEN
     if screen == "dashboard":
-        c1, c2 = st.columns(2)
-        with c1: metric_card("Unread Notices", unread_count, "📢")
+        c1, c2, c3, c4 = st.columns(4)
+        with c1: metric_card("Unread Notices", unread_count,        "📢")
         with c2: metric_card("Course Materials", len(materials_list), "📚")
-        
-        c3, c4 = st.columns(2)
-        with c3: metric_card("Study Group", s_group, "👥")
-        with c4: metric_card("Academic Year", s_year, "🎓")
+        with c3: metric_card("Study Group",     s_group,             "👥")
+        with c4: metric_card("Academic Year",   s_year,              "🎓")
 
-        st.markdown('<div style="margin:16px 0 8px 0;font-size:0.75rem;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:#64748b;">⚡ QUICK LAUNCH</div>', unsafe_allow_html=True)
+        st.markdown('<div style="margin:16px 0 8px 0;font-size:0.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">⚡ QUICK LAUNCH WORKSPACE</div>', unsafe_allow_html=True)
         
+        # Modern Streamlined Action Grid
         grid_col1, grid_col2 = st.columns(2)
         with grid_col1:
             st.markdown(f"""
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:4px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:1.2rem;">🤖</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">🤖</div>
                     <div>
-                        <div style="font-size:0.88rem;font-weight:700;color:#0f172a;">AI Study Tutor</div>
-                        <div style="font-size:0.70rem;color:#64748b;">Q&A & lab report writer</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">AI Study Tutor</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Interactive lecture Q&A & lab report writer</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Open AI Tutor →", key="dash_open_ai", use_container_width=True, type="primary"):
+            if st.button("Open AI Study Tutor →", key="dash_open_ai", use_container_width=True, type="primary"):
                 st.session_state.student_screen = "ai_tutor"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:4px;margin-top:8px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:1.2rem;">📁</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📁</div>
                     <div>
-                        <div style="font-size:0.88rem;font-weight:700;color:#0f172a;">Course Materials</div>
-                        <div style="font-size:0.70rem;color:#64748b;">{len(materials_list)} lecture files</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Course Materials</div>
+                        <div style="font-size:0.74rem;color:#64748b;">{len(materials_list)} lecture notes & past papers</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Open Materials →", key="dash_open_mat", use_container_width=True):
+            if st.button("Open Course Materials →", key="dash_open_mat", use_container_width=True):
                 st.session_state.student_screen = "materials"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:4px;margin-top:8px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:1.2rem;">📢</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📢</div>
                     <div>
-                        <div style="font-size:0.88rem;font-weight:700;color:#0f172a;">Noticeboard</div>
-                        <div style="font-size:0.70rem;color:#64748b;">{unread_count} unread notices</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Noticeboard</div>
+                        <div style="font-size:0.74rem;color:#64748b;">{unread_count} unread announcement(s)</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Open Notices →", key="dash_open_notices", use_container_width=True):
+            if st.button("Open Noticeboard →", key="dash_open_notices", use_container_width=True):
                 st.session_state.student_screen = "notices"
                 st.rerun()
 
         with grid_col2:
             st.markdown(f"""
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:4px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:1.2rem;">📅</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📅</div>
                     <div>
-                        <div style="font-size:0.88rem;font-weight:700;color:#0f172a;">Timetable</div>
-                        <div style="font-size:0.70rem;color:#64748b;">Weekly lecture schedule</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Class Timetable</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Weekly lecture schedule & room locations</div>
                     </div>
                 </div>
             </div>
@@ -1075,32 +1091,32 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:4px;margin-top:8px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:1.2rem;">💬</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">💬</div>
                     <div>
-                        <div style="font-size:0.88rem;font-weight:700;color:#0f172a;">Message Class Rep</div>
-                        <div style="font-size:0.70rem;color:#64748b;">{unread_rep_count} new replies</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">Message Class Rep</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Inquiries & responses ({unread_rep_count} new reply)</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("Open Rep Chat →", key="dash_open_msg", use_container_width=True):
+            if st.button("Open Rep Messages →", key="dash_open_msg", use_container_width=True):
                 st.session_state.student_screen = "messages"
                 st.rerun()
 
             st.markdown(f"""
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:4px;margin-top:8px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:1.2rem;">👥</span>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:6px;margin-top:10px;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">👥</div>
                     <div>
-                        <div style="font-size:0.88rem;font-weight:700;color:#0f172a;">Study Group</div>
-                        <div style="font-size:0.70rem;color:#64748b;">Group: {s_group}</div>
+                        <div style="font-size:0.92rem;font-weight:700;color:#0f172a;">My Study Group</div>
+                        <div style="font-size:0.74rem;color:#64748b;">Assigned Group: {s_group}</div>
                     </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("View Group →", key="dash_open_grp", use_container_width=True):
+            if st.button("View Study Group →", key="dash_open_grp", use_container_width=True):
                 st.session_state.student_screen = "group"
                 st.rerun()
 
@@ -1111,7 +1127,7 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                 ann_text = ann.get("text", str(ann)) if isinstance(ann, dict) else str(ann)
                 ann_id   = ann.get("id", ann_text[:20]) if isinstance(ann, dict) else ann_text[:20]
                 st.markdown(f'<div class="ann-card urgent"><span class="ann-badge badge-urgent">🚨 URGENT</span><div>{ann_text}</div></div>', unsafe_allow_html=True)
-                if st.button("Mark as Read", key=f"home_read_{uidx}", use_container_width=True):
+                if st.button("Mark as Read", key=f"home_read_{uidx}"):
                     st.session_state.read_announcements.append(ann_id)
                     st.rerun()
         normal_unread = [a for a in unread if a not in urgent_unread]
@@ -1125,25 +1141,27 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
 
     # 2. AI STUDY TUTOR (FULL SCREEN)
     elif screen == "ai_tutor":
+
         from ai_engine import extract_pdf_text, generate_image
         
-        col_h1, col_h2, col_h3 = st.columns([4, 2, 2])
+        # History & Action controls
+        col_h1, col_h2, col_h3 = st.columns([5, 2, 2])
         with col_h1:
             st.markdown("""
             <div style="display:flex;align-items:center;gap:10px;">
-                <div style="font-size:1.3rem;">🤖</div>
+                <div style="font-size:1.4rem;">🤖</div>
                 <div>
-                    <div style="font-size:1.05rem;font-weight:800;color:#0f172a;line-height:1.2;">AI Study Assistant</div>
-                    <div style="font-size:0.72rem;color:#64748b;">Powered by Gemini & Course Hub</div>
+                    <div style="font-size:1.15rem;font-weight:800;color:#0f172a;line-height:1.2;">AI Study Assistant</div>
+                    <div style="font-size:0.75rem;color:#64748b;">Powered by Gemini & Course Database</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
         with col_h2:
-            if st.button("📜 History", use_container_width=True, help="View chat history"):
+            if st.button("📜 History", use_container_width=True, help="View your chat history"):
                 st.session_state["show_ai_history"] = not st.session_state.get("show_ai_history", False)
                 st.rerun()
         with col_h3:
-            if st.button("🗑️ Clear", use_container_width=True, help="Clear active conversation"):
+            if st.button("🗑️ Clear Chat", use_container_width=True, help="Clear active conversation"):
                 st.session_state.ai_chat_history = []
                 st.session_state.ai_summary_shown = False
                 st.session_state.ai_summary_text = ""
@@ -1159,7 +1177,7 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                 history = db.get_chat_history(s_reg, limit=30)
                 if history:
                     st.caption(f"Showing last {len(history)} messages")
-                    col_exp1, col_exp2 = st.columns([1, 2])
+                    col_exp1, col_exp2 = st.columns([1, 3])
                     with col_exp1:
                         df_hist = pd.DataFrame(history)
                         st.download_button(
@@ -1174,19 +1192,19 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                             if db.clear_chat_history(s_reg):
                                 st.session_state.ai_chat_history = []
                                 st.session_state["show_ai_history"] = False
-                                st.success("Chat history deleted!")
+                                st.success("Chat history deleted from server!")
                                 st.rerun()
                     for msg in history:
                         timestamp = msg.get("timestamp", "")
                         role = msg.get("role", "")
                         message = msg.get("message", "")
                         if role == "user":
-                            st.markdown(f'<div style="background:#eff6ff;border-radius:10px;padding:8px 12px;margin-bottom:4px;border:1px solid #bfdbfe;"><div style="font-size:0.65rem;color:#1e40af;font-weight:700;">👤 You · {timestamp}</div><div style="font-size:0.86rem;color:#1e293b;margin-top:2px;">{message}</div></div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="background:#eff6ff;border-radius:10px;padding:8px 12px;margin-bottom:4px;border:1px solid #bfdbfe;"><div style="font-size:0.65rem;color:#1e40af;font-weight:700;">👤 You · {timestamp}</div><div style="font-size:0.88rem;color:#1e293b;margin-top:2px;">{message}</div></div>', unsafe_allow_html=True)
                         else:
-                            st.markdown(f'<div style="background:#ffffff;border-radius:10px;padding:8px 12px;margin-bottom:4px;border-left:3px solid {primary};border:1px solid #e2e8f0;"><div style="font-size:0.65rem;color:#64748b;font-weight:700;">🤖 AI · {timestamp}</div><div style="font-size:0.86rem;color:#0f172a;margin-top:2px;">{message}</div></div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="background:#ffffff;border-radius:10px;padding:8px 12px;margin-bottom:4px;margin-left:15px;border-left:3px solid {primary};border:1px solid #e2e8f0;"><div style="font-size:0.65rem;color:#64748b;font-weight:700;">🤖 AI · {timestamp}</div><div style="font-size:0.88rem;color:#0f172a;margin-top:2px;">{message}</div></div>', unsafe_allow_html=True)
                 else:
                     st.info("No chat history yet.")
-                if st.button("Close History", use_container_width=True):
+                if st.button("Close History Drawer", use_container_width=True):
                     st.session_state["show_ai_history"] = False
                     st.rerun()
 
@@ -1220,6 +1238,9 @@ Group: {s_group}
             horizontal=True, key="ai_mode_select"
         )
 
+
+
+        # Study Material Mode
         if ai_mode == "📚 Study Material":
             st.markdown(f'<div class="msg-info-card">📚 Select a course material for AI-powered help.</div>', unsafe_allow_html=True)
             mat_names     = ["— No material (general Q&A) —"] + [m.get("name", "") for m in materials_list]
@@ -1246,50 +1267,55 @@ Group: {s_group}
                     if st.session_state.get("ai_summary_text"):
                         st.markdown(f'<div class="ann-card"><span class="ann-badge badge-normal">SUMMARY</span><div>{st.session_state.ai_summary_text}</div></div>', unsafe_allow_html=True)
 
+        # Image Q&A Mode
         elif ai_mode == "🖼️ Image Q&A":
             st.markdown('''<div class="msg-info-card">
-                📸 Upload a photo of notes, diagrams or questions for step-by-step AI solutions.
+                📸 Upload a photo — diagram, circuit schematic, textbook page, or handwritten problem — and ask the AI Tutor for a full step-by-step breakdown.
             </div>''', unsafe_allow_html=True)
 
             uploaded_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg", "webp"], key="vision_qa_upload")
             if uploaded_image:
-                st.image(uploaded_image, caption=uploaded_image.name, use_container_width=True)
-                image_question = st.text_area(
-                    "What do you want to know about this image?",
-                    placeholder="e.g. Explain this diagram, solve this equation...",
-                    height=90,
-                    key="vision_qa_question"
-                )
-                if st.button("🔍 Analyze Image with AI Tutor", use_container_width=True, type="primary"):
-                    q = image_question.strip() if image_question.strip() else "Analyze and explain this image in detail."
-                    with st.spinner("AI Tutor is analyzing the image..."):
-                        answer = ai_study.ask_about_image(
-                            image_bytes=uploaded_image.getvalue(),
-                            mime_type=uploaded_image.type or "image/png",
-                            question=q,
-                            chat_history=st.session_state.ai_chat_history,
-                            student_reg=s_reg
-                        )
-                    st.session_state.ai_chat_history.append({"role": "user", "content": f"🖼️ [Image: {uploaded_image.name}] {q}"})
-                    st.session_state.ai_chat_history.append({"role": "assistant", "content": answer})
-                    st.session_state["last_image_analysis"] = answer
-                    st.rerun()
+                col_img1, col_img2 = st.columns([1, 2])
+                with col_img1:
+                    st.image(uploaded_image, caption=uploaded_image.name, use_container_width=True)
+                with col_img2:
+                    image_question = st.text_area(
+                        "What do you want to know about this image? (optional)",
+                        placeholder="e.g. Explain this diagram, solve this equation, or summarize these notes...",
+                        height=100,
+                        key="vision_qa_question"
+                    )
+                    if st.button("🔍 Analyze Image with AI Tutor", use_container_width=True, type="primary"):
+                        q = image_question.strip() if image_question.strip() else "Analyze and explain this image in detail."
+                        with st.spinner("AI Tutor is analyzing the image and working through solutions..."):
+                            answer = ai_study.ask_about_image(
+                                image_bytes=uploaded_image.getvalue(),
+                                mime_type=uploaded_image.type or "image/png",
+                                question=q,
+                                chat_history=st.session_state.ai_chat_history,
+                                student_reg=s_reg
+                            )
+                        st.session_state.ai_chat_history.append({"role": "user", "content": f"🖼️ [Image: {uploaded_image.name}] {q}"})
+                        st.session_state.ai_chat_history.append({"role": "assistant", "content": answer})
+                        st.session_state["last_image_analysis"] = answer
+                        st.rerun()
 
             if st.session_state.get("last_image_analysis"):
-                st.markdown(f'''<div class="ann-card" style="border-left-color:#1e40af;margin-top:14px;">
+                st.markdown(f'''<div class="ann-card" style="border-left-color:#1e40af;margin-top:16px;">
                     <span class="ann-badge badge-normal">LATEST IMAGE ANALYSIS</span>
-                    <div style="margin-top:8px;line-height:1.6;">''' + st.session_state["last_image_analysis"] + '''</div>
+                    <div style="margin-top:10px;line-height:1.6;">''' + st.session_state["last_image_analysis"] + '''</div>
                 </div>''', unsafe_allow_html=True)
 
+        # Report Writer Mode
         elif ai_mode == "📄 Report Writer":
             st.markdown('''<div class="msg-info-card">
-                📝 Describe your report and AI will structure it with proper university headings.
+                📝 Describe your report and AI will write it for you with proper university formatting.
             </div>''', unsafe_allow_html=True)
 
-            report_mode = st.radio("Start with:", ["✍️ Write from scratch", "📤 Upload draft"], horizontal=True, key="report_mode_select")
+            report_mode = st.radio("How would you like to start?", ["✍️ Write from scratch", "📤 Upload my draft"], horizontal=True, key="report_mode_select")
             draft_text = ""
-            if report_mode == "📤 Upload draft":
-                uploaded_draft = st.file_uploader("Upload draft (PDF or TXT)", type=["pdf", "txt"], key="report_draft_upload")
+            if report_mode == "📤 Upload my draft":
+                uploaded_draft = st.file_uploader("Upload your draft (PDF or TXT)", type=["pdf", "txt"], key="report_draft_upload")
                 if uploaded_draft:
                     if uploaded_draft.type == "application/pdf":
                         import tempfile, os
@@ -1304,23 +1330,23 @@ Group: {s_group}
                     else:
                         draft_text = uploaded_draft.read().decode("utf-8", errors="ignore")
                     if draft_text:
-                        st.success(f"Draft loaded ({len(draft_text.split())} words).")
+                        st.success(f"Draft loaded — {len(draft_text.split())} words detected.")
 
-            include_images = st.checkbox("Generate technical diagrams", value=False)
+            include_images = st.checkbox("Generate and include illustrative images in this report", value=False)
             num_images  = 0
             image_style = "Clean 2D Engineering Drawing"
             if include_images:
-                num_images = st.slider("Number of images", 1, 4, 2)
+                num_images = st.slider("How many images to generate?", 1, 4, 2)
                 image_style = st.selectbox(
                     "Image style",
                     ["Clean 2D Engineering Drawing", "Technical Pencil Sketch", "3D Realistic Render", "Blueprint Schematic"]
                 )
 
             with st.form("report_writer_form", clear_on_submit=False):
-                report_topic = st.text_input("Report title / topic", placeholder="e.g. Viscosity of Engine Oil under Heat")
+                report_topic = st.text_input("Report title / topic", placeholder="e.g. Effect of Temperature on Viscosity of Engine Oil")
                 report_type = st.selectbox("Report type", ["Lab Report", "Research Report", "Technical Report", "Assignment Essay", "Case Study", "Project Proposal"])
                 extra_instructions = st.text_area("Additional instructions (optional)", height=80)
-                word_count = st.select_slider("Approximate words", options=[500, 800, 1000, 1500, 2000, 2500, 3000], value=1000)
+                word_count = st.select_slider("Approximate word count", options=[500, 800, 1000, 1500, 2000, 2500, 3000], value=1000)
                 generate_btn = st.form_submit_button("Generate Report", use_container_width=True, type="primary")
 
                 if generate_btn:
@@ -1365,6 +1391,7 @@ Requirements:
                         st.session_state["generated_report_images"] = generated_images
                         st.rerun()
 
+            # Display and export generated report
             if st.session_state.get("generated_report"):
                 report_content = st.session_state["generated_report"]
                 report_title   = st.session_state.get("generated_report_title", "Report")
@@ -1377,11 +1404,15 @@ Requirements:
                 for part in parts:
                     m = _re.match(r"\[IMAGE:\s*(.+?)\]", part)
                     if m and m.group(1) in report_images:
-                        st.image(report_images[m.group(1)], caption=m.group(1), use_container_width=True)
+                        st.image(report_images[m.group(1)], caption=m.group(1))
                     elif part.strip():
                         st.markdown(part)
 
+                # ---------------------------------------------------------
+                # ROBUST, CRASH-PROOF PDF EXPORTER
+                # ---------------------------------------------------------
                 def _pdf_safe(text: str) -> str:
+                    """Sanitize unicode to latin-1 / ASCII safe characters."""
                     replacements = {
                         "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
                         "\u2013": "-", "\u2014": "--", "\u2026": "...", "\u2022": "*",
@@ -1413,13 +1444,17 @@ Requirements:
                     pdf.set_auto_page_break(auto=True, margin=15)
                     pdf.set_margins(left=15, top=15, right=15)
                     pdf.add_page()
+
+                    # Effective usable page width (safely prevents "Not enough horizontal space" errors)
                     page_width = pdf.epw if hasattr(pdf, 'epw') else (pdf.w - pdf.l_margin - pdf.r_margin)
 
+                    # Title
                     pdf.set_font("Helvetica", "B", 16)
                     pdf.set_x(pdf.l_margin)
                     pdf.multi_cell(page_width, 8, _pdf_safe(title), align="L")
                     pdf.ln(2)
 
+                    # Metadata
                     pdf.set_font("Helvetica", "", 10)
                     pdf.set_text_color(90, 90, 90)
                     pdf.set_x(pdf.l_margin)
@@ -1483,7 +1518,7 @@ Requirements:
                                     pdf.set_x(pdf.l_margin)
                                     pdf.multi_cell(page_width, h, clean_text, align="L")
                                 except Exception as line_err:
-                                    print(f"[report_pdf] skipped line: {line_err}")
+                                    print(f"[report_pdf] skipped problematic line: {line_err}")
 
                     return bytes(pdf.output())
 
@@ -1512,12 +1547,13 @@ Requirements:
                     key="dl_ai_report"
                 )
 
+        # Chat input form for Class Assistant & Study Material modes
         if ai_mode in ("💬 Class Assistant", "📚 Study Material"):
             for turn in st.session_state.ai_chat_history:
                 if turn["role"] == "user":
-                    st.markdown(f'<div style="background:{light};border-radius:10px;padding:8px 12px;margin-bottom:6px;margin-left:15%;text-align:right;"><div style="font-size:0.74rem;color:{primary};font-weight:700;">You</div><div style="font-size:0.88rem;">{turn["content"]}</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="background:{light};border-radius:10px;padding:10px 14px;margin-bottom:8px;margin-left:20%;text-align:right;"><div style="font-size:0.78rem;color:{primary};font-weight:600;">You</div><div style="font-size:0.9rem;">{turn["content"]}</div></div>', unsafe_allow_html=True)
                 else:
-                    st.markdown(f'<div style="background:white;border:1px solid #e2e8f7;border-radius:10px;padding:8px 12px;margin-bottom:6px;margin-right:15%;"><div style="font-size:0.74rem;color:{primary};font-weight:700;">🤖 AI</div><div style="font-size:0.88rem;">{turn["content"]}</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="background:white;border:1px solid #e2e8f7;border-radius:10px;padding:10px 14px;margin-bottom:8px;margin-right:20%;"><div style="font-size:0.78rem;color:{primary};font-weight:600;">🤖 AI</div><div style="font-size:0.9rem;">{turn["content"]}</div></div>', unsafe_allow_html=True)
 
             if st.session_state.get("ai_quick_q"):
                 quick_q = st.session_state.ai_quick_q
@@ -1543,11 +1579,11 @@ Requirements:
 
             with st.form("ai_chat_form", clear_on_submit=True):
                 user_question = st.text_area(
-                    "Your question:", height=80, label_visibility="collapsed",
-                    placeholder="Ask about timetable, notices, lectures..."
+                    "Your question:", height=90, label_visibility="collapsed",
+                    placeholder="Ask about your timetable, announcements, materials..."
                 )
-                c1, c2 = st.columns(2)
-                with c1: send_btn  = st.form_submit_button("Ask AI", use_container_width=True, type="primary")
+                c1, c2 = st.columns([3, 1])
+                with c1: send_btn  = st.form_submit_button("Ask AI", use_container_width=True)
                 with c2: clear_btn = st.form_submit_button("Clear",  use_container_width=True)
 
                 if send_btn and user_question.strip():
@@ -1589,8 +1625,16 @@ Requirements:
                         pass
                     st.rerun()
 
+# -------------------------------------------------------------
+# TAB 10: FEATURES
+# -------------------------------------------------------------
+
+# -------------------------------------------------------------
+
+
     # 3. COURSE MATERIALS (FULL SCREEN)
     elif screen == "materials":
+
         st.markdown("### 📁 Course Materials")
         search   = st.text_input("🔍 Search", placeholder="Search by file name...")
         filtered = [i for i in materials_list if search.lower() in (i.get("name", "") if isinstance(i, dict) else str(i)).lower()]
@@ -1600,40 +1644,28 @@ Requirements:
                 file_url  = item.get("url", "#") if isinstance(item, dict) else "#"
                 ext       = file_name.split(".")[-1].upper() if "." in file_name else "FILE"
 
-                st.markdown(
-                    f'<div class="mat-row">' +
-                    f'<div class="mat-icon {"pdf" if ext=="PDF" else ""}">{ext}</div>' +
-                    f'<div style="flex:1;min-width:0;"><strong style="font-size:0.88rem;color:#0f172a;word-break:break-all;">{file_name}</strong></div></div>',
-                    unsafe_allow_html=True
-                )
-                
-                col1, col2 = st.columns(2)
-                preview_key = f"preview_{idx}_{file_name}"
-                if preview_key not in st.session_state:
-                    st.session_state[preview_key] = False
+                with st.container():
+                    c1, c2 = st.columns([6, 1])
+                    with c1:
+                        st.markdown(
+                            f'<div class="mat-row">' +
+                            f'<div class="mat-icon {"pdf" if ext=="PDF" else ""}">{ext}</div>' +
+                            f'<div><strong>{file_name}</strong></div></div>',
+                            unsafe_allow_html=True
+                        )
+                    with c2:
+                        preview_key = f"preview_{idx}_{file_name}"
+                        if preview_key not in st.session_state:
+                            st.session_state[preview_key] = False
+                        if st.button(
+                            "👁️ Preview" if not st.session_state[preview_key] else "✖ Close",
+                            key=f"prev_btn_{idx}",
+                            use_container_width=True
+                        ):
+                            st.session_state[preview_key] = not st.session_state[preview_key]
+                            st.rerun()
 
-                with col1:
-                    if st.button(
-                        "👁️ Preview" if not st.session_state[preview_key] else "✖ Close",
-                        key=f"prev_btn_{idx}",
-                        use_container_width=True
-                    ):
-                        st.session_state[preview_key] = not st.session_state[preview_key]
-                        st.rerun()
-
-                with col2:
-                    file_data_quick = db.fetch_file_bytes(file_url)
-                    st.download_button(
-                        "⬇️ Download",
-                        data=file_data_quick if file_data_quick else b"",
-                        file_name=file_name,
-                        mime="application/octet-stream",
-                        key=f"dl_quick_{idx}_{file_name}",
-                        disabled=not file_data_quick,
-                        use_container_width=True
-                    )
-
-                if st.session_state.get(preview_key, False):
+                if st.session_state.get(f"preview_{idx}_{file_name}", False):
                     with st.expander(f"Preview: {file_name}", expanded=True):
                         with st.spinner("Loading preview..."):
                             file_data = db.fetch_file_bytes(file_url)
@@ -1650,7 +1682,7 @@ Requirements:
                                     page = doc[0]
                                     mat  = fitz.Matrix(1.5, 1.5)
                                     pix  = page.get_pixmap(matrix=mat)
-                                    st.image(pix.tobytes("png"), caption="Page 1 preview", use_container_width=True)
+                                    st.image(pix.tobytes("png"), caption="Page 1 preview")
                                     if pages > 1:
                                         st.caption(f"Showing page 1 of {pages}. Download to view all pages.")
                                     doc.close()
@@ -1662,20 +1694,50 @@ Requirements:
                                     import io
                                     doc = Document(io.BytesIO(file_data))
                                     paras = [p.text for p in doc.paragraphs if p.text.strip()]
-                                    st.text_area("Document preview (first 15 paragraphs):", "\n\n".join(paras[:15]), height=200, disabled=True)
+                                    st.text_area("Document preview (first 15 paragraphs):", "\n\n".join(paras[:15]), height=250, disabled=True)
                                 except Exception:
                                     st.info("Download document to view.")
                             elif ext in ("PNG", "JPG", "JPEG", "GIF", "WEBP"):
-                                st.image(file_data, caption=file_name, use_container_width=True)
+                                st.image(file_data, caption=file_name)
                             else:
                                 st.info(f"Preview not available for {ext} files. Download to view.")
 
+                        st.markdown("---")
+                        st.download_button(
+                            label=f"⬇️ Download {file_name}",
+                            data=file_data if file_data else b"",
+                            file_name=file_name,
+                            mime="application/octet-stream",
+                            key=f"dl_{idx}_{file_name}",
+                            use_container_width=True,
+                            type="primary",
+                            disabled=not file_data
+                        )
+                else:
+                    col1, col2 = st.columns([1, 3])
+                    with col1:
+                        file_data_quick = db.fetch_file_bytes(file_url)
+                        st.download_button(
+                            "⬇️ Download",
+                            data=file_data_quick if file_data_quick else b"",
+                            file_name=file_name,
+                            mime="application/octet-stream",
+                            key=f"dl_quick_{idx}_{file_name}",
+                            disabled=not file_data_quick
+                        )
                 st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
         else:
             st.info("No materials available for your class yet.")
 
+    # -------------------------------------------------------------
+    # TAB 4: MY GROUP
+    # -------------------------------------------------------------
+
+
+
     # 4. TIMETABLE (FULL SCREEN)
     elif screen == "timetable":
+
         st.markdown("### 📅 Class Timetable")
         TT_PALETTE = ["#1a56db","#16a34a","#ea580c","#7c3aed","#dc2626","#db2777","#0d9488","#b45309"]
         TT_LIGHTS = ["#dbeafe","#dcfce7","#ffedd5","#ede9fe","#fee2e2","#fce7f3","#ccfbf1","#fef3c7"]
@@ -1693,35 +1755,38 @@ Requirements:
                 d = entry.get("day","Other")
                 by_day.setdefault(d, []).append(entry)
 
-            for day in day_order:
-                if day not in by_day or not by_day[day]:
-                    continue
-                st.markdown(f'<div style="background:{primary};color:white;border-radius:10px;padding:6px 14px;margin:12px 0 6px 0;font-weight:700;font-size:0.85rem;">📅 {day}</div>', unsafe_allow_html=True)
-                entries = sorted(by_day[day], key=lambda x: x.get("time", ""))
-                for entry in entries:
-                    e_color = entry.get("color", "") or auto_color_s(entry.get("course", ""))[0]
-                    lect = entry.get("lecturer", "")
-                    lect_part = f'<div style="font-size:0.75rem;color:#64748b;font-weight:600;margin-top:2px;">👨‍🏫 {lect.title()}</div>' if lect else ""
-                    st.markdown(f"""
-                    <div style="background:white;border-radius:10px;padding:10px 14px;margin-bottom:6px;border:1px solid #e2e8f7;border-left:4px solid {e_color};">
-                        <div style="font-weight:800;color:{e_color};font-size:0.84rem;">{entry.get("time","")}</div>
-                        <div style="color:#1e293b;font-weight:700;font-size:0.90rem;margin-top:2px;">{entry.get("course","")}</div>
-                        {lect_part}
-                    </div>
-                    """, unsafe_allow_html=True)
+            view_mode = st.radio("View", ["📋 List", "🔲 Grid"], horizontal=True, label_visibility="collapsed", key="tt_view_mode")
+            if view_mode == "📋 List":
+                for day in day_order:
+                    if day not in by_day or not by_day[day]:
+                        continue
+                    st.markdown(f'<div style="background:{primary};color:white;border-radius:10px;padding:8px 16px;margin:12px 0 6px 0;font-weight:700;font-size:0.9rem;">📅 {day}</div>', unsafe_allow_html=True)
+                    entries = sorted(by_day[day], key=lambda x: x.get("time", ""))
+                    for entry in entries:
+                        e_color = entry.get("color", "") or auto_color_s(entry.get("course", ""))[0]
+                        lect = entry.get("lecturer", "")
+                        lect_part = f'<div style="font-size:0.82rem;color:#475569;font-weight:600;margin-top:4px;">👨‍🏫 {lect.title()}</div>' if lect else ""
+                        st.markdown(f'<div style="background:white;border-radius:10px;padding:12px 18px;margin-bottom:6px;border:1px solid #e2e8f7;border-left:4px solid {e_color};"><span style="font-weight:800;color:{e_color};min-width:90px;">{entry.get("time","")}</span> <span style="color:#1e293b;font-weight:600;">{entry.get("course","")}</span>{lect_part}</div>', unsafe_allow_html=True)
+
+    # -------------------------------------------------------------
+    # TAB 8: PROFILE & ATTACH PHOTO
+    # -------------------------------------------------------------
+
+
 
     # 5. STUDY GROUP (FULL SCREEN)
     elif screen == "group":
+
         st.markdown("### 👥 My Course Groups")
         course_groups = db.fetch_course_unit_groups(s_name, dept=s_dept, year=s_year)
 
         with st.expander("🤖 AI Group Assistant", expanded=False):
             group_query = st.text_input(
                 "What would you like to know?",
-                placeholder="e.g., Which group am I in for mathematics?",
+                placeholder="e.g., What is my thermodynamics group? Which group am I in for mathematics?",
                 key="ai_group_query"
             )
-            if st.button("Ask AI", key="ai_group_query_btn", use_container_width=True, type="primary"):
+            if st.button("Ask AI", key="ai_group_query_btn"):
                 if group_query.strip():
                     if course_groups:
                         with st.spinner("Checking your groups..."):
@@ -1734,17 +1799,17 @@ Requirements:
 
         if course_groups:
             st.markdown("**Your Course Unit Groups:**")
-            cols = st.columns(2)
+            cols = st.columns(min(3, len(course_groups)) if len(course_groups) > 0 else 1)
             for idx, (course, group) in enumerate(course_groups.items()):
-                with cols[idx % 2]:
+                with cols[idx % len(cols)] if len(cols) > 0 else st.container():
                     st.markdown(f"""
-                    <div style="background:{light};border-radius:12px;padding:12px;
+                    <div style="background:{light};border-radius:12px;padding:16px;
                         border:2px solid {primary};text-align:center;margin-bottom:8px;">
-                        <div style="font-size:0.72rem;color:{primary};font-weight:700;
-                            text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">
+                        <div style="font-size:0.75rem;color:{primary};font-weight:700;
+                            text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
                             {course}
                         </div>
-                        <div style="font-size:1.3rem;font-weight:900;color:{primary};">
+                        <div style="font-size:1.5rem;font-weight:900;color:{primary};">
                             {group}
                         </div>
                     </div>
@@ -1759,7 +1824,7 @@ Requirements:
             df_class = df_profiles[(df_profiles[dept_col] == s_dept) & (df_profiles[year_col] == s_year)] if (dept_col and year_col) else df_profiles
             group_members = df_class[df_class["Assigned Group"] == s_group]
 
-            st.markdown(f'<div class="group-banner"><div style="font-size:0.7rem;opacity:0.7;text-transform:uppercase;letter-spacing:1.5px;">General Project Group</div><div style="font-size:1.35rem;font-weight:900;">{s_group}</div><div style="font-size:0.78rem;opacity:0.85;">{len(group_members)} member(s)</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="group-banner"><div style="font-size:0.7rem;opacity:0.7;text-transform:uppercase;letter-spacing:2px;">General Project Group</div><div style="font-size:1.5rem;font-weight:900;">{s_group}</div><div style="font-size:0.82rem;opacity:0.85;">{len(group_members)} member(s)</div></div>', unsafe_allow_html=True)
 
             for _, member in group_members.iterrows():
                 m_name   = member["Student Name"]
@@ -1767,28 +1832,37 @@ Requirements:
                 m_course = member.get("Course Code", "")
                 m_avatar = str(member.get("Avatar", member.get("avatar_url", "")))
                 is_you   = (m_reg == s_reg)
-                you_html = '<span style="background:#dbeafe;color:#1a56db;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:6px;">You</span>' if is_you else ""
-                m_avatar_html = render_avatar_html(m_avatar, m_name, size=38, color=primary, light=light)
+                you_html = '<span style="background:#dbeafe;color:#1a56db;font-size:0.65rem;font-weight:700;padding:1px 8px;border-radius:10px;margin-left:6px;">You</span>' if is_you else ""
+
+                m_avatar_html = render_avatar_html(m_avatar, m_name, size=42, color=primary, light=light)
 
                 st.markdown(f"""
                 <div class="member-card">
                     {m_avatar_html}
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-weight:700;font-size:0.90rem;">{m_name}{you_html}</div>
-                        <div style="font-size:0.72rem;color:#94a3b8;">{m_course} · {m_reg}</div>
+                    <div>
+                        <div style="font-weight:700;">{m_name}{you_html}</div>
+                        <div style="font-size:0.75rem;color:#94a3b8;">{m_course} · {m_reg}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
+    # -------------------------------------------------------------
+    # TAB 5: MESSAGE
+    # -------------------------------------------------------------
+
+# -------------------------------------------------------------
+
+
     # 6. NOTICES (FULL SCREEN)
     elif screen == "notices":
+
         st.markdown("### 📢 Noticeboard")
         if unread_count:
             st.warning(f"You have **{unread_count} unread** announcement(s)")
 
-        col_s, col_f = st.columns(2)
+        col_s, col_f = st.columns([3, 1])
         with col_s:
-            ann_search = st.text_input("🔍 Search notices", placeholder="Keyword...", key="ann_search_input")
+            ann_search = st.text_input("🔍 Search notices", placeholder="Search by keyword...", key="ann_search_input")
         with col_f:
             ann_filter = st.selectbox("Filter", ["All", "Unread", "Urgent", "Broadcast"], key="ann_filter_sel")
 
@@ -1816,7 +1890,7 @@ Requirements:
                 card_cls = "urgent" if priority == "urgent" and not is_read else ("read" if is_read else "")
                 badge_cls = "badge-urgent" if priority == "urgent" else ("badge-read" if is_read else "badge-normal")
 
-                with st.expander(f"{'✅ ' if is_read else '🚨 ' if priority=='urgent' else '📌 '} {ann_text[:50]}..."):
+                with st.expander(f"{'✅ ' if is_read else '🚨 ' if priority=='urgent' else '📌 '} {ann_text[:60]}..."):
                     st.markdown(f'<div class="ann-card {card_cls}" style="margin:0;"><span class="ann-badge {badge_cls}">{badge}</span><div>{ann_text}</div></div>', unsafe_allow_html=True)
                     if not is_read:
                         if st.checkbox("Mark as Read", key=f"notice_{idx}_{ann_id}"):
@@ -1827,6 +1901,12 @@ Requirements:
         else:
             st.info("No announcements yet.")
 
+    # -------------------------------------------------------------
+    # TAB 3: MATERIALS
+    # -------------------------------------------------------------
+
+
+
     # 7. MESSAGES & REPLIES (FULL SCREEN)
     elif screen == "messages":
         sub_msg_tab, sub_rep_tab = st.tabs([
@@ -1834,6 +1914,7 @@ Requirements:
             f"💬 Rep Replies ({unread_rep_count})" if unread_rep_count else "💬 Rep Replies"
         ])
         with sub_msg_tab:
+
             st.markdown("### ✉️ Message Class Rep")
             st.markdown(f'<div class="msg-info-card">🔒 <strong>Private & Confidential</strong> — Only your {s_year} Class Rep can see your message.</div>', unsafe_allow_html=True)
 
@@ -1850,8 +1931,8 @@ Requirements:
                     status = str(msg[3])
                     text   = str(msg[4])
                     sc     = "#16a34a" if status.lower() == "reviewed" else "#d4820a"
-                    st.markdown(f'<div style="background:white;border-radius:10px;padding:12px 14px;margin-bottom:6px;border:1px solid #e2e8f7;border-left:4px solid {primary};"><div style="font-size:0.74rem;color:#94a3b8;">🕒 {ts} · <span style="color:{sc};font-weight:700;">{status}</span></div><div style="font-size:0.86rem;margin-top:4px;color:#0f172a;">{text}</div></div>', unsafe_allow_html=True)
-                    if st.button("🗑️ Delete", key=f"del_msg_{midx}", use_container_width=True):
+                    st.markdown(f'<div style="background:white;border-radius:10px;padding:14px;margin-bottom:8px;border:1px solid #e2e8f7;border-left:4px solid {primary};"><div style="font-size:0.78rem;color:#94a3b8;">🕒 {ts} · <span style="color:{sc};font-weight:600;">{status}</span></div><div style="font-size:0.9rem;margin-top:4px;">{text}</div></div>', unsafe_allow_html=True)
+                    if st.button("Delete", key=f"del_msg_{midx}"):
                         if db.delete_feedback(ts, s_reg):
                             st.rerun()
 
@@ -1861,9 +1942,9 @@ Requirements:
                 st.session_state.fb_success_msg = ""
 
             with st.expander("🤖 AI Message Assistant", expanded=False):
-                ai_topic = st.text_input("Topic:", placeholder="e.g. Workshop attendance...", key="msg_ai_topic")
-                ai_tone  = st.selectbox("Tone:", ["Professional", "Friendly", "Urgent", "Inquiry"], key="msg_ai_tone")
-                if st.button("Draft with AI", key="ai_draft_msg_btn", use_container_width=True, type="primary"):
+                ai_topic = st.text_input("What do you need help with?", placeholder="e.g., Workshop attendance, Course materials...", key="msg_ai_topic")
+                ai_tone  = st.selectbox("Message tone:", ["Professional", "Friendly", "Urgent", "Inquiry"], key="msg_ai_tone")
+                if st.button("Generate Draft with AI", key="ai_draft_msg_btn"):
                     if ai_topic.strip():
                         with st.spinner("Drafting message..."):
                             draft = ai_study.ask_ai(
@@ -1879,22 +1960,33 @@ Requirements:
 
             with st.form("student_feedback_form", clear_on_submit=True):
                 default_msg = st.session_state.get("ai_draft", "")
-                user_msg = st.text_area("Type your message:", value=default_msg, height=120)
-                submit_fb = st.form_submit_button("Send Private Message", use_container_width=True, type="primary")
+                user_msg = st.text_area("Type your message:", value=default_msg, height=140)
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    submit_fb = st.form_submit_button("Send Private Message", use_container_width=True)
+                with col2:
+                    if st.form_submit_button("Clear Draft", use_container_width=True):
+                        st.session_state.ai_draft = ""
+                        st.rerun()
 
                 if submit_fb:
                     if user_msg.strip():
                         if db.submit_feedback(s_reg, s_name, user_msg, dept=s_dept, year=s_year):
                             cached_fetch_feedback.clear()
                             st.session_state.fb_success_msg = "✅ Message delivered to your Class Rep!"
-                            st.session_state.ai_draft = ""
                             st.rerun()
                         else:
                             st.error("⚠️ Submission failed. Please try again.")
                     else:
                         st.warning("Please type a message.")
 
+        # -------------------------------------------------------------
+        # TAB 6: REP REPLIES
+        # -------------------------------------------------------------
+
+
         with sub_rep_tab:
+
             st.markdown("### 💬 Messages from Class Rep")
             if unread_rep_count:
                 st.info(f"🔔 You have **{unread_rep_count} unread** message(s).")
@@ -1914,34 +2006,42 @@ Requirements:
                         st.write(r_msg)
 
                     if not is_read:
-                        if st.button("Mark as Read", key=f"rep_read_{ridx}", use_container_width=True):
+                        if st.button("Mark as Read", key=f"rep_read_{ridx}"):
                             if db.mark_rep_reply_read(r_time, s_reg):
                                 cached_fetch_rep_replies.clear()
                                 st.rerun()
             else:
                 st.info("No messages from your Class Rep yet.")
 
+        # -------------------------------------------------------------
+        # TAB 7: TIMETABLE
+        # -------------------------------------------------------------
+
+    # -------------------------------------------------------------
+
+
     # 8. PROFILE & SECURITY (FULL SCREEN)
     elif screen == "profile":
+
         st.markdown("### 👤 Student Profile")
         s_contact = str(student_data.get("Contact", student_data.get("contact", "")))
-        profile_avatar_html = render_avatar_html(s_avatar, s_name, size=64, color=primary, light=light)
+        profile_avatar_html = render_avatar_html(s_avatar, s_name, size=76, color=primary, light=light)
 
         st.markdown(f"""
         <div class="profile-card">
             <div class="profile-avatar-wrap">
                 {profile_avatar_html}
                 <div>
-                    <div style="font-size:1.15rem;font-weight:800;color:#1e293b;">{s_name}</div>
-                    <div style="font-size:0.78rem;color:#94a3b8;">{s_reg}</div>
-                    <div style="font-size:0.72rem;color:#16a34a;font-weight:700;margin-top:2px;">● Active Student</div>
+                    <div style="font-size:1.3rem;font-weight:800;color:#1e293b;">{s_name}</div>
+                    <div style="font-size:0.82rem;color:#94a3b8;">{s_reg}</div>
+                    <div style="font-size:0.75rem;color:#16a34a;font-weight:700;margin-top:2px;">● Active Student</div>
                 </div>
             </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:0.84rem;"><span style="color:#94a3b8;">Department</span><span style="font-weight:700;">{s_dept_name}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:0.84rem;"><span style="color:#94a3b8;">Year</span><span style="font-weight:700;">{s_year}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:0.84rem;"><span style="color:#94a3b8;">Course Code</span><span style="font-weight:700;">{s_course}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:0.84rem;"><span style="color:#94a3b8;">Assigned Group</span><span style="font-weight:700;">{s_group}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:0.84rem;"><span style="color:#94a3b8;">Contact</span><span style="font-weight:700;">{s_contact if s_contact else "Not set"}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Department</span><span style="font-weight:700;">{s_dept_name}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Year</span><span style="font-weight:700;">{s_year}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Course Code</span><span style="font-weight:700;">{s_course}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Assigned Group</span><span style="font-weight:700;">{s_group}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:0.88rem;"><span style="color:#94a3b8;">Contact</span><span style="font-weight:700;">{s_contact if s_contact else "Not set"}</span></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1949,15 +2049,16 @@ Requirements:
         st.markdown("#### 📸 Profile Picture")
         with st.expander("Update Profile Photo", expanded=bool(not s_avatar)):
             new_avatar = st.file_uploader(
-                "Upload photo",
+                "Upload a portrait or selfie",
                 type=["png", "jpg", "jpeg", "webp"],
-                key="student_avatar_uploader"
+                key="student_avatar_uploader",
+                help="Recommended: Square photo, JPG or PNG format"
             )
             col_av1, col_av2 = st.columns(2)
             with col_av1:
-                if st.button("Save Picture", use_container_width=True, type="primary"):
+                if st.button("Save Profile Picture", use_container_width=True, type="primary"):
                     if new_avatar:
-                        with st.spinner("Uploading photo..."):
+                        with st.spinner("Uploading and updating photo..."):
                             url = db.upload_student_avatar(
                                 s_reg,
                                 new_avatar.getvalue(),
@@ -1965,14 +2066,14 @@ Requirements:
                             )
                         if url:
                             cached_fetch_roster.clear()
-                            st.success("✅ Profile picture updated!")
+                            st.success("✅ Profile picture updated successfully!")
                             st.rerun()
                         else:
-                            st.error("⚠️ Failed to upload image.")
+                            st.error("⚠️ Failed to upload image. Please try another file.")
                     else:
                         st.warning("Please choose an image file first.")
             with col_av2:
-                if s_avatar and st.button("🗑️ Remove", use_container_width=True):
+                if s_avatar and st.button("🗑️ Remove Photo", use_container_width=True):
                     with st.spinner("Removing photo..."):
                         db.delete_student_avatar(s_reg)
                     cached_fetch_roster.clear()
@@ -1990,8 +2091,9 @@ Requirements:
                 old_pin  = st.text_input("Current PIN",     type="password", max_chars=6)
                 new_pin1 = st.text_input("New PIN",         type="password", max_chars=6)
                 new_pin2 = st.text_input("Confirm New PIN", type="password", max_chars=6)
-                save_pin = st.form_submit_button("Save New PIN", use_container_width=True, type="primary")
-                cancel_pin = st.form_submit_button("Cancel", use_container_width=True)
+                cp1, cp2 = st.columns(2)
+                with cp1: save_pin   = st.form_submit_button("Save", use_container_width=True)
+                with cp2: cancel_pin = st.form_submit_button("Cancel", use_container_width=True)
 
                 if cancel_pin:
                     st.session_state.show_change_pin = False
@@ -2021,14 +2123,15 @@ Requirements:
         st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
         st.markdown("#### 📱 Update Contact Info")
         if not st.session_state.show_update_contact:
-            if st.button("Update Contact Number", use_container_width=True):
+            if st.button("Update My Contact Number", use_container_width=True):
                 st.session_state.show_update_contact = True
                 st.rerun()
         else:
             with st.form("update_contact_form", clear_on_submit=True):
                 new_contact = st.text_input("New Contact Number", placeholder="e.g. 0741234567", value=s_contact)
-                save_c = st.form_submit_button("Save Contact", use_container_width=True, type="primary")
-                canc_c = st.form_submit_button("Cancel", use_container_width=True)
+                c1, c2 = st.columns(2)
+                with c1: save_c = st.form_submit_button("Save", use_container_width=True)
+                with c2: canc_c = st.form_submit_button("Cancel", use_container_width=True)
 
                 if canc_c:
                     st.session_state.show_update_contact = False
@@ -2048,15 +2151,22 @@ Requirements:
                         else:
                             st.error("⚠️ Update failed.")
 
+    # -------------------------------------------------------------
+    # TAB 9: AI ASSISTANT
+    # -------------------------------------------------------------
+
+
+
     # 9. FEATURES (FULL SCREEN)
     elif screen == "features":
+
         render_student_slots(db, s_reg, s_name, s_dept, s_year, primary, light)
 
     # -------------------------------------------------------------
     # LOGOUT
     # -------------------------------------------------------------
     st.markdown('<div class="pro-divider"></div>', unsafe_allow_html=True)
-    if st.button("🚪 Log Out", use_container_width=True):
+    if st.button("🚪 Log Out"):
         keys = [
             "student_logged_in", "read_announcements", "open_expanders",
             "show_ai_tab", "ai_chat_history", "ai_pdf_text",
