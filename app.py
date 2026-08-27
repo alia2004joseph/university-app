@@ -293,6 +293,47 @@ header[data-testid="stHeader"] {
     margin-bottom: 8px;
 }
 
+
+    /* Horizontal Radio Scroll & Card Styling */
+    div[data-testid="stRadio"] > div[role="radiogroup"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        gap: 8px !important;
+        padding: 4px 2px 10px 2px !important;
+        scrollbar-width: none !important;
+    }
+    div[data-testid="stRadio"] > div[role="radiogroup"]::-webkit-scrollbar {
+        display: none !important;
+    }
+    div[data-testid="stRadio"] label[data-baseweb="radio"] {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 7px 12px !important;
+        margin-right: 0 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+        transition: all 0.15s ease !important;
+    }
+    div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {
+        border-color: #cbd5e1 !important;
+        background: #f8fafc !important;
+    }
+    div[data-testid="stRadio"] label[data-baseweb="radio"] p {
+        font-size: 0.82rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        margin: 0 !important;
+    }
+
 /* User Card in Sidebar */
 .user-sidebar-card {
     background: rgba(255, 255, 255, 0.05);
