@@ -53,8 +53,8 @@ st.markdown("""
 body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {
     font-family: var(--font-main) !important;
     line-height: 1.55;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 input, textarea, select, .stTextInput input, .stTextArea textarea, .stSelectbox select div [data-baseweb="select"] {

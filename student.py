@@ -32,8 +32,8 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         line-height: 1.55;
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
+        word-break: normal;
     }}
     
       #MainMenu, footer {{ 

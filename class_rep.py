@@ -19,11 +19,21 @@ def inject_rep_css(primary: str, light: str):
     body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         line-height: 1.55;
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
+        word-break: normal;
     }}
     
     #MainMenu, footer {{ visibility: hidden !important; }}
+    header[data-testid="stHeader"] {{
+        background: transparent !important;
+        height: 2.5rem !important;
+    }}
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] {{
+        visibility: visible !important;
+        display: flex !important;
+        opacity: 1 !important;
+    }}
     .stApp {{ background-color: #f8fafc !important; }}
     
     /* Rep Banner with Dark Executive Contrast */
@@ -152,16 +162,44 @@ def inject_rep_css(primary: str, light: str):
         display: none !important;
     }}
 
-    /* Horizontal Radio Scroll for AI Tools */
+    /* Horizontal Radio Scroll & Card Styling for AI Tools */
     div[data-testid="stRadio"] > div[role="radiogroup"] {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
-        flex-wrap: nowrap !important;
-        padding-bottom: 6px;
-        scrollbar-width: none;
+        gap: 8px !important;
+        padding: 4px 2px 10px 2px !important;
+        scrollbar-width: none !important;
     }}
     div[data-testid="stRadio"] > div[role="radiogroup"]::-webkit-scrollbar {{
-        display: none;
+        display: none !important;
+    }}
+    div[data-testid="stRadio"] label[data-baseweb="radio"] {{
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 7px 12px !important;
+        margin-right: 0 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+        transition: all 0.15s ease !important;
+    }}
+    div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {{
+        border-color: #cbd5e1 !important;
+        background: #f8fafc !important;
+    }}
+    div[data-testid="stRadio"] label[data-baseweb="radio"] p {{
+        font-size: 0.82rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+        margin: 0 !important;
     }}
     
     /* ─────────────────────────────────────────────
