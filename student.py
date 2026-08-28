@@ -29,11 +29,16 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     css = f"""
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
-    body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
+    html, body, .stApp {{
+        color-scheme: light !important;
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+    }}
+    
+    body, .stApp, p, span, div, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         line-height: 1.55;
-        overflow-wrap: break-word;
-        word-break: normal;
+        color: #0f172a;
     }}
     
       #MainMenu, footer {{ 
@@ -328,6 +333,11 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     }}
 
     .stTabs [data-baseweb="tab"] {{
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        min-width: fit-content !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
         border-radius: 8px;
         padding: 8px 16px;
         font-weight: 600;
@@ -338,6 +348,13 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
         background: transparent;
         border: none;
         transition: all 0.15s ease;
+    }}
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span,
+    .stTabs [data-baseweb="tab"] div {{
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
     }}
     .stTabs [data-baseweb="tab"]:hover {{
         color: #0f172a;
@@ -2078,11 +2095,11 @@ Requirements:
                     <div style="font-size:0.75rem;color:#16a34a;font-weight:700;margin-top:2px;">● Active Student</div>
                 </div>
             </div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Department</span><span style="font-weight:700;">{s_dept_name}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Year</span><span style="font-weight:700;">{s_year}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Course Code</span><span style="font-weight:700;">{s_course}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#94a3b8;">Assigned Group</span><span style="font-weight:700;">{s_group}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:0.88rem;"><span style="color:#94a3b8;">Contact</span><span style="font-weight:700;">{s_contact if s_contact else "Not set"}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#64748b;font-weight:600;">Department</span><span style="font-weight:700;color:#0f172a;">{s_dept_name}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#64748b;font-weight:600;">Year</span><span style="font-weight:700;color:#0f172a;">{s_year}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#64748b;font-weight:600;">Course Code</span><span style="font-weight:700;color:#0f172a;">{s_course}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:0.88rem;"><span style="color:#64748b;font-weight:600;">Assigned Group</span><span style="font-weight:700;color:#0f172a;">{s_group}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:0.88rem;"><span style="color:#64748b;font-weight:600;">Contact</span><span style="font-weight:700;color:#0f172a;">{s_contact if s_contact else "Not set"}</span></div>
         </div>
         """, unsafe_allow_html=True)
 

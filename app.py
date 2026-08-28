@@ -42,7 +42,7 @@ st.markdown("""
     --primary-blue: #2563eb;
     --primary-dark: #0f172a;
     --slate-border: #e2e8f0;
-    color-scheme: light;
+    color-scheme: light !important;
 }
 
 /* Global Typography & Box-sizing */
@@ -50,11 +50,16 @@ st.markdown("""
     box-sizing: border-box !important;
 }
 
-body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {
+html, body, .stApp {
+    color-scheme: light !important;
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+}
+
+body, .stApp, p, span, div, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {
     font-family: var(--font-main) !important;
     line-height: 1.55;
-    overflow-wrap: break-word;
-    word-break: normal;
+    color: #0f172a;
 }
 
 input, textarea, select, .stTextInput input, .stTextArea textarea, .stSelectbox select div [data-baseweb="select"] {

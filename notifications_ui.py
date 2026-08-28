@@ -76,7 +76,7 @@ def render_notification_bell(reg_number: str, primary: str = "#1a56db"):
                 f"""
                 <div style="background:{bg};border-left:3px solid {border};
                     padding:10px 12px;border-radius:8px;margin-bottom:8px;">
-                    <div style="font-weight:{'500' if is_read else '700'};font-size:0.92rem;">
+                    <div style="font-weight:{'500' if is_read else '700'};font-size:0.92rem;color:#0f172a;">
                         {icon} {title}
                     </div>
                     <div style="font-size:0.85rem;color:#475569;margin-top:2px;">{message}</div>

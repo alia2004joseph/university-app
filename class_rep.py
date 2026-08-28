@@ -16,11 +16,16 @@ def inject_rep_css(primary: str, light: str):
     css = f"""
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
-    body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
+    html, body, .stApp {{
+        color-scheme: light !important;
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+    }}
+    
+    body, .stApp, p, span, div, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         line-height: 1.55;
-        overflow-wrap: break-word;
-        word-break: normal;
+        color: #0f172a;
     }}
     
     #MainMenu, footer {{ visibility: hidden !important; }}
@@ -148,7 +153,17 @@ def inject_rep_css(primary: str, light: str):
         background: transparent;
         white-space: nowrap !important;
         flex-shrink: 0 !important;
+        min-width: fit-content !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
         transition: all 0.15s ease;
+    }}
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span,
+    .stTabs [data-baseweb="tab"] div {{
+        white-space: nowrap !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
     }}
     .stTabs [aria-selected="true"] {{
         background: {primary} !important;
@@ -1474,16 +1489,16 @@ def render_class_rep_interface(
                 </div>
             </div>
             <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:0.84rem;">
-                <span style="color:#94a3b8;">Reg Number</span>
-                <span style="font-weight:700;">{r_reg}</span>
+                <span style="color:#64748b;font-weight:600;">Reg Number</span>
+                <span style="font-weight:700;color:#0f172a;">{r_reg}</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:0.84rem;">
-                <span style="color:#94a3b8;">Department</span>
-                <span style="font-weight:700;">{d_name}</span>
+                <span style="color:#64748b;font-weight:600;">Department</span>
+                <span style="font-weight:700;color:#0f172a;">{d_name}</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:0.84rem;">
-                <span style="color:#94a3b8;">Year</span>
-                <span style="font-weight:700;">{r_year}</span>
+                <span style="color:#64748b;font-weight:600;">Year</span>
+                <span style="font-weight:700;color:#0f172a;">{r_year}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)

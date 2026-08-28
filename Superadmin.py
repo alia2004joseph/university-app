@@ -24,11 +24,16 @@ def inject_admin_css():
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
-    body, .stApp, p, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
+    html, body, .stApp {{
+        color-scheme: light !important;
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+    }}
+    
+    body, .stApp, p, span, div, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         line-height: 1.55;
-        overflow-wrap: break-word;
-        word-break: normal;
+        color: #0f172a;
     }}
         #MainMenu, footer {{ 
         visibility: hidden !important; 
