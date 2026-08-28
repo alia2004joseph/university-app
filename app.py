@@ -53,13 +53,27 @@ st.markdown("""
 html, body, .stApp {
     color-scheme: light !important;
     background-color: #f8fafc !important;
-    color: #0f172a !important;
+    color: #0f172a;
 }
 
-body, .stApp, p, span, div, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {
+body, .stApp, p, h1, h2, h3, h4, h5, h6, label {
     font-family: var(--font-main) !important;
     line-height: 1.55;
-    color: #0f172a;
+}
+
+input, textarea, select {
+    font-family: var(--font-main) !important;
+}
+
+/* Password Toggle Icon & BaseWeb input enhancer */
+div[data-baseweb="input"] button,
+.stTextInput button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 8px !important;
+    color: #64748b !important;
+    min-width: auto !important;
 }
 
 input, textarea, select, .stTextInput input, .stTextArea textarea, .stSelectbox select div [data-baseweb="select"] {
@@ -260,16 +274,36 @@ header[data-testid="stHeader"] {
 .stTabs [data-baseweb="tab-border"] { display: none !important; }
 
 /* Modern Header Card */
+
+/* Password Visibility Toggle Clean Styling */
+div[data-baseweb="input"] button,
+.stTextInput button[aria-label*="password" i],
+.stTextInput button[aria-label*="visibility" i] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 8px !important;
+    color: #64748b !important;
+    min-width: auto !important;
+}
+
 .app-header-card {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e40af 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e40af 100%) !important;
     border-radius: 16px;
     padding: 24px 28px;
     margin-bottom: 20px;
-    color: white;
+    color: #ffffff !important;
     box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.08);
     position: relative;
     overflow: hidden;
+}
+.app-header-card div, .app-header-card p, .app-header-card span, .app-header-card h1, .app-header-card h2 {
+    color: #ffffff !important;
+}
+.app-header-card .app-header-badge,
+.app-header-card .app-header-badge span {
+    color: #93c5fd !important;
 }
 .app-header-card::after {
     content: '';
@@ -559,7 +593,7 @@ else:
         <div class="app-header-badge">
             <span>🏛️</span> Academic Network Access
         </div>
-        <div style="font-size:1.65rem;font-weight:800;margin-bottom:4px;letter-spacing:-0.5px;line-height:1.2;">
+        <div style="font-size:1.65rem;font-weight:800;margin-bottom:4px;letter-spacing:-0.5px;line-height:1.2;color:#ffffff !important;">
             Smart University Portal
         </div>
         <div style="font-size:0.86rem;color:#cbd5e1;font-weight:400;">

@@ -19,13 +19,27 @@ def inject_rep_css(primary: str, light: str):
     html, body, .stApp {{
         color-scheme: light !important;
         background-color: #f8fafc !important;
-        color: #0f172a !important;
+        color: #0f172a;
     }}
     
-    body, .stApp, p, span, div, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
+    body, .stApp, p, h1, h2, h3, h4, h5, h6, label {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         line-height: 1.55;
-        color: #0f172a;
+    }}
+    
+    input, textarea, select {{
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    }}
+    
+    /* Password Toggle and Input Enhancer */
+    div[data-baseweb="input"] button,
+    .stTextInput button {{
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 8px !important;
+        color: #64748b !important;
+        min-width: auto !important;
     }}
     
     #MainMenu, footer {{ visibility: hidden !important; }}
@@ -42,6 +56,9 @@ def inject_rep_css(primary: str, light: str):
     .stApp {{ background-color: #f8fafc !important; }}
     
     /* Rep Banner with Dark Executive Contrast */
+    .rep-banner div, .rep-banner p, .rep-banner span, .rep-banner h2 {{
+        color: #ffffff !important;
+    }}
     .rep-banner {{
         background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, {primary} 100%);
         border-radius: 16px;

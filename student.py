@@ -32,16 +32,30 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     html, body, .stApp {{
         color-scheme: light !important;
         background-color: #f8fafc !important;
-        color: #0f172a !important;
-    }}
-    
-    body, .stApp, p, span, div, h1, h2, h3, h4, h5, h6, input, textarea, select, button, label {{
-        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-        line-height: 1.55;
         color: #0f172a;
     }}
     
-      #MainMenu, footer {{ 
+    body, .stApp, p, h1, h2, h3, h4, h5, h6, label {{
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        line-height: 1.55;
+    }}
+    
+    input, textarea, select {{
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    }}
+    
+    /* Password Toggle and Input Enhancer */
+    div[data-baseweb="input"] button,
+    .stTextInput button {{
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 8px !important;
+        color: #64748b !important;
+        min-width: auto !important;
+    }}
+    
+    #MainMenu, footer {{ 
         visibility: hidden !important; 
         height: 0 !important;
         padding: 0 !important;
@@ -65,6 +79,9 @@ def inject_css(primary: str = "#1e40af", light: str = "#eff6ff"):
     }}
     
     /*  Welcome Banner  */
+    .welcome-banner div, .welcome-banner p, .welcome-banner span, .welcome-banner h2 {{
+        color: #ffffff !important;
+    }}
     .welcome-banner {{
         background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e40af 100%) !important;
         border-radius: 16px;
