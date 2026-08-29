@@ -13,7 +13,7 @@ from database import SheetDatabaseManager
 from database.avatars import render_avatar_html
 from cache import (
     cached_fetch_roster, cached_fetch_announcements, cached_fetch_materials,
-    cached_fetch_feedback, cached_fetch_rep_replies, cached_fetch_timetable
+    cached_fetch_feedback, cached_fetch_rep_replies, cached_fetch_timetable, cached_fetch_reps
 )
 from config import (
     get_departments, YEARS,
@@ -1290,23 +1290,94 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
             tomorrow  = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][(datetime.now().weekday() + 1) % 7]
             ann_lines = "".join([f"  [{ann.get('priority','Normal')}] {ann.get('timestamp','')} — {ann.get('text','')[:200]}\n" for ann in all_anns[:15] if isinstance(ann, dict)])
             mat_lines = "".join([f"  - {m.get('name','')} (URL: {m.get('url','')})\n" for m in materials_list[:20]])
+
+            # --- 1. Study Group Members Details ---
+            group_lines = []
+            if s_group and str(s_group).strip() not in ("", "Unassigned", "Not Assigned", "None"):
+                dept_col = next((c for c in ["Department", "department", "dept"] if c in df_profiles.columns), None)
+                year_col = next((c for c in ["Year", "year"] if c in df_profiles.columns), None)
+                df_class = df_profiles[(df_profiles[dept_col] == s_dept) & (df_profiles[year_col] == s_year)] if (dept_col and year_col) else df_profiles
+                g_members = df_class[df_class["Assigned Group"] == s_group]
+                if not g_members.empty:
+                    for _, member in g_members.iterrows():
+                        m_n   = str(member.get("Student Name", "")).strip()
+                        m_r   = str(member.get("Reg Number", "")).strip()
+                        m_c   = str(member.get("Course Code", "")).strip()
+                        m_cnt = str(member.get("Contact", "")).strip() or "Not provided"
+                        m_em  = str(member.get("Email", "")).strip() or "Not provided"
+                        is_me = " (You / Logged-in Student)" if m_r == s_reg else ""
+                        group_lines.append(f"  • {m_n}{is_me} | Reg: {m_r} | Course: {m_c} | Email: {m_em} | Phone: {m_cnt}")
+            group_section = (f"Group Name: {s_group}\n" + "\n".join(group_lines)) if group_lines else f"Assigned Group: {s_group} (No other members listed in this class)"
+
+            # --- 2. Course Unit Specific Groups ---
+            try:
+                cg = db.fetch_course_unit_groups(s_name, dept=s_dept, year=s_year)
+                if cg and isinstance(cg, dict):
+                    cg_lines = [f"  • {c_name}: {g_val}" for c_name, g_val in cg.items()]
+                    course_group_section = "\n".join(cg_lines)
+                else:
+                    course_group_section = "  None assigned."
+            except Exception:
+                course_group_section = "  None assigned."
+
+            # --- 3. Class Representative details ---
+            rep_section = "No Class Representative currently assigned for this class."
+            try:
+                reps_list = cached_fetch_reps()
+                class_rep = next(
+                    (r for r in reps_list if str(r.get("dept", "")).strip().upper() == s_dept.strip().upper() and str(r.get("year", "")).strip().lower() == s_year.strip().lower()),
+                    None
+                )
+                if class_rep:
+                    rep_name  = class_rep.get("rep_name", "N/A")
+                    rep_reg   = class_rep.get("rep_reg", "N/A")
+                    rep_email = class_rep.get("email", "Not provided") or "Not provided"
+                    rep_section = f"Name: {rep_name}\nRegistration Number: {rep_reg}\nEmail: {rep_email}\nRole: Class Representative for {s_dept_name} ({s_year})"
+            except Exception:
+                pass
+
+            # --- 4. Today's Timetable ---
+            tt_lines = []
+            try:
+                tt_list = cached_fetch_timetable(dept=s_dept, year=s_year)
+                today_day = datetime.now().strftime("%A")
+                today_classes = [t for t in tt_list if str(t.get("Day", "")).strip().lower() == today_day.lower()]
+                for t in today_classes:
+                    tt_lines.append(f"  • {t.get('Time', '')} | {t.get('Course', '')} | Room: {t.get('Venue', '')} | Lecturer: {t.get('Lecturer', '')}")
+            except Exception:
+                pass
+            timetable_section = "\n".join(tt_lines) if tt_lines else "No classes scheduled for today."
+
             return f"""=== TODAY ===
 {today}
 Tomorrow: {tomorrow}
 
-=== STUDENT PROFILE ===
+=== LOGGED-IN STUDENT PROFILE ===
 Name: {s_name}
-Reg Number: {s_reg}
+Registration Number: {s_reg}
 Department: {s_dept_name} ({s_dept})
-Year: {s_year}
+Year of Study: {s_year}
 Course Code: {s_course}
-Group: {s_group}
+Assigned Group: {s_group}
 
-=== CLASS ANNOUNCEMENTS ===
+=== YOUR STUDY GROUP MEMBERS & CONTACT DETAILS ({s_group}) ===
+{group_section}
+
+=== COURSE UNIT GROUPS ===
+{course_group_section}
+
+=== YOUR CLASS REPRESENTATIVE (CLASS REP) ===
+{rep_section}
+
+=== TODAY'S TIMETABLE SCHEDULE ===
+{timetable_section}
+
+=== RECENT CLASS ANNOUNCEMENTS ===
 {ann_lines if ann_lines else "  No announcements yet."}
 
-=== AVAILABLE MATERIALS ===
-{mat_lines if mat_lines else "  No materials uploaded yet."}"""
+=== AVAILABLE COURSE MATERIALS ===
+{mat_lines if mat_lines else "  No materials uploaded yet."}
+"""
 
         ai_mode = st.radio(
             "Mode:", ["💬 Class Assistant", "📚 Study Material", "🖼️ Image Q&A", "📄 Report Writer"],
@@ -1651,6 +1722,26 @@ Requirements:
                 except Exception:
                     pass
                 st.rerun()
+
+            if ai_mode == "💬 Class Assistant":
+                st.markdown("<div style='font-size:0.75rem;color:#64748b;font-weight:600;margin-bottom:6px;'>⚡ Quick Prompts:</div>", unsafe_allow_html=True)
+                qc1, qc2, qc3, qc4 = st.columns(4)
+                with qc1:
+                    if st.button("👥 Group Members", key="qk_grp", use_container_width=True):
+                        st.session_state.ai_quick_q = "Who are my group members and what are their contact details?"
+                        st.rerun()
+                with qc2:
+                    if st.button("👤 Class Rep", key="qk_rep", use_container_width=True):
+                        st.session_state.ai_quick_q = "Who is my Class Representative and how can I reach them?"
+                        st.rerun()
+                with qc3:
+                    if st.button("📅 Today Schedule", key="qk_sched", use_container_width=True):
+                        st.session_state.ai_quick_q = "What is my class timetable schedule for today?"
+                        st.rerun()
+                with qc4:
+                    if st.button("📢 Announcements", key="qk_anns", use_container_width=True):
+                        st.session_state.ai_quick_q = "What are the latest announcements for our class?"
+                        st.rerun()
 
             with st.form("ai_chat_form", clear_on_submit=True):
                 user_question = st.text_area(
