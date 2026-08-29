@@ -5,6 +5,7 @@ import streamlit as st
 import re
 import json as _json
 import pandas as pd
+from cache import cached_fetch_roster
 from database import SheetDatabaseManager
 from database.avatars import render_avatar_html
 from ai_engine import AISortingEngine, AIRepAssistant
