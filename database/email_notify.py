@@ -189,3 +189,61 @@ def notify_students_email_for_group_allocation(allocations_dict: Dict, group_nam
                     sent += 1
         return sent
     return safe_call(_run, default=0, log_label="notify_students_email_for_group_allocation")
+
+
+
+def notify_rep_email_for_student_message(
+    student_name: str,
+    reg_number: str,
+    message: str,
+    dept: str = "ALL",
+    year: str = "ALL"
+) -> bool:
+    """Send a full email notification to the Class Rep containing the complete
+    student private message/inquiry and student identification details."""
+    def _run():
+        if not is_email_configured():
+            return False
+        from .reps import get_rep_email
+        rep_email = get_rep_email(dept, year)
+        if not rep_email:
+            return False
+
+        # Retrieve student details (email, course code) if available
+        student_email = ""
+        student_course = ""
+        try:
+            client = get_client()
+            res = client.table("students").select("email, course_code").eq("reg_number", reg_number.strip().upper()).limit(1).execute()
+            if res.data and res.data[0]:
+                student_email = str(res.data[0].get("email") or "").strip()
+                student_course = str(res.data[0].get("course_code") or "").strip()
+        except Exception:
+            pass
+
+        email_line = f"• Student Email: {student_email}\n" if student_email else ""
+        course_line = f"• Course Code: {student_course}\n" if student_course else ""
+
+        subject = f"💬 Private Message from {student_name} ({reg_number}) — Smart University App"
+        body = (
+            f"Dear Class Representative,\n\n"
+            f"You have received a new private message from a student in your class:\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"STUDENT DETAILS\n"
+            f"• Name: {student_name}\n"
+            f"• Registration Number: {reg_number}\n"
+            f"• Department: {dept}\n"
+            f"• Year of Study: {year}\n"
+            f"{course_line}"
+            f"{email_line}"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"FULL MESSAGE CONTENT:\n"
+            f"\"{message.strip()}\"\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"To reply directly to this student via the portal, please log in to your Class Rep workspace:\n"
+            f"{_app_url()}\n\n"
+            f"— Smart University System"
+        )
+        return _send_raw_email(rep_email, subject, body)
+
+    return bool(safe_call(_run, default=False, log_label="notify_rep_email_for_student_message"))

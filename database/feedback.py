@@ -47,24 +47,18 @@ def submit_feedback(reg_num: str, name: str, message: str, dept: str = "ALL", ye
             "status": "Pending",
         }).execute()
 
-        # Notify the Class Rep — same "check the app" teaser pattern used
-        # for everything students receive, kept non-fatal on failure.
+        # Notify the Class Rep with the FULL student message and complete details
         try:
-            from .reps import get_rep_email
-            from .email_notify import _send_raw_email, _teaser_body
-            rep_email = get_rep_email(dept, year)
-            if rep_email:
-                _send_raw_email(
-                    rep_email,
-                    "💬 New Student Feedback — Smart University App",
-                    _teaser_body(
-                        f"New message from {name.strip()}",
-                        message.strip(),
-                        "feedback message",
-                    ),
-                )
+            from .email_notify import notify_rep_email_for_student_message
+            notify_rep_email_for_student_message(
+                student_name=name.strip(),
+                reg_number=reg_num.strip().upper(),
+                message=message.strip(),
+                dept=dept,
+                year=year
+            )
         except Exception as e:
-            print(f"[feedback] rep email teaser failed (non-fatal): {e}")
+            print(f"[feedback] rep email notification failed (non-fatal): {e}")
 
         return True
     return bool(safe_call(_run, default=False, log_label="submit_feedback"))

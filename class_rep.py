@@ -1011,7 +1011,7 @@ def render_class_rep_interface(
 
                 if draft_btn and ann_text.strip():
                     with st.spinner("Drafting..."):
-                        st.session_state.rep_ai_draft = ai_rep.draft_announcement(ann_text, priority)
+                        st.session_state.rep_ai_draft = ai_rep.draft_announcement(ann_text, priority, rep_name=r_name, rep_dept=d_name, rep_year=r_year, rep_reg=r_reg, rep_email=st.session_state.get("rep_email", ""))
                 if post_btn:
                     if ann_text.strip():
                         if db.post_announcement(ann_text, priority, dept=r_dept, year=r_year):
@@ -1309,7 +1309,7 @@ def render_class_rep_interface(
                     with c2:
                         if st.button("AI Reply", key=f"ai_rep_{fidx}", use_container_width=True):
                             with st.spinner("Drafting..."):
-                                st.session_state.rep_ai_reply = ai_rep.suggest_reply(name, msg)
+                                st.session_state.rep_ai_reply = ai_rep.suggest_reply(name, msg, rep_name=r_name, rep_dept=d_name, rep_year=r_year)
                                 st.session_state[f"reply_target_{fidx}"] = {
                                     "reg": reg, "name": name, "ts": ts
                                 }
@@ -1425,7 +1425,7 @@ def render_class_rep_interface(
             priority = st.selectbox("Priority", ["Normal", "Urgent"], key="sugg_ann_pri")
             if st.button("Draft with AI", use_container_width=True, type="primary", key="btn_draft_ann") and rough.strip():
                 with st.spinner("Drafting..."):
-                    draft = ai_rep.draft_announcement(rough, priority)
+                    draft = ai_rep.draft_announcement(rough, priority, rep_name=r_name, rep_dept=d_name, rep_year=r_year, rep_reg=r_reg, rep_email=st.session_state.get("rep_email", ""))
                 st.session_state.rep_ai_draft = draft
 
             if st.session_state.get("rep_ai_draft"):

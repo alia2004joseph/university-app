@@ -2126,10 +2126,15 @@ Requirements:
                 if st.button("Generate Draft with AI", key="ai_draft_msg_btn"):
                     if ai_topic.strip():
                         with st.spinner("Drafting message..."):
-                            draft = ai_study.ask_ai(
-                                question=f"Draft a {ai_tone.lower()} student message to their Class Rep about: {ai_topic}. Keep it 3-4 sentences, professional, and clear.",
-                                chat_history=[],
-                                student_reg=s_reg
+                            draft = ai_study.draft_student_message(
+                                topic=ai_topic.strip(),
+                                tone=ai_tone,
+                                student_name=s_name,
+                                student_reg=s_reg,
+                                dept=s_dept_name,
+                                year=s_year,
+                                course_code=s_course,
+                                recipient_type="Class Representative"
                             )
                             if draft and not draft.startswith("⚠️"):
                                 st.session_state.ai_draft = draft

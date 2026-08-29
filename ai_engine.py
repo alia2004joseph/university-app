@@ -540,6 +540,59 @@ class AIStudyAssistant:
         )
         return _call_with_retry(STUDENT_MODEL, prompt, config)
 
+    def draft_student_message(
+        self,
+        topic: str,
+        tone: str = "Professional",
+        student_name: str = "",
+        student_reg: str = "",
+        dept: str = "",
+        year: str = "",
+        course_code: str = "",
+        recipient_type: str = "Class Representative"
+    ) -> str:
+        """
+        Draft a personalized, ready-to-send message from a student to their Class Rep, Lecturer, or Admin.
+        Automatically incorporates the student's real identification details into the message.
+        """
+        if not _key_manager.has_keys():
+            return "⚠️ No API keys found."
+
+        details = []
+        if student_name:
+            details.append(f"Name: {student_name}")
+        if student_reg:
+            details.append(f"Registration Number: {student_reg}")
+        if dept:
+            details.append(f"Department: {dept}")
+        if year:
+            details.append(f"Year of Study: {year}")
+        if course_code:
+            details.append(f"Course Code: {course_code}")
+
+        student_info = "\n".join(details) if details else "Student at University"
+
+        prompt = (
+            f"Draft a clear, courteous, and {tone.lower()} message from a university student to their {recipient_type}.\n\n"
+            f"Topic / Subject: \"{topic}\"\n\n"
+            f"Student Details (MUST be automatically embedded into the draft sign-off):\n"
+            f"{student_info}\n\n"
+            f"Requirements:\n"
+            f"- Write a complete, ready-to-send message (3 to 5 concise sentences).\n"
+            f"- Sign off with the student's actual name, registration number, department, and year.\n"
+            f"- NEVER use placeholders like '[Your Name]', '[Reg Number]', or '[Insert Date]'. Always use their actual details provided above.\n"
+            f"- Return ONLY the plain text draft ready to send. No extra commentary or Markdown tags."
+        )
+        config = types.GenerateContentConfig(
+            system_instruction=(
+                "You are an academic communication assistant. Draft clear, polite, and effective student communications. "
+                "Always automatically embed the provided real student identification details into the message draft without using placeholders."
+            ),
+            temperature=0.4,
+            max_output_tokens=600
+        )
+        return _call_with_retry(STUDENT_MODEL, prompt, config)
+
     def chat_with_context(
         self,
         question: str,
@@ -590,6 +643,7 @@ class AIStudyAssistant:
                 "You have complete knowledge of the student's profile, group allocations, group members (including names, registration numbers, emails, and contact phone numbers), class representative details (name, registration number, email), timetable schedule, announcements, materials, and coursework. "
                 "When the student asks about their group or group members, clearly list their group name and all their team members along with their registration numbers and contact details (email/phone). "
                 "When the student asks about their Class Representative, tell them the Class Rep's name, registration number, and contact email directly. "
+                "When the student asks you to draft any message, email, letter, excuse, inquiry, or announcement (to a lecturer, class representative, group members, or department), ALWAYS be clever and embed their real name, registration number, department, year, and course code automatically into the message draft or sign-off instead of using placeholder text like '[Your Name]' or '[Insert Details Here]'. "
                 "Always personalize your responses using the student's name and their specific data. "
                 "Never say you lack access to their information — you have it all in context. "
                 "For class data questions, answer directly and confidently. "
@@ -774,34 +828,74 @@ class AIStudyAssistant:
 # ─────────────────────────────────────────────────────────────
 class AIRepAssistant:
 
-    def draft_announcement(self, rough_idea: str, priority: str = "Normal") -> str:
+    def draft_announcement(
+        self,
+        rough_idea: str,
+        priority: str = "Normal",
+        rep_name: str = "",
+        rep_dept: str = "",
+        rep_year: str = "",
+        rep_reg: str = "",
+        rep_email: str = ""
+    ) -> str:
         if not _key_manager.has_keys():
             return "⚠️ No API keys found."
+
+        rep_details = []
+        if rep_name:
+            rep_details.append(f"Name: {rep_name}")
+        if rep_dept or rep_year:
+            rep_details.append(f"Role: Class Representative for {rep_dept} ({rep_year})")
+        if rep_reg:
+            rep_details.append(f"Registration Number: {rep_reg}")
+        if rep_email:
+            rep_details.append(f"Email: {rep_email}")
+
+        rep_block = "\n".join(rep_details) if rep_details else "Class Representative"
+
         prompt = (
-            f"Help a Class Rep draft a professional announcement.\n"
-            f"Priority: {priority}\nIdea: \"{rough_idea}\"\n\n"
-            f"Write a complete, formal announcement ready to post. "
-            f"Return ONLY plain text. NO HTML tags. NO formatting. Just plain text."
+            f"Help a Class Representative draft a formal, professional announcement for their class.\n\n"
+            f"Priority: {priority}\n"
+            f"Announcement Idea / Subject: \"{rough_idea}\"\n\n"
+            f"Class Representative Details (MUST be included in the sign-off):\n"
+            f"{rep_block}\n\n"
+            f"Requirements:\n"
+            f"- Write a complete, clear, and well-structured announcement ready to post.\n"
+            f"- Sign off automatically with the representative's actual name, title ({rep_dept} {rep_year}), and contact details.\n"
+            f"- NEVER use placeholders like '[Class Rep Name]' or '[Contact Email]'. Always use their actual details provided above.\n"
+            f"- Return ONLY plain text. NO HTML tags."
         )
         config = types.GenerateContentConfig(
             system_instruction=REP_SYSTEM_PROMPT,
-            temperature=0.5, max_output_tokens=1000
+            temperature=0.4, max_output_tokens=1000
         )
         return _call_with_retry(REP_MODEL, prompt, config)
 
-    def suggest_reply(self, student_name: str, student_message: str) -> str:
+    def suggest_reply(
+        self,
+        student_name: str,
+        student_message: str,
+        rep_name: str = "",
+        rep_dept: str = "",
+        rep_year: str = ""
+    ) -> str:
         if not _key_manager.has_keys():
             return "⚠️ No API keys found."
+
+        sign_off = f"\n\nBest regards,\n{rep_name}\nClass Representative — {rep_dept} ({rep_year})" if rep_name else ""
+
         prompt = (
-            f"A Class Rep needs to reply to:\n"
-            f"Student: {student_name}\nMessage: \"{student_message}\"\n\n"
-            f"Write a professional, empathetic reply (3-5 sentences). "
-            f"Return ONLY plain text. NO HTML tags. NO formatting. NO bold. NO italics. "
-            f"Just plain text with proper punctuation."
+            f"A Class Representative needs to reply to a student inquiry:\n"
+            f"Student Name: {student_name}\n"
+            f"Student Message: \"{student_message}\"\n\n"
+            f"Representative: {rep_name} (Class Rep for {rep_dept} {rep_year})\n\n"
+            f"Write a professional, empathetic, and helpful reply (3-5 sentences).\n"
+            f"Sign off with the representative's actual name and role:{sign_off}\n\n"
+            f"Return ONLY plain text. No placeholders."
         )
         config = types.GenerateContentConfig(
             system_instruction=REP_SYSTEM_PROMPT,
-            temperature=0.5, max_output_tokens=500
+            temperature=0.4, max_output_tokens=500
         )
         return _call_with_retry(REP_MODEL, prompt, config)
 
