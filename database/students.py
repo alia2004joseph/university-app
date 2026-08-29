@@ -109,16 +109,22 @@ def delete_student(name: str) -> Dict:
 
 
 def save_group_allocations(allocations_dict: Dict) -> Dict:
-    """allocations_dict: {student_name: group_name, ...}"""
+    """allocations_dict: {student_name_or_reg: group_name, ...}
+    Supports keys as Reg Number (e.g. 25/U/...) OR Student Name.
+    """
     def _run():
         client = get_client()
-        for student_name, group_name in allocations_dict.items():
-            client.table("students").update({"assigned_group": group_name}) \
-                .eq("student_name", student_name).execute()
+        for key, group_name in allocations_dict.items():
+            clean_key = str(key).strip()
+            clean_group = str(group_name).strip()
+            is_reg = any(c.isdigit() for c in clean_key) or ("/" in clean_key)
+            if is_reg:
+                client.table("students").update({"assigned_group": clean_group}).eq("reg_number", clean_key.upper()).execute()
+            else:
+                client.table("students").update({"assigned_group": clean_group}).eq("student_name", clean_key).execute()
         return {"status": "success"}
 
     return safe_call(_run, default={"status": "error", "message": "Database unavailable"}, log_label="save_group_allocations")
-
 
 def assign_group(reg_number_or_name: str, group_name: str) -> bool:
     """Assign a single student (matched by reg number OR name) to a group."""

@@ -893,11 +893,16 @@ def render_class_rep_interface(
                     for grp, members in preview.items():
                         st.markdown(f"**{grp}** — {', '.join(members)}")
                     if st.button("Save Groups", use_container_width=True, type="primary"):
-                        with st.spinner("Saving..."):
+                        with st.spinner("Saving and notifying students..."):
                             res = db.save_group_allocations(alloc)
                         if res.get("status") == "success":
+                            cached_fetch_roster.clear()
+                            try:
+                                db.notify_students_email_for_group_allocation(alloc, dept=r_dept, year=r_year)
+                            except Exception as _e:
+                                pass
                             del st.session_state["pending_allocations"]
-                            st.success("Groups saved!")
+                            st.success("Groups saved and student roster updated!")
                             st.rerun()
                         else:
                             st.error("Failed to save.")
@@ -910,9 +915,15 @@ def render_class_rep_interface(
                     if st.form_submit_button("Assign", use_container_width=True):
                         reg = df_class[df_class["Student Name"] == student_sel]["Reg Number"].values
                         if len(reg):
-                            res = db.save_group_allocations({reg[0]: group_name})
+                            alloc_single = {reg[0]: group_name}
+                            res = db.save_group_allocations(alloc_single)
                             if res.get("status") == "success":
-                                st.success(f"{student_sel} → {group_name}")
+                                cached_fetch_roster.clear()
+                                try:
+                                    db.notify_students_email_for_group_allocation(alloc_single, group_name_override=group_name, dept=r_dept, year=r_year)
+                                except Exception as _e:
+                                    pass
+                                st.success(f"{student_sel} → {group_name} (Roster updated!)")
                                 st.rerun()
 
                 st.markdown("---")

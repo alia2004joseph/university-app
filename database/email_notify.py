@@ -156,3 +156,36 @@ def notify_student_email(reg_number: str, title: str, teaser: str, kind_label: s
         return _send_raw_email(res.data[0]["email"], f"🔔 {title} — Smart University App",
                                 _teaser_body(title, teaser, kind_label))
     return bool(safe_call(_run, default=False, log_label="notify_student_email"))
+
+def notify_students_email_for_group_allocation(allocations_dict: Dict, group_name_override: str = "", dept: str = "ALL", year: str = "ALL") -> int:
+    """Send notification email to students when assigned to a group."""
+    def _run():
+        if not is_email_configured():
+            return 0
+        client = get_client()
+        sent = 0
+        subject = "👥 Group Allocation Update — Smart University App"
+        for key, grp_val in allocations_dict.items():
+            clean_key = str(key).strip()
+            group_title = group_name_override or str(grp_val).strip()
+            is_reg = any(c.isdigit() for c in clean_key) or ("/" in clean_key)
+            q = client.table("students").select("student_name, email, reg_number")
+            if is_reg:
+                res = q.eq("reg_number", clean_key.upper()).limit(1).execute()
+            else:
+                res = q.eq("student_name", clean_key).limit(1).execute()
+            if res.data and res.data[0].get("email"):
+                student_info = res.data[0]
+                student_email = student_info["email"].strip()
+                student_name = student_info.get("student_name", "Student")
+                body = (
+                    f"Hello {student_name},\n\n"
+                    f"You have been assigned to: {group_title}\n\n"
+                    f"Open the Smart University App to view your fellow group members and their contact details:\n"
+                    f"{_app_url()}\n\n"
+                    f"— Smart University App"
+                )
+                if _send_raw_email(student_email, subject, body):
+                    sent += 1
+        return sent
+    return safe_call(_run, default=0, log_label="notify_students_email_for_group_allocation")

@@ -17,6 +17,7 @@ from . import slots as _slots
 from . import ai_memory as _ai_memory
 from . import config_store as _config_store
 from . import notifications as _notifications
+from . import email_notify as _email_notify
 from . import avatars as _avatars
 
 
@@ -343,6 +344,9 @@ class SupabaseDatabaseManager:
 
     def mark_notification_read(self, notification_id: str) -> bool:
         return _notifications.mark_notification_read(notification_id)
+
+    def notify_students_email_for_group_allocation(self, allocations_dict: Dict, group_name_override: str = "", dept: str = "ALL", year: str = "ALL") -> int:
+        return _email_notify.notify_students_email_for_group_allocation(allocations_dict, group_name_override, dept, year)
 
     def mark_all_notifications_read(self, reg_number: str) -> bool:
         return _notifications.mark_all_notifications_read(reg_number)

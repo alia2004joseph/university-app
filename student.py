@@ -1902,21 +1902,34 @@ Requirements:
             st.markdown(f'<div class="group-banner"><div style="font-size:0.7rem;opacity:0.7;text-transform:uppercase;letter-spacing:2px;">General Project Group</div><div style="font-size:1.5rem;font-weight:900;">{s_group}</div><div style="font-size:0.82rem;opacity:0.85;">{len(group_members)} member(s)</div></div>', unsafe_allow_html=True)
 
             for _, member in group_members.iterrows():
-                m_name   = member["Student Name"]
-                m_reg    = member["Reg Number"]
-                m_course = member.get("Course Code", "")
-                m_avatar = str(member.get("Avatar", member.get("avatar_url", "")))
-                is_you   = (m_reg == s_reg)
-                you_html = '<span style="background:#dbeafe;color:#1a56db;font-size:0.65rem;font-weight:700;padding:1px 8px;border-radius:10px;margin-left:6px;">You</span>' if is_you else ""
+                m_name    = member["Student Name"]
+                m_reg     = member["Reg Number"]
+                m_course  = member.get("Course Code", "")
+                m_contact = str(member.get("Contact", "")).strip()
+                m_email   = str(member.get("Email", "")).strip()
+                m_avatar  = str(member.get("Avatar", member.get("avatar_url", "")))
+                is_you    = (m_reg == s_reg)
+                you_html  = '<span style="background:#dbeafe;color:#1a56db;font-size:0.65rem;font-weight:700;padding:1px 8px;border-radius:10px;margin-left:6px;">You</span>' if is_you else ""
 
-                m_avatar_html = render_avatar_html(m_avatar, m_name, size=42, color=primary, light=light)
+                m_avatar_html = render_avatar_html(m_avatar, m_name, size=46, color=primary, light=light)
+
+                # Contacts snippet
+                contact_badges = []
+                if m_email:
+                    contact_badges.append(f'<a href="mailto:{m_email}" style="color:#2563eb;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;">✉️ {m_email}</a>')
+                if m_contact:
+                    clean_phone = m_contact.replace(" ", "")
+                    contact_badges.append(f'<a href="tel:{clean_phone}" style="color:#059669;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;">📞 {m_contact}</a>')
+                
+                contacts_html = (" · ".join(contact_badges)) if contact_badges else '<span style="color:#94a3b8;font-size:0.75rem;">No contact info provided</span>'
 
                 st.markdown(f"""
-                <div class="member-card">
+                <div class="member-card" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
                     {m_avatar_html}
-                    <div>
-                        <div style="font-weight:700;">{m_name}{you_html}</div>
-                        <div style="font-size:0.75rem;color:#94a3b8;">{m_course} · {m_reg}</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;font-size:0.95rem;color:#0f172a;">{m_name}{you_html}</div>
+                        <div style="font-size:0.75rem;color:#64748b;margin-bottom:4px;">{m_course} · {m_reg}</div>
+                        <div style="font-size:0.78rem;margin-top:2px;">{contacts_html}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
