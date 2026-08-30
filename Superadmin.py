@@ -1106,7 +1106,7 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                 if isinstance(a, dict) and a.get("dept", "") == "ALL"
             ]
             if broadcasts:
-                for ann in broadcasts[:10]:
+                for bidx, ann in enumerate(broadcasts[:10]):
                     st.markdown(f"""
                     <div style="background:white;border-radius:10px;padding:12px 16px;
                         margin-bottom:8px;border:1px solid #e2e8f7;
@@ -1117,6 +1117,7 @@ def render_superadmin_interface(db: SheetDatabaseManager, ai_admin: AIAdminAssis
                         <div style="margin-top:4px;">{ann.get('text','')}</div>
                     </div>
                     """, unsafe_allow_html=True)
+                    render_announcement_engagement(db, ann, dept="ALL", year="ALL", primary=ADMIN_PRIMARY, light="#f1f5f9", key_prefix=f"admin_bcast_{bidx}")
             else:
                 st.info("No broadcasts sent yet.")
 

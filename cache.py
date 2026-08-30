@@ -85,3 +85,15 @@ def cached_fetch_timetable(dept: str = "ALL", year: str = "ALL") -> list:
 @st.cache_data(ttl=TTL_REPS, show_spinner=False)
 def cached_fetch_reps() -> list:
     return _reps_svc.fetch_reps()
+
+from database import read_receipts as _read_receipts_svc
+
+TTL_ANALYTICS = 20  # 20 sec
+
+@st.cache_data(ttl=TTL_ANALYTICS, show_spinner=False)
+def cached_get_announcement_read_analytics(announcement_id: str = "", dept: str = "ALL", year: str = "ALL", ann_text: str = "") -> dict:
+    return _read_receipts_svc.get_announcement_read_analytics(announcement_id=announcement_id, dept=dept, year=year, ann_text=ann_text)
+
+@st.cache_data(ttl=TTL_ANALYTICS, show_spinner=False)
+def cached_get_material_access_analytics(material_id: str = "", dept: str = "ALL", year: str = "ALL", file_name: str = "") -> dict:
+    return _read_receipts_svc.get_material_access_analytics(material_id=material_id, dept=dept, year=year, file_name=file_name)

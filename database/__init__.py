@@ -19,6 +19,7 @@ from . import config_store as _config_store
 from . import notifications as _notifications
 from . import email_notify as _email_notify
 from . import avatars as _avatars
+from . import read_receipts as _read_receipts
 
 
 class SupabaseDatabaseManager:
@@ -351,5 +352,22 @@ class SupabaseDatabaseManager:
     def mark_all_notifications_read(self, reg_number: str) -> bool:
         return _notifications.mark_all_notifications_read(reg_number)
 
+
+
+    # ── ENGAGEMENT / READ RECEIPTS ─────────────────────────────
+    def mark_announcement_read(self, student_reg: str, announcement_id: str = "", ann_text: str = "") -> bool:
+        return _read_receipts.mark_announcement_read(student_reg, announcement_id, ann_text)
+
+    def get_student_read_announcement_ids(self, student_reg: str):
+        return _read_receipts.get_student_read_announcement_ids(student_reg)
+
+    def get_announcement_read_analytics(self, announcement_id: str = "", dept: str = "ALL", year: str = "ALL", ann_text: str = "") -> Dict:
+        return _read_receipts.get_announcement_read_analytics(announcement_id, dept, year, ann_text)
+
+    def mark_material_accessed(self, student_reg: str, material_id: str = "", file_name: str = "", action: str = "view") -> bool:
+        return _read_receipts.mark_material_accessed(student_reg, material_id, file_name, action)
+
+    def get_material_access_analytics(self, material_id: str = "", dept: str = "ALL", year: str = "ALL", file_name: str = "") -> Dict:
+        return _read_receipts.get_material_access_analytics(material_id, dept, year, file_name)
 
 SheetDatabaseManager = SupabaseDatabaseManager

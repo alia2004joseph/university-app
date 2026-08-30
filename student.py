@@ -960,6 +960,15 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
     global_anns = cached_fetch_announcements(dept="ALL",  year="ALL")
     all_anns    = dept_anns + [a for a in global_anns if a not in dept_anns]
 
+    # Sync persistent read receipts from database
+    if "read_announcements_synced" not in st.session_state or st.session_state.get("last_synced_student") != s_reg:
+        db_read_ids = db.get_student_read_announcement_ids(s_reg)
+        for rid in db_read_ids:
+            if rid not in st.session_state.read_announcements:
+                st.session_state.read_announcements.append(rid)
+        st.session_state.read_announcements_synced = True
+        st.session_state.last_synced_student = s_reg
+
     materials_list   = cached_fetch_materials(dept=s_dept, year=s_year)
     my_rep_replies   = cached_fetch_rep_replies(reg_number=s_reg, dept=s_dept, year=s_year)
     unread_rep_count = sum(1 for r in my_rep_replies if r.get("read_status", "Unread").lower() == "unread")
@@ -967,8 +976,10 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
     unread        = []
     urgent_unread = []
     for ann in all_anns:
-        ann_id = (ann.get("id", ann.get("text", ""))[:20] if isinstance(ann, dict) else str(ann)[:20])
-        if ann_id not in st.session_state.read_announcements:
+        ann_id = (str(ann.get("id", "")) if (isinstance(ann, dict) and ann.get("id")) else (ann.get("text", "")[:20] if isinstance(ann, dict) else str(ann)[:20]))
+        ann_txt_pfx = (ann.get("text", "")[:20] if isinstance(ann, dict) else str(ann)[:20])
+        is_read_flag = (ann_id in st.session_state.read_announcements) or (ann_txt_pfx in st.session_state.read_announcements)
+        if not is_read_flag:
             unread.append(ann)
             if isinstance(ann, dict) and ann.get("priority", "").lower() == "urgent":
                 urgent_unread.append(ann)
@@ -1203,7 +1214,11 @@ def render_student_interface(db: SheetDatabaseManager, ai_study, df_profiles):
                 ann_id   = ann.get("id", ann_text[:20]) if isinstance(ann, dict) else ann_text[:20]
                 st.markdown(f'<div class="ann-card urgent"><span class="ann-badge badge-urgent">🚨 URGENT</span><div>{ann_text}</div></div>', unsafe_allow_html=True)
                 if st.button("Mark as Read", key=f"home_read_{uidx}"):
-                    st.session_state.read_announcements.append(ann_id)
+                    db.mark_announcement_read(s_reg, announcement_id=ann.get("id", ""), ann_text=ann_text)
+                    if ann_id not in st.session_state.read_announcements:
+                        st.session_state.read_announcements.append(ann_id)
+                    if ann.get("id") and str(ann.get("id")) not in st.session_state.read_announcements:
+                        st.session_state.read_announcements.append(str(ann.get("id")))
                     st.rerun()
         normal_unread = [a for a in unread if a not in urgent_unread]
         if normal_unread:
@@ -1397,6 +1412,10 @@ Assigned Group: {s_group}
                 if sel_mat:
                     file_url  = sel_mat.get("url", "")
                     file_name = sel_mat.get("name", "")
+                    try:
+                        db.mark_material_accessed(s_reg, material_id=sel_mat.get("id", ""), file_name=file_name, action="ai_study")
+                    except Exception:
+                        pass
                     if st.session_state.ai_selected_file != file_name:
                         st.session_state.ai_selected_file = file_name
                         st.session_state.ai_summary_shown = False
@@ -1832,6 +1851,10 @@ Requirements:
                             st.rerun()
 
                 if st.session_state.get(f"preview_{idx}_{file_name}", False):
+                    try:
+                        db.mark_material_accessed(s_reg, material_id=item.get("id", ""), file_name=file_name, action="preview")
+                    except Exception:
+                        pass
                     with st.expander(f"Preview: {file_name}", expanded=True):
                         with st.spinner("Loading preview..."):
                             file_data = db.fetch_file_bytes(file_url)
@@ -1869,7 +1892,7 @@ Requirements:
                                 st.info(f"Preview not available for {ext} files. Download to view.")
 
                         st.markdown("---")
-                        st.download_button(
+                        if st.download_button(
                             label=f"⬇️ Download {file_name}",
                             data=file_data if file_data else b"",
                             file_name=file_name,
@@ -1878,7 +1901,11 @@ Requirements:
                             use_container_width=True,
                             type="primary",
                             disabled=not file_data
-                        )
+                        ):
+                            try:
+                                db.mark_material_accessed(s_reg, material_id=item.get("id", ""), file_name=file_name, action="download")
+                            except Exception:
+                                pass
                 else:
                     col1, col2 = st.columns([1, 3])
                     with col1:
@@ -2073,7 +2100,11 @@ Requirements:
                     st.markdown(f'<div class="ann-card {card_cls}" style="margin:0;"><span class="ann-badge {badge_cls}">{badge}</span><div>{ann_text}</div></div>', unsafe_allow_html=True)
                     if not is_read:
                         if st.checkbox("Mark as Read", key=f"notice_{idx}_{ann_id}"):
-                            st.session_state.read_announcements.append(ann_id)
+                            db.mark_announcement_read(s_reg, announcement_id=ann.get("id", ""), ann_text=ann_text)
+                            if ann_id not in st.session_state.read_announcements:
+                                st.session_state.read_announcements.append(ann_id)
+                            if ann.get("id") and str(ann.get("id")) not in st.session_state.read_announcements:
+                                st.session_state.read_announcements.append(str(ann.get("id")))
                             st.rerun()
                     else:
                         st.caption("✅ Read")

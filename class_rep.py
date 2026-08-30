@@ -11,6 +11,7 @@ from database.avatars import render_avatar_html
 from ai_engine import AISortingEngine, AIRepAssistant
 from config import get_departments, YEARS, dept_color, dept_light, dept_name, dept_courses
 from utils.mobile import is_mobile, get_view_mode_toggle
+from engagement_ui import render_announcement_engagement, render_material_engagement, render_class_engagement_overview
 
 
 def inject_rep_css(primary: str, light: str):
